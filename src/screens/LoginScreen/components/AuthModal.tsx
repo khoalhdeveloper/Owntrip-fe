@@ -114,13 +114,13 @@ export default function AuthModal({
             <View style={styles.headerTextContainer}>
               <Text style={styles.headerTitle}>
                 {activeTab === 'login'
-                  ? 'Welcome back to\nOwnTrip'
-                  : 'Set up your\naccount'}
+                  ? 'Chào mừng quay lại với\nOwnTrip'
+                  : 'Tạo tài khoản\ncủa bạn'}
               </Text>
               <Text style={styles.headerSubtitle}>
                 {activeTab === 'login'
-                  ? 'Sign in to continue your journey'
-                  : 'Sign up to enjoy the best travel experience'}
+                  ? 'Đăng nhập để tiếp tục hành trình'
+                  : 'Đăng ký để tận hưởng trải nghiệm tốt nhất'}
               </Text>
             </View>
           </ImageBackground>
@@ -144,7 +144,7 @@ export default function AuthModal({
                   onPress={() => handleTabSwitch('login')}
                 >
                   <Text style={[styles.tabText, activeTab === 'login' && styles.tabTextActive]}>
-                    Login
+                    Đăng nhập
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -154,7 +154,7 @@ export default function AuthModal({
                   <Text
                     style={[styles.tabText, activeTab === 'register' && styles.tabTextActive]}
                   >
-                    Register
+                    Đăng ký
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -167,7 +167,7 @@ export default function AuthModal({
                     <Feather name="user" size={20} color="#A0AEC0" style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
-                      placeholder="Full Name"
+                      placeholder="Họ và tên"
                       placeholderTextColor="#A0AEC0"
                       value={displayName}
                       onChangeText={setDisplayName}
@@ -186,7 +186,7 @@ export default function AuthModal({
                   />
                   <TextInput
                     style={styles.input}
-                    placeholder="E-mail ID"
+                    placeholder="Địa chỉ Email"
                     placeholderTextColor="#A0AEC0"
                     value={email}
                     onChangeText={setEmail}
@@ -205,7 +205,7 @@ export default function AuthModal({
                   />
                   <TextInput
                     style={styles.input}
-                    placeholder="Password"
+                    placeholder="Mật khẩu"
                     placeholderTextColor="#A0AEC0"
                     value={password}
                     onChangeText={setPassword}
@@ -222,9 +222,9 @@ export default function AuthModal({
                 {/* Remember me + Forget Password */}
                 {activeTab === 'login' && (
                   <View style={styles.optionsRow}>
-                    <Text style={styles.optionText}>Remember me</Text>
+                    <Text style={styles.optionText}>Ghi nhớ tôi</Text>
                     <TouchableOpacity>
-                      <Text style={styles.forgotText}>Forget Password?</Text>
+                      <Text style={styles.forgotText}>Quên mật khẩu?</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -240,7 +240,7 @@ export default function AuthModal({
                     <ActivityIndicator color="#FFFFFF" />
                   ) : (
                     <Text style={styles.submitText}>
-                      {activeTab === 'login' ? 'Login' : 'Register'}
+                      {activeTab === 'login' ? 'Đăng nhập' : 'Đăng ký'}
                     </Text>
                   )}
                 </TouchableOpacity>
@@ -248,7 +248,7 @@ export default function AuthModal({
                 {/* Divider */}
                 <View style={styles.dividerRow}>
                   <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>Or login with</Text>
+                  <Text style={styles.dividerText}>Hoặc đăng nhập bằng</Text>
                   <View style={styles.dividerLine} />
                 </View>
 

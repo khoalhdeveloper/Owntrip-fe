@@ -22,11 +22,11 @@ interface TabConfig {
 }
 
 const TABS: TabConfig[] = [
-  { name: 'index', label: 'Home', icon: 'home', color: '#4A7CFF' },
-  { name: 'trips', label: 'Trips', icon: 'map', color: '#4A7CFF' },
+  { name: 'index', label: 'Khám phá', icon: 'home', color: '#4A7CFF' },
+  { name: 'trips', label: 'Lịch trình', icon: 'map', color: '#4A7CFF' },
   { name: 'checkin', label: 'Check-in', icon: 'map-pin', color: '#48BB78', isCenter: true },
-  { name: 'store', label: 'Store', icon: 'shopping-bag', color: '#4A7CFF' },
-  { name: 'profile', label: 'Profile', icon: 'user', color: '#4A7CFF' },
+  { name: 'store', label: 'Cửa hàng', icon: 'shopping-bag', color: '#4A7CFF' },
+  { name: 'profile', label: 'Cá nhân', icon: 'user', color: '#4A7CFF' },
 ];
 
 const INACTIVE_COLOR = '#A0AEC0';

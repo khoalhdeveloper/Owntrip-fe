@@ -16,6 +16,9 @@ export const ENDPOINTS = {
     UPDATE: '/api/users/update',
     MY_PROFILE: (id: string) => `/api/users/myProfile/${id}`,
     UPDATE_PROFILE: (id: string) => `/api/users/updateProfile/${id}`,
+    PAY_WITH_POINTS: '/api/users/pay-with-points',
+    VNPAY_CREATE: '/api/users/vnpay/create',
+    TOP_UP: '/api/users/top-up',
   },
   TRIPS: {
     LIST: '/api/trips',
@@ -40,5 +43,9 @@ export const ENDPOINTS = {
   },
   CHATBOT: {
     CHAT: '/api/chatbot/chat',
+  },
+  NOTIFICATIONS: {
+    GET_ALL: '/api/notifications',
+    MARK_AS_READ: (id: string) => `/api/notifications/${id}/read`,
   },
 };

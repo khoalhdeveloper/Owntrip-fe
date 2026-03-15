@@ -32,16 +32,16 @@ interface TabItem {
 }
 
 const TABS: TabItem[] = [
-  { key: 'summary', label: 'Summary', icon: 'grid' },
-  { key: 'itinerary', label: 'Itinerary', icon: 'calendar' },
-  { key: 'explore', label: 'Explore', icon: 'compass' },
-  { key: 'journal', label: 'Journal', icon: 'book-open' },
+  { key: 'summary', label: 'Tổng quan', icon: 'grid' },
+  { key: 'itinerary', label: 'Lịch trình', icon: 'calendar' },
+  { key: 'explore', label: 'Khám phá', icon: 'compass' },
+  { key: 'journal', label: 'Nhật ký', icon: 'book-open' },
 ];
 
 function formatDateShort(dateStr: string): string {
   const d = new Date(dateStr);
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${months[d.getMonth()]} ${d.getDate()}`;
+  const months = ['Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'];
+  return `${d.getDate()} ${months[d.getMonth()]}`;
 }
 
 export default function TripDetailScreen({ tripId }: { tripId: string }) {
@@ -121,7 +121,7 @@ export default function TripDetailScreen({ tripId }: { tripId: string }) {
       <View style={styles.loadingContainer}>
         <StatusBar barStyle="dark-content" />
         <ActivityIndicator size="large" color="#1A1A1A" />
-        <Text style={styles.loadingText}>Loading trip...</Text>
+        <Text style={styles.loadingText}>Đang tải chuyến đi...</Text>
       </View>
     );
   }
@@ -131,9 +131,9 @@ export default function TripDetailScreen({ tripId }: { tripId: string }) {
       <View style={styles.loadingContainer}>
         <StatusBar barStyle="dark-content" />
         <Feather name="alert-circle" size={44} color="#D1D5DB" />
-        <Text style={styles.loadingText}>Trip not found</Text>
+        <Text style={styles.loadingText}>Không tìm thấy chuyến đi</Text>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>Go Back</Text>
+          <Text style={styles.backButtonText}>Quay lại</Text>
         </TouchableOpacity>
       </View>
     );
@@ -200,7 +200,7 @@ export default function TripDetailScreen({ tripId }: { tripId: string }) {
         <Animated.View style={[styles.headerInfo, { transform: [{ translateY: titleTranslateY }] }]}>
           <Text style={styles.headerTitle} numberOfLines={2}>{trip.title}</Text>
           <Text style={styles.headerMeta}>
-            {formatDateShort(trip.startDate)} – {formatDateShort(trip.endDate)} · {trip.totalDays} days
+            {formatDateShort(trip.startDate)} – {formatDateShort(trip.endDate)} · {trip.totalDays} ngày
           </Text>
         </Animated.View>
       </View>

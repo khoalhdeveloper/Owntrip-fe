@@ -28,27 +28,27 @@ const BRAND_LIGHT = '#EBF5FF';
 function formatDateRange(start: string, end: string): string {
   const s = new Date(start);
   const e = new Date(end);
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const months = ['Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'];
   if (s.getFullYear() === e.getFullYear()) {
-    return `${months[s.getMonth()]} ${s.getDate()} – ${months[e.getMonth()]} ${e.getDate()}, ${e.getFullYear()}`;
+    return `${s.getDate()} ${months[s.getMonth()]} – ${e.getDate()} ${months[e.getMonth()]}, ${e.getFullYear()}`;
   }
-  return `${months[s.getMonth()]} ${s.getDate()}, ${s.getFullYear()} – ${months[e.getMonth()]} ${e.getDate()}, ${e.getFullYear()}`;
+  return `${s.getDate()} ${months[s.getMonth()]}, ${s.getFullYear()} – ${e.getDate()} ${months[e.getMonth()]}, ${e.getFullYear()}`;
 }
 
 function formatDayShort(dateStr: string): string {
   const d = new Date(dateStr);
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${months[d.getMonth()]} ${d.getDate()}`;
+  const months = ['Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'];
+  return `${d.getDate()} ${months[d.getMonth()]}`;
 }
 
 function getTripStatus(startDate: string, endDate: string) {
   const now = new Date();
   const start = new Date(startDate);
   const end = new Date(endDate);
-  if (now > end) return 'Completed';
-  if (now >= start) return 'Active';
+  if (now > end) return 'Đã hoàn thành';
+  if (now >= start) return 'Đang diễn ra';
   const daysUntil = Math.ceil((start.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  return `In ${daysUntil} days`;
+  return `Còn ${daysUntil} ngày`;
 }
 
 // ===== SECTION HEADER (matches reference) =====
@@ -157,7 +157,7 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
 
   const handleRemoveAccommodation = async () => {
     const confirmed = await confirmDelete(
-      'Xóa Accommodation',
+      'Xóa Chỗ ở',
       `Xóa "${bookedHotel?.name}" khỏi chuyến đi này?`,
       'Xóa',
     );
@@ -199,8 +199,8 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
 
   const formatCurrency = (amount: number) => amount.toLocaleString('vi-VN') + '₫';
   const formatShortDate = (d: Date) => {
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return `${months[d.getMonth()]} ${d.getDate()}`;
+    const months = ['Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'];
+    return `${d.getDate()} ${months[d.getMonth()]}`;
   };
 
   const nights = checkInDate && checkOutDate
@@ -224,7 +224,7 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
       <View style={styles.card}>
         <SectionHeader
           icon="home"
-          title="Accommodation"
+          title="Chỗ ở"
           right={bookedHotel ? (
             <TouchableOpacity onPress={handleRemoveAccommodation} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Feather name="trash-2" size={16} color="#EF4444" />
@@ -259,7 +259,7 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
                 </Text>
               </View>
               <View style={styles.bookedBottom}>
-                <Text style={styles.bookedNights}>{nights} night{nights > 1 ? 's' : ''}</Text>
+                <Text style={styles.bookedNights}>{nights} đêm</Text>
                 <Text style={styles.bookedTotal}>{formatCurrency(nights * bookedHotel.pricePerNight)}</Text>
               </View>
             </View>
@@ -271,15 +271,15 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
             <View style={styles.emptyIcon}>
               <Feather name="home" size={24} color="#D1D5DB" />
             </View>
-            <Text style={styles.emptyTitle}>No accommodation yet</Text>
-            <Text style={styles.emptyHint}>Add your hotel, resort or homestay</Text>
+            <Text style={styles.emptyTitle}>Chưa chọn chỗ ở</Text>
+            <Text style={styles.emptyHint}>Thêm khách sạn, resort hoặc homestay</Text>
             <TouchableOpacity
               style={styles.actionBtn}
               activeOpacity={0.7}
               onPress={openHotelModal}
             >
               <Feather name="plus" size={14} color="#FFF" />
-              <Text style={styles.actionBtnText}>Add Accommodation</Text>
+              <Text style={styles.actionBtnText}>Thêm chỗ ở</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -289,10 +289,10 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
       <View style={styles.card}>
         <SectionHeader
           icon="map-pin"
-          title="Places to Visit"
+          title="Địa điểm tham quan"
           right={
             <Text style={styles.countText}>
-              {loadingDest ? '...' : `${destinations.length} spots`}
+              {loadingDest ? '...' : `${destinations.length} điểm`}
             </Text>
           }
         />
@@ -306,8 +306,8 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
             <View style={styles.emptyIcon}>
               <Feather name="compass" size={24} color="#D1D5DB" />
             </View>
-            <Text style={styles.emptyTitle}>No places added</Text>
-            <Text style={styles.emptyHint}>Discover and add amazing destinations</Text>
+            <Text style={styles.emptyTitle}>Chưa có địa điểm</Text>
+            <Text style={styles.emptyHint}>Khám phá và thêm những điểm đến tuyệt vời</Text>
           </View>
         ) : (
           <View>
@@ -322,7 +322,7 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
                     {/* Day header divider */}
                     {Object.keys(groupedByDay).length > 1 && (
                       <View style={[styles.dayDivider, groupIdx === 0 && { marginTop: 0 }]}>
-                        <Text style={styles.dayLabel}>Day {dayNum}</Text>
+                        <Text style={styles.dayLabel}>Ngày {dayNum}</Text>
                         {dayDate && (
                           <Text style={styles.dayDate}>{formatDayShort(dayDate)}</Text>
                         )}
@@ -391,7 +391,7 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
       <View style={styles.card}>
         <SectionHeader
           icon="file-text"
-          title="Notes"
+          title="Ghi chú"
           right={
             <TouchableOpacity
               onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
@@ -406,9 +406,9 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
           {(trip.description
             ? trip.description.split('\n').filter(Boolean)
             : [
-                "Don't forget to bring rain jacket 🌧️",
-                'Try the local street food at the market!',
-                'Book museum tickets in advance 🎟️',
+                "Đừng quên mang theo áo mưa 🌧️",
+                "Thử các món ăn địa phương tại chợ!",
+                "Đặt vé bảo tàng trước 🎟️",
               ]
           ).map((line, i) => (
             <View key={i} style={styles.noteItem}>
@@ -422,7 +422,7 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
       <View style={styles.card}>
         <SectionHeader
           icon="credit-card"
-          title="Budget"
+          title="Ngân sách"
           right={
             <Text style={styles.budgetTotal}>
               ${(trip.budget || 180).toLocaleString()}
@@ -435,18 +435,18 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
             // User set a budget, but we don't have accurate actual spent tracking yet
             // Use fallback proportions to make it look active, or you can implement real calc here
             <>
-              <BudgetRow label="Accommodation" amount={Math.round(trip.budget * 0.45)} total={trip.budget} />
-              <BudgetRow label="Food & Drinks" amount={Math.round(trip.budget * 0.25)} total={trip.budget} />
-              <BudgetRow label="Transportation" amount={Math.round(trip.budget * 0.15)} total={trip.budget} />
-              <BudgetRow label="Activities" amount={Math.round(trip.budget * 0.1)} total={trip.budget} />
+              <BudgetRow label="Chỗ ở" amount={Math.round(trip.budget * 0.45)} total={trip.budget} />
+              <BudgetRow label="Ăn uống" amount={Math.round(trip.budget * 0.25)} total={trip.budget} />
+              <BudgetRow label="Di chuyển" amount={Math.round(trip.budget * 0.15)} total={trip.budget} />
+              <BudgetRow label="Hoạt động" amount={Math.round(trip.budget * 0.1)} total={trip.budget} />
             </>
           ) : (
             // No budget set, use completely mock values
             <>
-              <BudgetRow label="Accommodation" amount={85} total={180} />
-              <BudgetRow label="Food & Drinks" amount={45} total={180} />
-              <BudgetRow label="Transportation" amount={30} total={180} />
-              <BudgetRow label="Activities" amount={20} total={180} />
+              <BudgetRow label="Chỗ ở" amount={85} total={180} />
+              <BudgetRow label="Ăn uống" amount={45} total={180} />
+              <BudgetRow label="Di chuyển" amount={30} total={180} />
+              <BudgetRow label="Hoạt động" amount={20} total={180} />
             </>
           )}
         </View>
@@ -457,7 +457,7 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
         <View style={styles.modalContainer}>
           <View style={styles.modalHandleBar}><View style={styles.modalHandle} /></View>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Choose Accommodation</Text>
+            <Text style={styles.modalTitle}>Chọn chỗ ở</Text>
             <TouchableOpacity onPress={() => setHotelModalVisible(false)}>
               <Feather name="x" size={22} color="#6B7280" />
             </TouchableOpacity>
@@ -466,7 +466,7 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
           {loadingHotels ? (
             <View style={styles.modalLoading}>
               <ActivityIndicator size="large" color={BRAND} />
-              <Text style={styles.modalLoadingText}>Finding hotels...</Text>
+              <Text style={styles.modalLoadingText}>Đang tìm khách sạn...</Text>
             </View>
           ) : (
             <FlatList
@@ -519,7 +519,7 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
                           {extra > 0 && <Text style={styles.hotelChipMore}>+{extra}</Text>}
                         </View>
                       )}
-                      <Text style={styles.hotelPrice}>{formatCurrency(item.pricePerNight)}<Text style={styles.hotelPriceUnit}>/night</Text></Text>
+                      <Text style={styles.hotelPrice}>{formatCurrency(item.pricePerNight)}<Text style={styles.hotelPriceUnit}>/đêm</Text></Text>
                     </View>
                   </TouchableOpacity>
                 );
@@ -527,7 +527,7 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
               ListEmptyComponent={
                 <View style={styles.modalLoading}>
                   <Feather name="home" size={44} color="#D1D5DB" />
-                  <Text style={styles.modalLoadingText}>No accommodations found</Text>
+                  <Text style={styles.modalLoadingText}>Không tìm thấy chỗ ở nào</Text>
                 </View>
               }
             />

@@ -47,11 +47,11 @@ export default function MissionsScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
             <Feather name="arrow-left" size={24} color="#1E293B" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Missions</Text>
+          <Text style={styles.headerTitle}>Nhiệm vụ</Text>
           <View style={styles.headerBtn} />
         </View>
 
-        <Text style={styles.subtitle}>Souvenirs you haven&apos;t collected yet</Text>
+        <Text style={styles.subtitle}>Quà lưu niệm bạn chưa thu thập</Text>
 
         {loading ? (
           <View style={styles.loadingWrap}>
@@ -81,9 +81,9 @@ export default function MissionsScreen() {
                   <Text style={styles.cardType}>{item.type.charAt(0).toUpperCase() + item.type.slice(1)}</Text>
                   <View style={styles.coinsRow}>
                     <Feather name="award" size={12} color="#64748B" />
-                    <Text style={styles.coinsText}>{item.amount} coins</Text>
+                    <Text style={styles.coinsText}>{item.amount} xu</Text>
                   </View>
-                  <Text style={styles.notCollected}>Not collected yet</Text>
+                  <Text style={styles.notCollected}>Chưa thu thập</Text>
                 </TouchableOpacity>
               ))}
             </View>

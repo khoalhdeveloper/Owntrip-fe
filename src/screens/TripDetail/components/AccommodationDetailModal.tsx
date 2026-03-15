@@ -329,7 +329,7 @@ export default function AccommodationDetailModal({
                 <View style={styles.infoItem}>
                   <Feather name="log-in" size={16} color={BRAND} />
                   <View>
-                    <Text style={styles.infoItemLabel}>Check-in</Text>
+                    <Text style={styles.infoItemLabel}>Nhận phòng</Text>
                     <Text style={styles.infoItemValue}>{hotel.checkIn}</Text>
                   </View>
                 </View>
@@ -338,7 +338,7 @@ export default function AccommodationDetailModal({
                 <View style={styles.infoItem}>
                   <Feather name="log-out" size={16} color={BRAND} />
                   <View>
-                    <Text style={styles.infoItemLabel}>Check-out</Text>
+                    <Text style={styles.infoItemLabel}>Trả phòng</Text>
                     <Text style={styles.infoItemValue}>{hotel.checkOut}</Text>
                   </View>
                 </View>

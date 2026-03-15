@@ -11,23 +11,23 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { placesService, Place } from '@/services/placesService';
 import { tripService, AddPlaceBody } from '@/services/tripService';
+import { useConfirm } from '@/components/ConfirmProvider';
 
 const BRAND = '#4A7CFF';
 
 // Quick search categories — small text pills only
 const CATEGORIES = [
-  { label: 'Restaurants', query: 'nhà hàng' },
-  { label: 'Cafés', query: 'quán cafe' },
-  { label: 'Attractions', query: 'điểm du lịch' },
-  { label: 'Hotels', query: 'khách sạn' },
-  { label: 'Shopping', query: 'mua sắm' },
-  { label: 'Nightlife', query: 'bar pub' },
+  { label: 'Nhà hàng', query: 'nhà hàng' },
+  { label: 'Cà phê', query: 'quán cafe' },
+  { label: 'Tham quan', query: 'điểm du lịch' },
+  { label: 'Khách sạn', query: 'khách sạn' },
+  { label: 'Mua sắm', query: 'mua sắm' },
+  { label: 'Giải trí', query: 'bar pub' },
 ];
 
 // Suggested places by destination
@@ -150,6 +150,7 @@ export default function AddPlaceModal({
   const [searching, setSearching] = useState(false);
   const [adding, setAdding] = useState<string | null>(null);
   const [searchError, setSearchError] = useState(false);
+  const { alert: showAlert } = useConfirm();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -215,8 +216,8 @@ export default function AddPlaceModal({
       handleClose();
       onPlaceAdded();
     } catch (error: any) {
-      const msg = error?.response?.data?.message || error?.message || 'Failed to add place';
-      Alert.alert('Error', msg);
+      const msg = error?.response?.data?.message || error?.message || 'Không thể thêm địa điểm';
+      showAlert('Lỗi', msg, 'error');
     } finally {
       setAdding(null);
     }
@@ -282,8 +283,8 @@ export default function AddPlaceModal({
   // Build display list
   const displayList = results.length > 0 ? results : (query.length < 2 ? suggested : []);
   const sectionTitle = results.length > 0
-    ? `${results.length} result${results.length > 1 ? 's' : ''}`
-    : `Popular in ${tripDestination}`;
+    ? `${results.length} kết quả`
+    : `Phổ biến tại ${tripDestination}`;
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
@@ -298,7 +299,7 @@ export default function AddPlaceModal({
 
         {/* ===== HEADER ===== */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Add to Day {dayNumber}</Text>
+          <Text style={styles.headerTitle}>Thêm vào Ngày {dayNumber}</Text>
           <TouchableOpacity onPress={handleClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <Feather name="x" size={22} color="#6B7280" />
           </TouchableOpacity>
@@ -309,7 +310,7 @@ export default function AddPlaceModal({
           <Feather name="search" size={16} color="#9CA3AF" />
           <TextInput
             style={styles.searchInput}
-            placeholder={`Search places in ${tripDestination}`}
+            placeholder={`Tìm kiếm tại ${tripDestination}`}
             placeholderTextColor="#9CA3AF"
             value={query}
             onChangeText={(t) => handleSearch(t)}
@@ -352,7 +353,7 @@ export default function AddPlaceModal({
         {searchError && (
           <View style={styles.errorBanner}>
             <Feather name="wifi-off" size={13} color="#92400E" />
-            <Text style={styles.errorText}>Search unavailable. Try suggestions below.</Text>
+            <Text style={styles.errorText}>Tìm kiếm không khả dụng. Hãy thử các gợi ý dưới đây.</Text>
           </View>
         )}
 
@@ -374,7 +375,7 @@ export default function AddPlaceModal({
         ) : query.length >= 2 && !searchError ? (
           <View style={styles.center}>
             <Feather name="search" size={32} color="#E5E7EB" />
-            <Text style={styles.emptyText}>No results for &quot;{query}&quot;</Text>
+            <Text style={styles.emptyText}>Không tìm thấy kết quả cho &quot;{query}&quot;</Text>
           </View>
         ) : null}
       </KeyboardAvoidingView>

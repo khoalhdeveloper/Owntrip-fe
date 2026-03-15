@@ -24,6 +24,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { placesService, Place } from '../../services/placesService';
 import { tripService, Trip, TripDetailResponse } from '../../services/tripService';
 import { userService, UserProfile } from '../../services/userService';
+import { notificationService, Notification } from '../../services/notificationService';
 import { getImageSource } from '../../utils/imageUtils';
 
 const MOCK_TRIP_REVIEWS = [
@@ -86,6 +87,9 @@ export default function HomeScreen() {
   const [selectedTripDetail, setSelectedTripDetail] = useState<TripDetailResponse | null>(null);
   const [loadingTripDetail, setLoadingTripDetail] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isNotifModalVisible, setIsNotifModalVisible] = useState(false);
+  const [selectedNotifForDetail, setSelectedNotifForDetail] = useState<Notification | null>(null);
 
   const { width } = Dimensions.get('window');
   
@@ -153,9 +157,19 @@ export default function HomeScreen() {
       }
     };
 
+    const fetchNotifications = async () => {
+      try {
+        const data = await notificationService.getAll();
+        setNotifications(data || []);
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+      }
+    };
+
     fetchTrending();
     fetchTrips();
     fetchUserInfo();
+    fetchNotifications();
   }, [])
   );
 
@@ -170,6 +184,24 @@ export default function HomeScreen() {
       setLoadingTripDetail(false);
     }
   };
+
+  const handleMarkAsRead = async (id: string) => {
+    const success = await notificationService.markAsRead(id);
+    if (success) {
+      setNotifications(prev => 
+        prev.map(notif => notif._id === id ? { ...notif, isRead: true } : notif)
+      );
+    }
+  };
+
+  const handleNotifPress = (notif: Notification) => {
+    setSelectedNotifForDetail(notif);
+    if (!notif.isRead) {
+      handleMarkAsRead(notif._id);
+    }
+  };
+
+  const hasUnread = notifications.some(n => !n.isRead);
 
   const handleSearch = async (text: string) => {
     setSearchQuery(text);
@@ -212,10 +244,13 @@ export default function HomeScreen() {
               <Feather name="award" size={16} color="#48BB78" />
               <Text style={styles.pointsText}>{userProfile?.points?.toLocaleString() || '0'}</Text>
             </View>
-            <View style={styles.notifButton}>
-              <Feather name="bell" size={20} color="#1A2B4A" />
-              <View style={styles.notifDot} />
-            </View>
+            <TouchableOpacity 
+              style={styles.notifButton} 
+              onPress={() => setIsNotifModalVisible(true)}
+            >
+              <Feather name="bell" size={24} color="#1A2B4A" />
+              {hasUnread && <View style={styles.notifDot} />}
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -799,6 +834,112 @@ export default function HomeScreen() {
         </SafeAreaView>
       </Modal>
 
+      {/* Notifications Modal */}
+      <Modal
+        visible={isNotifModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsNotifModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.modalCloseArea}
+            activeOpacity={1}
+            onPress={() => setIsNotifModalVisible(false)}
+          />
+          <View style={[styles.modalContent, { height: '80%' }]}>
+            <View style={styles.notifHeader}>
+              <Text style={styles.notifTitle}>Thông báo</Text>
+              <TouchableOpacity onPress={() => setIsNotifModalVisible(false)}>
+                <Feather name="x" size={24} color="#1A2B4A" />
+              </TouchableOpacity>
+            </View>
+
+            {notifications.length === 0 ? (
+              <View style={styles.emptyNotifContainer}>
+                <Feather name="bell-off" size={48} color="#E2E8F0" />
+                <Text style={styles.emptyNotifText}>Bạn chưa có thông báo nào</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={notifications}
+                keyExtractor={(item) => item._id}
+                contentContainerStyle={{ paddingBottom: 20 }}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={[styles.notifItem, !item.isRead && styles.notifItemUnread]}
+                    onPress={() => handleNotifPress(item)}
+                  >
+                    <View style={[styles.notifIcon, { backgroundColor: item.isRead ? '#F7FAFC' : '#EBF8FF' }]}>
+                      <Feather
+                        name={item.type === 'promotion' ? 'tag' : 'bell'}
+                        size={18}
+                        color={item.isRead ? '#718096' : '#4299E1'}
+                      />
+                    </View>
+                    <View style={styles.notifInfo}>
+                      <Text style={[styles.notifItemTitle, !item.isRead && styles.notifTextUnread]}>
+                        {item.title}
+                      </Text>
+                      <Text style={styles.notifItemMessage} numberOfLines={2}>
+                        {item.message}
+                      </Text>
+                      <Text style={styles.notifItemTime}>
+                        {new Date(item.createdAt).toLocaleDateString('vi-VN')}
+                      </Text>
+                    </View>
+                    {!item.isRead && <View style={styles.unreadDot} />}
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Notification Detail Modal */}
+      <Modal
+        visible={!!selectedNotifForDetail}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setSelectedNotifForDetail(null)}
+      >
+        <View style={styles.detailNotifOverlay}>
+          <View style={styles.detailNotifContent}>
+            <View style={styles.detailNotifHeader}>
+              <View style={[styles.notifIcon, { backgroundColor: '#EBF8FF', marginBottom: 0 }]}>
+                 <Feather 
+                  name={selectedNotifForDetail?.type === 'promotion' ? 'tag' : 'bell'} 
+                  size={24} 
+                  color="#4299E1" 
+                />
+              </View>
+              <TouchableOpacity onPress={() => setSelectedNotifForDetail(null)}>
+                <Feather name="x" size={20} color="#CBD5E0" />
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={styles.detailNotifTitle}>{selectedNotifForDetail?.title}</Text>
+            <Text style={styles.detailNotifTime}>
+              {selectedNotifForDetail && new Date(selectedNotifForDetail.createdAt).toLocaleString('vi-VN')}
+            </Text>
+            
+            <View style={styles.detailNotifDivider} />
+            
+            <ScrollView style={{ maxHeight: 200 }}>
+              <Text style={styles.detailNotifMessage}>{selectedNotifForDetail?.message}</Text>
+            </ScrollView>
+
+            <TouchableOpacity 
+              style={styles.detailNotifButton}
+              onPress={() => setSelectedNotifForDetail(null)}
+            >
+              <Text style={styles.detailNotifButtonText}>Đóng</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 }
@@ -841,8 +982,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#FAFBFC',
   },
-
-  // Search
+  searchPlaceholder: { fontSize: 15, color: '#A0AEC0' },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -855,7 +995,6 @@ const styles = StyleSheet.create({
     borderColor: '#E8ECF0',
     marginBottom: 20,
   },
-  searchPlaceholder: { fontSize: 15, color: '#A0AEC0' },
 
   // Banner
   banner: {
@@ -1544,5 +1683,136 @@ const styles = StyleSheet.create({
   tripRatingCount: {
     fontSize: 14,
     color: '#A0AEC0',
+  },
+  // Notification Styles
+  notifHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDF2F7',
+  },
+  notifTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1A2B4A',
+  },
+  emptyNotifContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyNotifText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#A0AEC0',
+    textAlign: 'center',
+  },
+  notifItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F7FAFC',
+  },
+  notifItemUnread: {
+    backgroundColor: '#F0F9FF',
+  },
+  notifIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  notifInfo: {
+    flex: 1,
+  },
+  notifItemTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#2D3748',
+    marginBottom: 4,
+  },
+  notifTextUnread: {
+    color: '#1A2B4A',
+    fontWeight: '700',
+  },
+  notifItemMessage: {
+    fontSize: 14,
+    color: '#718096',
+    marginBottom: 4,
+  },
+  notifItemTime: {
+    fontSize: 12,
+    color: '#A0AEC0',
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#4299E1',
+    marginLeft: 8,
+  },
+  // Notification Detail Styles
+  detailNotifOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  detailNotifContent: {
+    backgroundColor: '#FFF',
+    borderRadius: 24,
+    width: '100%',
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  detailNotifHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  detailNotifTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1A2B4A',
+    marginBottom: 4,
+  },
+  detailNotifTime: {
+    fontSize: 12,
+    color: '#A0AEC0',
+    marginBottom: 16,
+  },
+  detailNotifDivider: {
+    height: 1,
+    backgroundColor: '#EDF2F7',
+    marginBottom: 16,
+  },
+  detailNotifMessage: {
+    fontSize: 15,
+    color: '#4A5568',
+    lineHeight: 22,
+  },
+  detailNotifButton: {
+    backgroundColor: '#4A7CFF',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 24,
+  },
+  detailNotifButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

@@ -8,7 +8,6 @@ import {
   TextInput,
   ScrollView,
   Image,
-
   ActivityIndicator,
   Platform,
   KeyboardAvoidingView,
@@ -42,6 +41,7 @@ export default function WriteReviewModal({
   const [comment, setComment] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const { alert: showAlert, confirm: showConfirm } = useConfirm();
 
   const resetForm = () => {
     setRating(0);
@@ -49,16 +49,18 @@ export default function WriteReviewModal({
     setImages([]);
   };
 
-  const { confirm, alert: showAlert } = useConfirm();
-
   const handleClose = async () => {
     if (rating > 0 || comment.length > 0 || images.length > 0) {
-      const discard = await confirm(
-        'Huỷ đánh giá?',
-        'Nội dung bạn nhập sẽ bị mất.',
+      const isConfirmed = await showConfirm(
+        'Huỷ đánh giá?', 
+        'Nội dung bạn nhập sẽ bị mất.', 
         'Huỷ',
+        'question'
       );
-      if (discard) { resetForm(); onClose(); }
+      if (isConfirmed) {
+        resetForm(); 
+        onClose();
+      }
     } else {
       onClose();
     }
@@ -126,11 +128,11 @@ export default function WriteReviewModal({
 
   const handleSubmit = async () => {
     if (rating === 0) {
-      showAlert('Lỗi', 'Vui lòng chọn số sao đánh giá', 'warning');
+      showAlert('Lỗi', 'Vui lòng chọn số sao đánh giá', 'error');
       return;
     }
     if (comment.trim().length < 10) {
-      showAlert('Lỗi', 'Nhận xét cần ít nhất 10 ký tự', 'warning');
+      showAlert('Lỗi', 'Nhận xét cần ít nhất 10 ký tự', 'error');
       return;
     }
     if (!hotel) return;
@@ -153,7 +155,9 @@ export default function WriteReviewModal({
       if (success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         await showAlert('Thành công! 🎉', 'Đánh giá của bạn đã được gửi', 'success');
-        resetForm(); onReviewSubmitted(); onClose();
+        resetForm(); 
+        onReviewSubmitted(); 
+        onClose();
       } else {
         showAlert('Lỗi', 'Không thể gửi đánh giá. Vui lòng thử lại.', 'error');
       }
