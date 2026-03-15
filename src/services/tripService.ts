@@ -158,6 +158,25 @@ export const tripService = {
     }
   },
 
+  updateTrip: async (tripId: string, data: {
+    title?: string;
+    destination?: string;
+    startDate?: string;
+    endDate?: string;
+    description?: string;
+    isPublished?: boolean;
+    budget?: number;
+  }): Promise<Trip | null> => {
+    try {
+      const url = ENDPOINTS.TRIPS.UPDATE(tripId);
+      const response = await axiosClient.put<any, any>(url, data);
+      return response?.trip ?? response ?? null;
+    } catch (error) {
+      console.error(`Error updating trip ${tripId}:`, error);
+      throw error;
+    }
+  },
+
   deleteTrip: async (tripId: string): Promise<any> => {
     try {
       const url = ENDPOINTS.TRIPS.DELETE(tripId);

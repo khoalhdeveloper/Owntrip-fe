@@ -8,11 +8,16 @@ import {
   Platform,
   ActivityIndicator,
   Linking,
-
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { Swipeable } from 'react-native-gesture-handler';
+import { Swipeable, Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated';
 import { Trip, TripDay, Destination, tripService } from '@/services/tripService';
 import AddPlaceModal from './AddPlaceModal';
 import { useConfirm } from '@/components/ConfirmProvider';
@@ -32,6 +37,8 @@ function getTimeOfDay(order: number): { label: string; color: string } {
   if (order <= 4) return { label: 'Buổi chiều', color: '#3B82F6' };
   return { label: 'Buổi tối', color: '#8B5CF6' };
 }
+
+const ITEM_HEIGHT = 78; // approx card height + margin
 
 // ===== MAIN COMPONENT =====
 export default function ItineraryTab({ trip, days }: { trip: Trip; days: TripDay[] }) {
@@ -124,23 +131,34 @@ export default function ItineraryTab({ trip, days }: { trip: Trip; days: TripDay
     }
   };
 
-  // Render swipe right action — refined white circle style
-  const renderDeleteAction = (dest: Destination) => (
-    <TouchableOpacity
-      style={styles.swipeDeleteAction}
-      activeOpacity={0.7}
-      onPress={() => handleDeletePlace(dest)}
-    >
-      <View style={styles.swipeDeleteCircle}>
-        <Feather name="trash-2" size={16} color="#EF4444" />
-      </View>
-    </TouchableOpacity>
-  );
-
   // Get existing placeIds for the selected day (prevent duplicate add)
   const getExistingPlaceIds = (dayNum: number): string[] => {
     return (destByDay[dayNum] || []).map((d) => d.place.placeId);
   };
+
+  // Drag reorder handler — no bounce, just swap
+  const handleDragEnd = useCallback((dayNum: number, fromIdx: number, dy: number) => {
+    const dayDests = (destByDay[dayNum] || []).sort((a, b) => a.place.order - b.place.order);
+    const offset = Math.round(dy / ITEM_HEIGHT);
+    const toIdx = Math.max(0, Math.min(dayDests.length - 1, fromIdx + offset));
+    if (toIdx === fromIdx) return;
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    // Swap in local destinations
+    const reordered = [...dayDests];
+    const [moved] = reordered.splice(fromIdx, 1);
+    reordered.splice(toIdx, 0, moved);
+
+    // Update order values
+    const updatedDests = destinations.map((d) => {
+      if (d.dayId !== dayDests[0]?.dayId) return d;
+      const newIdx = reordered.findIndex((r) => r.place._id === d.place._id);
+      if (newIdx === -1) return d;
+      return { ...d, place: { ...d.place, order: newIdx + 1 } };
+    });
+    setDestinations(updatedDests);
+  }, [destByDay, destinations]);
 
   if (loading) {
     return (
@@ -192,83 +210,22 @@ export default function ItineraryTab({ trip, days }: { trip: Trip; days: TripDay
                     <Text style={styles.emptyDayHint}>Nhấn bên dưới để thêm địa điểm đầu tiên</Text>
                   </View>
                 ) : (
-                  dayDests.map((dest, idx) => {
-                    const isLast = idx === dayDests.length - 1;
-                    const tod = getTimeOfDay(dest.place.order);
-                    const hasPhoto = dest.place.photo && !imgErrors[dest.place._id];
-
-                    return (
-                      <View key={dest.place._id} style={styles.timelineItem}>
-                        {/* Timeline line + dot */}
-                        <View style={styles.timelineTrack}>
-                          <View style={styles.timelineDot} />
-                          {!isLast && <View style={styles.timelineLine} />}
-                        </View>
-
-                        {/* Activity card — swipeable */}
-                        <Swipeable
-                          ref={(ref) => { swipeableRefs.current[dest.place._id] = ref; }}
-                          renderRightActions={() => renderDeleteAction(dest)}
-                          rightThreshold={60}
-                          overshootRight={false}
-                          containerStyle={styles.swipeableContainer}
-                          onSwipeableWillOpen={() => {
-                            if (openSwipeable.current && openSwipeable.current !== dest.place._id) {
-                              swipeableRefs.current[openSwipeable.current]?.close();
-                            }
-                            openSwipeable.current = dest.place._id;
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                          }}
-                        >
-                          <TouchableOpacity
-                            style={styles.activityCard}
-                            activeOpacity={0.7}
-                            onPress={() => {
-                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                              if (dest.place.mapUrl) Linking.openURL(dest.place.mapUrl);
-                            }}
-                          >
-                            {/* Info */}
-                            <View style={styles.activityInfo}>
-                              <Text style={styles.activityName} numberOfLines={1}>
-                                {dest.place.name}
-                              </Text>
-                              <View style={styles.activityMeta}>
-                                {dest.place.rating ? (
-                                  <>
-                                    <Feather name="star" size={11} color="#F59E0B" />
-                                    <Text style={styles.activityRating}>{dest.place.rating}</Text>
-                                    <Text style={styles.activityDot}>·</Text>
-                                  </>
-                                ) : null}
-                                <Text style={[styles.activityTag, { color: tod.color }]}>
-                                  {tod.label}
-                                </Text>
-                              </View>
-                              {dest.place.address ? (
-                                <Text style={styles.activityAddr} numberOfLines={1}>
-                                  {dest.place.address}
-                                </Text>
-                              ) : null}
-                            </View>
-
-                            {/* Thumbnail — right side */}
-                            {hasPhoto ? (
-                              <Image
-                                source={{ uri: dest.place.photo }}
-                                style={styles.activityThumb}
-                                onError={() => handleImageError(dest.place._id)}
-                              />
-                            ) : (
-                              <View style={[styles.activityThumb, styles.activityThumbPlaceholder]}>
-                                <Feather name="map-pin" size={18} color="#D1D5DB" />
-                              </View>
-                            )}
-                          </TouchableOpacity>
-                        </Swipeable>
-                      </View>
-                    );
-                  })
+                  dayDests.map((dest, idx) => (
+                    <DraggableActivityItem
+                      key={dest.place._id}
+                      dest={dest}
+                      idx={idx}
+                      isLast={idx === dayDests.length - 1}
+                      dayNum={day.day}
+                      imgErrors={imgErrors}
+                      onImageError={handleImageError}
+                      onDelete={handleDeletePlace}
+                      onDragStart={() => {/* drag visual only */}}
+                      onDragEnd={handleDragEnd}
+                      swipeableRefs={swipeableRefs}
+                      openSwipeable={openSwipeable}
+                    />
+                  ))
                 )}
 
                 {/* + Add Activity — uses dayId from TripDay */}
@@ -427,4 +384,192 @@ const styles = StyleSheet.create({
     borderTopColor: '#E5E7EB',
   },
   addActivityText: { fontSize: 14, fontWeight: '600', color: BRAND },
+
+  // Drag handle
+  dragHandle: {
+    paddingHorizontal: 6, paddingVertical: 10,
+    justifyContent: 'center', alignItems: 'center',
+  },
 });
+
+// ===== DRAGGABLE ACTIVITY ITEM =====
+interface DraggableActivityItemProps {
+  dest: Destination;
+  idx: number;
+  isLast: boolean;
+  dayNum: number;
+  imgErrors: Record<string, boolean>;
+  onImageError: (id: string) => void;
+  onDelete: (dest: Destination) => void;
+  onDragStart: (dayNum: number) => void;
+  onDragEnd: (dayNum: number, fromIdx: number, dy: number) => void;
+  swipeableRefs: React.MutableRefObject<Record<string, Swipeable | null>>;
+  openSwipeable: React.MutableRefObject<string | null>;
+}
+
+function DraggableActivityItem({
+  dest, idx, isLast, dayNum, imgErrors,
+  onImageError, onDelete, onDragStart, onDragEnd,
+  swipeableRefs, openSwipeable,
+}: DraggableActivityItemProps) {
+  const tod = getTimeOfDay(dest.place.order);
+  const hasPhoto = dest.place.photo && !imgErrors[dest.place._id];
+
+  const translateY = useSharedValue(0);
+  const isDragging = useSharedValue(false);
+
+  const triggerHaptic = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  }, []);
+
+  const triggerDragStart = useCallback(() => {
+    onDragStart(dayNum);
+  }, [onDragStart, dayNum]);
+
+  const triggerDragEnd = useCallback((dy: number) => {
+    onDragEnd(dayNum, idx, dy);
+  }, [onDragEnd, dayNum, idx]);
+
+  const longPressGesture = Gesture.LongPress()
+    .minDuration(200)
+    .onStart(() => {
+      'worklet';
+      isDragging.value = true;
+      runOnJS(triggerHaptic)();
+      runOnJS(triggerDragStart)();
+    });
+
+  const panGesture = Gesture.Pan()
+    .activateAfterLongPress(200)
+    .onUpdate((event) => {
+      'worklet';
+      translateY.value = event.translationY;
+    })
+    .onEnd((event) => {
+      'worklet';
+      isDragging.value = false;
+      translateY.value = withTiming(0, { duration: 150 });
+      runOnJS(triggerDragEnd)(event.translationY);
+    })
+    .onFinalize(() => {
+      'worklet';
+      if (isDragging.value) {
+        isDragging.value = false;
+        translateY.value = withTiming(0, { duration: 150 });
+      }
+    });
+
+  const dragGesture = Gesture.Simultaneous(longPressGesture, panGesture);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+    zIndex: isDragging.value ? 100 : 0,
+    opacity: isDragging.value ? 0.92 : 1,
+    ...(Platform.OS === 'ios'
+      ? {
+          shadowOpacity: isDragging.value ? 0.15 : 0,
+          shadowRadius: isDragging.value ? 12 : 0,
+        }
+      : {
+          elevation: isDragging.value ? 6 : 0,
+        }),
+  }));
+
+  const renderDeleteAction = () => (
+    <TouchableOpacity
+      style={styles.swipeDeleteAction}
+      activeOpacity={0.7}
+      onPress={() => onDelete(dest)}
+    >
+      <View style={styles.swipeDeleteCircle}>
+        <Feather name="trash-2" size={16} color="#EF4444" />
+      </View>
+    </TouchableOpacity>
+  );
+
+  return (
+    <Animated.View
+      style={[
+        { shadowColor: '#000', shadowOffset: { width: 0, height: 2 } },
+        animatedStyle,
+      ]}
+    >
+      <View style={styles.timelineItem}>
+        {/* Timeline line + dot */}
+        <View style={styles.timelineTrack}>
+          <View style={styles.timelineDot} />
+          {!isLast && <View style={styles.timelineLine} />}
+        </View>
+
+        {/* Activity card — swipeable */}
+        <Swipeable
+          ref={(ref) => { swipeableRefs.current[dest.place._id] = ref; }}
+          renderRightActions={renderDeleteAction}
+          rightThreshold={60}
+          overshootRight={false}
+          containerStyle={styles.swipeableContainer}
+          onSwipeableWillOpen={() => {
+            if (openSwipeable.current && openSwipeable.current !== dest.place._id) {
+              swipeableRefs.current[openSwipeable.current]?.close();
+            }
+            openSwipeable.current = dest.place._id;
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          }}
+        >
+          <TouchableOpacity
+            style={styles.activityCard}
+            activeOpacity={0.7}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              if (dest.place.mapUrl) Linking.openURL(dest.place.mapUrl);
+            }}
+          >
+            {/* Drag Handle */}
+            <GestureDetector gesture={dragGesture}>
+              <Animated.View style={styles.dragHandle}>
+                <Feather name="menu" size={14} color="#C5C8CE" />
+              </Animated.View>
+            </GestureDetector>
+
+            {/* Info */}
+            <View style={styles.activityInfo}>
+              <Text style={styles.activityName} numberOfLines={1}>
+                {dest.place.name}
+              </Text>
+              <View style={styles.activityMeta}>
+                {dest.place.rating ? (
+                  <>
+                    <Feather name="star" size={11} color="#F59E0B" />
+                    <Text style={styles.activityRating}>{dest.place.rating}</Text>
+                    <Text style={styles.activityDot}>·</Text>
+                  </>
+                ) : null}
+                <Text style={[styles.activityTag, { color: tod.color }]}>
+                  {tod.label}
+                </Text>
+              </View>
+              {dest.place.address ? (
+                <Text style={styles.activityAddr} numberOfLines={1}>
+                  {dest.place.address}
+                </Text>
+              ) : null}
+            </View>
+
+            {/* Thumbnail — right side */}
+            {hasPhoto ? (
+              <Image
+                source={{ uri: dest.place.photo }}
+                style={styles.activityThumb}
+                onError={() => onImageError(dest.place._id)}
+              />
+            ) : (
+              <View style={[styles.activityThumb, styles.activityThumbPlaceholder]}>
+                <Feather name="map-pin" size={18} color="#D1D5DB" />
+              </View>
+            )}
+          </TouchableOpacity>
+        </Swipeable>
+      </View>
+    </Animated.View>
+  );
+}

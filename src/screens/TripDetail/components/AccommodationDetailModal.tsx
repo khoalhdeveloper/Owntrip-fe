@@ -36,6 +36,9 @@ interface AccommodationDetailModalProps {
   onClose: () => void;
   onBook: (hotel: Accommodation) => void;
   onWriteReview: (hotel: Accommodation) => void;
+  /** When true, CTA shows "Hủy phòng" instead of "Đặt phòng" */
+  isBooked?: boolean;
+  onCancelBooking?: (hotel: Accommodation) => void;
 }
 
 const STAR_LABELS = ['', 'Tệ', 'Trung bình', 'Tốt', 'Rất tốt', 'Tuyệt vời'];
@@ -61,6 +64,8 @@ export default function AccommodationDetailModal({
   onClose,
   onBook,
   onWriteReview,
+  isBooked = false,
+  onCancelBooking,
 }: AccommodationDetailModalProps) {
   const [reviews, setReviews] = useState<AccommodationReview[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
@@ -68,6 +73,8 @@ export default function AccommodationDetailModal({
   const [liked, setLiked] = useState(false);
   const [showAllAmenities, setShowAllAmenities] = useState(false);
   const [nearbyPlaces, setNearbyPlaces] = useState<{ name: string; latitude: number; longitude: number }[]>([]);
+  const [mapLoading, setMapLoading] = useState(true);
+  const [locatingUser, setLocatingUser] = useState(false);
   const webViewRef = useRef<WebView>(null);
 
   useEffect(() => {
@@ -77,7 +84,6 @@ export default function AccommodationDetailModal({
       setShowAllAmenities(false);
       fetchReviews(hotel.id);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, hotel]);
 
   const fetchReviews = async (hotelId: string) => {
@@ -167,20 +173,37 @@ export default function AccommodationDetailModal({
     if (url) Linking.openURL(url);
   };
 
-  // Handle WebView messages (my-location, marker taps)
+  // Handle My Location — native button
+  const handleMyLocation = useCallback(async () => {
+    try {
+      setLocatingUser(true);
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      const loc = await Location.getCurrentPositionAsync({});
+      webViewRef.current?.injectJavaScript(
+        `showUserLocation(${loc.coords.latitude}, ${loc.coords.longitude}); true;`
+      );
+    } catch {
+      // ignore
+    } finally {
+      setLocatingUser(false);
+    }
+  }, []);
+
+  // Handle FitAll — native button
+  const handleFitAll = useCallback(() => {
+    webViewRef.current?.injectJavaScript(`fitAllBounds(); true;`);
+  }, []);
+
+  // Handle WebView messages (my-location from HTML, marker taps)
   const handleWebViewMessage = useCallback(async (event: any) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
       if (data.type === 'requestLocation') {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') return;
-        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-        webViewRef.current?.injectJavaScript(
-          `showUserLocation(${loc.coords.latitude},${loc.coords.longitude}); true;`
-        );
+        handleMyLocation();
       }
     } catch {}
-  }, []);
+  }, [handleMyLocation]);
 
   if (!hotel) return null;
 
@@ -365,6 +388,12 @@ export default function AccommodationDetailModal({
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Vị trí</Text>
             <View style={styles.mapContainer}>
+              {mapLoading && (
+                <View style={styles.mapLoadingOverlay}>
+                  <ActivityIndicator size="small" color={BRAND} />
+                  <Text style={styles.mapLoadingText}>Đang tải bản đồ...</Text>
+                </View>
+              )}
               <WebView
                 ref={webViewRef}
                 source={{ html: mapHtml }}
@@ -377,7 +406,31 @@ export default function AccommodationDetailModal({
                 showsVerticalScrollIndicator={false}
                 showsHorizontalScrollIndicator={false}
                 onMessage={handleWebViewMessage}
+                onLoadEnd={() => setMapLoading(false)}
+                startInLoadingState={false}
               />
+
+              {/* Floating My Location button */}
+              <TouchableOpacity
+                style={styles.mapFloatingBtn}
+                onPress={handleMyLocation}
+                activeOpacity={0.8}
+                disabled={locatingUser}
+              >
+                {locatingUser
+                  ? <ActivityIndicator size="small" color={BRAND} />
+                  : <Feather name="crosshair" size={16} color={BRAND} />
+                }
+              </TouchableOpacity>
+
+              {/* Floating FitAll button */}
+              <TouchableOpacity
+                style={[styles.mapFloatingBtn, styles.mapFloatingBtnSecond]}
+                onPress={handleFitAll}
+                activeOpacity={0.8}
+              >
+                <Feather name="maximize-2" size={16} color={BRAND} />
+              </TouchableOpacity>
             </View>
             <TouchableOpacity style={styles.directionsBtn} onPress={handleDirections} activeOpacity={0.7}>
               <Feather name="navigation" size={16} color={BRAND} />
@@ -460,14 +513,25 @@ export default function AccommodationDetailModal({
             <Text style={styles.footerPrice}>{formatCurrency(hotel.pricePerNight)}</Text>
             <Text style={styles.footerPriceUnit}>/đêm</Text>
           </View>
-          <TouchableOpacity
-            style={styles.bookCTA}
-            activeOpacity={0.8}
-            onPress={() => onBook(hotel)}
-          >
-            <Feather name="calendar" size={18} color="#FFF" />
-            <Text style={styles.bookCTAText}>Đặt phòng</Text>
-          </TouchableOpacity>
+          {isBooked ? (
+            <TouchableOpacity
+              style={styles.cancelCTA}
+              activeOpacity={0.8}
+              onPress={() => onCancelBooking?.(hotel)}
+            >
+              <Feather name="x-circle" size={18} color="#EF4444" />
+              <Text style={styles.cancelCTAText}>Hủy phòng</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.bookCTA}
+              activeOpacity={0.8}
+              onPress={() => onBook(hotel)}
+            >
+              <Feather name="calendar" size={18} color="#FFF" />
+              <Text style={styles.bookCTAText}>Đặt phòng</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </Modal>
@@ -572,9 +636,30 @@ const styles = StyleSheet.create({
   // Map
   mapContainer: {
     height: 280, borderRadius: 16, overflow: 'hidden',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F3F4F6', position: 'relative',
   },
   mapWebview: { flex: 1 },
+  mapLoadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#F9FAFB',
+    justifyContent: 'center', alignItems: 'center',
+    zIndex: 10, gap: 8,
+  },
+  mapLoadingText: { fontSize: 12, color: '#9CA3AF' },
+  mapFloatingBtn: {
+    position: 'absolute', bottom: 14, right: 14,
+    width: 40, height: 40, borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    justifyContent: 'center', alignItems: 'center',
+    zIndex: 20,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 6 },
+      android: { elevation: 4 },
+    }),
+  },
+  mapFloatingBtnSecond: {
+    bottom: 62,
+  },
   directionsBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 8, paddingVertical: 12, marginTop: 8,
@@ -635,4 +720,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24, paddingVertical: 14,
   },
   bookCTAText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
+  cancelCTA: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#FEF2F2', borderRadius: 14,
+    paddingHorizontal: 24, paddingVertical: 14,
+    borderWidth: 1, borderColor: '#FECACA',
+  },
+  cancelCTAText: { fontSize: 16, fontWeight: '700', color: '#EF4444' },
 });
