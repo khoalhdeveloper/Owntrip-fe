@@ -23,14 +23,14 @@ const BRAND_LIGHT = '#EBF5FF';
 // ===== HELPERS =====
 function formatDayDate(dateStr: string): string {
   const d = new Date(dateStr);
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${months[d.getMonth()]} ${d.getDate()}`;
+  const months = ['Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'];
+  return `${d.getDate()} ${months[d.getMonth()]}`;
 }
 
 function getTimeOfDay(order: number): { label: string; color: string } {
-  if (order <= 2) return { label: 'Morning', color: '#F59E0B' };
-  if (order <= 4) return { label: 'Afternoon', color: '#3B82F6' };
-  return { label: 'Evening', color: '#8B5CF6' };
+  if (order <= 2) return { label: 'Buổi sáng', color: '#F59E0B' };
+  if (order <= 4) return { label: 'Buổi chiều', color: '#3B82F6' };
+  return { label: 'Buổi tối', color: '#8B5CF6' };
 }
 
 // ===== MAIN COMPONENT =====
@@ -169,10 +169,10 @@ export default function ItineraryTab({ trip, days }: { trip: Trip; days: TripDay
                 <Text style={styles.dayNumText}>{day.day}</Text>
               </View>
               <View style={styles.dayHeaderInfo}>
-                <Text style={styles.dayTitle}>Day {day.day}</Text>
+                <Text style={styles.dayTitle}>Ngày {day.day}</Text>
                 <Text style={styles.dayMeta}>
                   {formatDayDate(day.date)}
-                  {activityCount > 0 ? ` · ${activityCount} activit${activityCount > 1 ? 'ies' : 'y'}` : ''}
+                  {activityCount > 0 ? ` · ${activityCount} hoạt động` : ''}
                 </Text>
               </View>
               <Feather
@@ -188,8 +188,8 @@ export default function ItineraryTab({ trip, days }: { trip: Trip; days: TripDay
                 {dayDests.length === 0 ? (
                   <View style={styles.emptyDay}>
                     <Feather name="compass" size={24} color="#D1D5DB" />
-                    <Text style={styles.emptyDayText}>No activities planned</Text>
-                    <Text style={styles.emptyDayHint}>Tap below to add your first spot</Text>
+                    <Text style={styles.emptyDayText}>Chưa có hoạt động nào</Text>
+                    <Text style={styles.emptyDayHint}>Nhấn bên dưới để thêm địa điểm đầu tiên</Text>
                   </View>
                 ) : (
                   dayDests.map((dest, idx) => {
@@ -278,7 +278,7 @@ export default function ItineraryTab({ trip, days }: { trip: Trip; days: TripDay
                   onPress={() => openAddModal(day.dayId, day.day)}
                 >
                   <Feather name="plus" size={16} color={BRAND} />
-                  <Text style={styles.addActivityText}>Add Activity</Text>
+                  <Text style={styles.addActivityText}>Thêm hoạt động</Text>
                 </TouchableOpacity>
               </View>
             )}
