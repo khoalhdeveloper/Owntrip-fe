@@ -21,7 +21,7 @@ export default function AchievementScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
             <Feather name="arrow-left" size={24} color="#1E293B" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Achievement</Text>
+          <Text style={styles.headerTitle}>Thành tựu</Text>
           <TouchableOpacity style={styles.headerBtn}>
             <Feather name="settings" size={22} color="#64748B" />
           </TouchableOpacity>
@@ -39,18 +39,18 @@ export default function AchievementScreen() {
                 <Feather name="award" size={28} color="#CA8A04" />
               </View>
               <View style={styles.achievementsCardTitleWrap}>
-                <Text style={styles.achievementsCardTitle}>Your achievements</Text>
-                <Text style={styles.achievementsCardSubtitle}>Souvenirs you&apos;ve collected</Text>
+                <Text style={styles.achievementsCardTitle}>Thành tựu của bạn</Text>
+                <Text style={styles.achievementsCardSubtitle}>Lưu niệm bạn đã thu thập được</Text>
               </View>
             </View>
             <View style={styles.statsRow}>
               <View style={styles.statBox}>
                 <Text style={styles.statValue}>0</Text>
-                <Text style={styles.statLabel}>Collected</Text>
+                <Text style={styles.statLabel}>Đã thu thập</Text>
               </View>
               <View style={styles.statBox}>
                 <Text style={styles.statValue}>0</Text>
-                <Text style={styles.statLabel}>Coins earned</Text>
+                <Text style={styles.statLabel}>Xu đã nhận</Text>
               </View>
             </View>
           </View>
@@ -61,22 +61,22 @@ export default function AchievementScreen() {
               <Feather name="crosshair" size={24} color="#1E293B" />
             </View>
             <View style={styles.missionsContent}>
-              <Text style={styles.missionsTitle}>Missions</Text>
-              <Text style={styles.missionsSubtitle}>Souvenirs you haven&apos;t collected yet</Text>
+              <Text style={styles.missionsTitle}>Nhiệm vụ</Text>
+              <Text style={styles.missionsSubtitle}>Quà lưu niệm chưa thu thập</Text>
             </View>
             <Feather name="chevron-right" size={22} color="#94A3B8" />
           </TouchableOpacity>
 
           {/* Achievement History */}
           <View style={styles.historySection}>
-            <Text style={styles.historyTitle}>Achievement History</Text>
-            <Text style={styles.historySubtitle}>Souvenirs you&apos;ve collected</Text>
+            <Text style={styles.historyTitle}>Lịch sử thành tựu</Text>
+            <Text style={styles.historySubtitle}>Những món quà bạn đã tích lũy</Text>
             <View style={styles.emptyState}>
               <View style={styles.emptyIconWrap}>
                 <Feather name="package" size={56} color="#CBD5E0" />
               </View>
-              <Text style={styles.emptyTitle}>No souvenirs collected yet</Text>
-              <Text style={styles.emptyMessage}>Collect souvenirs from the Store to see them here</Text>
+              <Text style={styles.emptyTitle}>Chưa có quà lưu niệm</Text>
+              <Text style={styles.emptyMessage}>Mua quà lưu niệm tại Cửa hàng để thấy chúng ở đây</Text>
             </View>
           </View>
 
