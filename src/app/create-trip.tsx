@@ -18,6 +18,7 @@ import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { tripService } from '@/services/tripService';
+import { useConfirm } from '@/components/ConfirmProvider';
 
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -45,6 +46,7 @@ const removeAccents = (str: string) => {
 export default function CreateTripScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const { alert: showAlert } = useConfirm();
   
   const [formData, setFormData] = useState({
     title: '',
@@ -102,7 +104,7 @@ export default function CreateTripScreen() {
 
   const handleCreate = async () => {
     if (!formData.title || !formData.destination) {
-      Alert.alert("Thiếu thông tin", "Vui lòng nhập tiêu đề và điểm đến.");
+      showAlert("Thiếu thông tin", "Vui lòng nhập tiêu đề và điểm đến.", "warning");
       return;
     }
 
@@ -116,14 +118,15 @@ export default function CreateTripScreen() {
       
       const result = await tripService.createTrip(payload);
       if (result) {
-        Alert.alert(
+        await showAlert(
           "Tuyệt vời! ✈️",
           "Kế hoạch hành trình của bạn đã được tạo thành công.",
-          [{ text: "Xem chuyến đi", onPress: () => router.replace('/(tabs)/trips') }]
+          "success"
         );
+        router.replace('/(tabs)/trips');
       }
     } catch (error) {
-      Alert.alert("Lỗi", "Không thể tạo chuyến đi. Vui lòng kiểm tra lại kết nối.");
+      showAlert("Lỗi", "Không thể tạo chuyến đi. Vui lòng kiểm tra lại kết nối.", "error");
     } finally {
       setLoading(false);
     }
