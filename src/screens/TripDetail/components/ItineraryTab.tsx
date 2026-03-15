@@ -8,13 +8,14 @@ import {
   Platform,
   ActivityIndicator,
   Linking,
-  Alert,
+
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Swipeable } from 'react-native-gesture-handler';
 import { Trip, TripDay, Destination, tripService } from '@/services/tripService';
 import AddPlaceModal from './AddPlaceModal';
+import { useConfirm } from '@/components/ConfirmProvider';
 
 const BRAND = '#4A7CFF';
 const BRAND_LIGHT = '#EBF5FF';
@@ -95,36 +96,32 @@ export default function ItineraryTab({ trip, days }: { trip: Trip; days: TripDay
     fetchDestinations();
   };
 
+  const { confirmDelete, alert: showAlert } = useConfirm();
+
   // Delete place
-  const handleDeletePlace = (dest: Destination) => {
-    Alert.alert(
-      'Remove Place',
-      `Remove "${dest.place.name}" from Day ${dest.day}?`,
-      [
-        { text: 'Cancel', style: 'cancel', onPress: () => {
-          swipeableRefs.current[dest.place._id]?.close();
-        }},
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-            // Optimistic delete
-            const backup = [...destinations];
-            setDestinations((prev) => prev.filter((d) => d.place._id !== dest.place._id));
-
-            try {
-              await tripService.removePlaceFromDay(dest.dayId, dest.place._id);
-            } catch (error: any) {
-              setDestinations(backup);
-              const msg = error?.response?.data?.message || 'Failed to remove place';
-              Alert.alert('Error', msg);
-            }
-          },
-        },
-      ],
+  const handleDeletePlace = async (dest: Destination) => {
+    const confirmed = await confirmDelete(
+      'Xóa địa điểm',
+      `Xóa "${dest.place.name}" khỏi Ngày ${dest.day}?`,
+      'Xóa',
     );
+    if (!confirmed) {
+      swipeableRefs.current[dest.place._id]?.close();
+      return;
+    }
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    // Optimistic delete
+    const backup = [...destinations];
+    setDestinations((prev) => prev.filter((d) => d.place._id !== dest.place._id));
+
+    try {
+      await tripService.removePlaceFromDay(dest.dayId, dest.place._id);
+    } catch (error: any) {
+      setDestinations(backup);
+      const msg = error?.response?.data?.message || 'Không thể xóa địa điểm';
+      showAlert('Lỗi', msg, 'error');
+    }
   };
 
   // Render swipe right action — refined white circle style

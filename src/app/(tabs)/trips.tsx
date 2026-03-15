@@ -12,7 +12,7 @@ import {
   StatusBar,
   Dimensions,
   Animated,
-  Alert,
+
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -21,6 +21,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Swipeable } from 'react-native-gesture-handler';
 import { tripService, Trip } from '@/services/tripService';
+import { useConfirm } from '@/components/ConfirmProvider';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SEGMENT_PADDING = 3;
@@ -98,38 +99,33 @@ export default function TripsScreen() {
     }).start();
   };
 
+  const { confirmDelete, alert: showAlert } = useConfirm();
+
   // Optimistic delete
-  const handleDeleteTrip = (trip: Trip) => {
-    Alert.alert(
-      'Delete Trip',
-      `Are you sure you want to delete "${trip.title}"?`,
-      [
-        { text: 'Cancel', style: 'cancel', onPress: () => {
-          // Close swipeable
-          swipeableRefs.current[trip._id]?.close();
-        }},
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-            // Optimistic: remove from UI immediately
-            const backup = [...trips];
-            setTrips((prev) => prev.filter((t) => t._id !== trip._id));
-
-            try {
-              await tripService.deleteTrip(trip._id);
-            } catch (error: any) {
-              // Rollback on error
-              setTrips(backup);
-              const msg = error?.response?.data?.message || 'Failed to delete trip';
-              Alert.alert('Error', msg);
-            }
-          },
-        },
-      ],
+  const handleDeleteTrip = async (trip: Trip) => {
+    const confirmed = await confirmDelete(
+      'Xóa chuyến đi',
+      `Bạn có chắc muốn xóa "${trip.title}" không?`,
+      'Xóa',
     );
+    if (!confirmed) {
+      swipeableRefs.current[trip._id]?.close();
+      return;
+    }
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    // Optimistic: remove from UI immediately
+    const backup = [...trips];
+    setTrips((prev) => prev.filter((t) => t._id !== trip._id));
+
+    try {
+      await tripService.deleteTrip(trip._id);
+    } catch (error: any) {
+      // Rollback on error
+      setTrips(backup);
+      const msg = error?.response?.data?.message || 'Không thể xóa chuyến đi';
+      showAlert('Lỗi', msg, 'error');
+    }
   };
 
   // Render swipeable right action — refined for tall cards

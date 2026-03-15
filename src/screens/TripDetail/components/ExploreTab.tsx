@@ -250,13 +250,13 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
   }, [searchQuery, activeCategory, trip.destination, trip.province, places.length]);
 
   /* ─── Render Place Card ─── */
-  const renderPlaceCard = useCallback(({ item }: { item: Place }) => {
+  const renderPlaceCard = useCallback(({ item, itemKey }: { item: Place; itemKey?: string }) => {
     const hasPhoto = item.photo && !failedImages.has(item.placeId);
     const isSaved = savedPlaceIds.has(item.placeId);
     const isAdded = addedPlaceIds.has(item.placeId);
 
     return (
-      <View style={styles.placeCard}>
+      <View key={itemKey} style={styles.placeCard}>
         {/* Image */}
         {hasPhoto ? (
           <Image
@@ -466,9 +466,7 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
         {renderListHeader()}
         {!loading && places.length === 0 && renderEmpty()}
         {!loading && places.length > 0 && places.map((item) => (
-          <React.Fragment key={item.placeId}>
-            {renderPlaceCard({ item })}
-          </React.Fragment>
+          renderPlaceCard({ item, itemKey: item.placeId })
         ))}
       </View>
 

@@ -10,13 +10,16 @@ import {
   Linking,
   Modal,
   FlatList,
-  Alert,
+
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Trip, TripDay, Destination, tripService } from '@/services/tripService';
 import { accommodationService, Accommodation } from '@/services/accommodationService';
 import StayDatePickerModal from './StayDatePickerModal';
+import AccommodationDetailModal from './AccommodationDetailModal';
+import WriteReviewModal from './WriteReviewModal';
+import { useConfirm } from '@/components/ConfirmProvider';
 
 const BRAND = '#4A7CFF';
 const BRAND_LIGHT = '#EBF5FF';
@@ -80,6 +83,8 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
   // Accommodation state
   const [hotelModalVisible, setHotelModalVisible] = useState(false);
   const [calendarVisible, setCalendarVisible] = useState(false);
+  const [detailVisible, setDetailVisible] = useState(false);
+  const [reviewVisible, setReviewVisible] = useState(false);
   const [hotels, setHotels] = useState<Accommodation[]>([]);
   const [loadingHotels, setLoadingHotels] = useState(false);
   const [selectedHotel, setSelectedHotel] = useState<Accommodation | null>(null);
@@ -124,7 +129,19 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSelectedHotel(hotel);
     setHotelModalVisible(false);
+    setTimeout(() => setDetailVisible(true), 300);
+  };
+
+  const handleBookFromDetail = (hotel: Accommodation) => {
+    setSelectedHotel(hotel);
+    setDetailVisible(false);
     setTimeout(() => setCalendarVisible(true), 300);
+  };
+
+  const handleWriteReview = (hotel: Accommodation) => {
+    setSelectedHotel(hotel);
+    setDetailVisible(false);
+    setTimeout(() => setReviewVisible(true), 300);
   };
 
   const handleDateConfirm = (checkIn: Date, checkOut: Date) => {
@@ -135,24 +152,22 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
     setSelectedHotel(null);
   };
 
-  const handleRemoveAccommodation = () => {
-    Alert.alert(
-      'Remove Accommodation',
-      `Remove "${bookedHotel?.name}" from this trip?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove', style: 'destructive',
-          onPress: () => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            setBookedHotel(null);
-            setCheckInDate(null);
-            setCheckOutDate(null);
-          },
-        },
-      ],
+  const { confirmDelete } = useConfirm();
+
+  const handleRemoveAccommodation = async () => {
+    const confirmed = await confirmDelete(
+      'Xóa Accommodation',
+      `Xóa "${bookedHotel?.name}" khỏi chuyến đi này?`,
+      'Xóa',
     );
+    if (confirmed) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setBookedHotel(null);
+      setCheckInDate(null);
+      setCheckOutDate(null);
+    }
   };
+
 
   const formatCurrency = (amount: number) => amount.toLocaleString('vi-VN') + '₫';
   const formatShortDate = (d: Date) => {
@@ -486,6 +501,27 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
           )}
         </View>
       </Modal>
+
+      {/* ===== DETAIL MODAL ===== */}
+      <AccommodationDetailModal
+        visible={detailVisible}
+        hotel={selectedHotel}
+        trip={trip}
+        days={days}
+        onClose={() => { setDetailVisible(false); setSelectedHotel(null); }}
+        onBook={handleBookFromDetail}
+        onWriteReview={handleWriteReview}
+      />
+
+      {/* ===== WRITE REVIEW MODAL ===== */}
+      <WriteReviewModal
+        visible={reviewVisible}
+        hotel={selectedHotel}
+        onClose={() => setReviewVisible(false)}
+        onReviewSubmitted={() => {
+          if (selectedHotel) setDetailVisible(true);
+        }}
+      />
 
       {/* ===== CALENDAR MODAL ===== */}
       {selectedHotel && (
