@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   Image,
   TouchableOpacity,
   ActivityIndicator,
@@ -12,21 +11,30 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { Trip } from '@/services/tripService';
+import { Trip, TripDay } from '@/services/tripService';
 import { accommodationService, Accommodation } from '@/services/accommodationService';
 import StayDatePickerModal from './StayDatePickerModal';
+import AccommodationDetailModal from './AccommodationDetailModal';
+import WriteReviewModal from './WriteReviewModal';
 
 const BRAND = '#4A7CFF';
 
 interface AccommodationTabProps {
   trip: Trip;
+  days: TripDay[];
 }
 
-export default function AccommodationTab({ trip }: AccommodationTabProps) {
+function formatCurrency(amount: number): string {
+  return amount.toLocaleString('vi-VN') + '₫';
+}
+
+export default function AccommodationTab({ trip, days }: AccommodationTabProps) {
   const [accommodations, setAccommodations] = useState<Accommodation[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedHotel, setSelectedHotel] = useState<Accommodation | null>(null);
   const [calendarVisible, setCalendarVisible] = useState(false);
+  const [detailVisible, setDetailVisible] = useState(false);
+  const [reviewVisible, setReviewVisible] = useState(false);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
 
   const fetchAccommodations = useCallback(async () => {
@@ -43,10 +51,25 @@ export default function AccommodationTab({ trip }: AccommodationTabProps) {
 
   useEffect(() => { fetchAccommodations(); }, [fetchAccommodations]);
 
-  const handleSelectHotel = (hotel: Accommodation) => {
+  // Open detail modal
+  const handleOpenDetail = (hotel: Accommodation) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSelectedHotel(hotel);
-    setCalendarVisible(true);
+    setDetailVisible(true);
+  };
+
+  // Book flow: open date picker
+  const handleBook = (hotel: Accommodation) => {
+    setSelectedHotel(hotel);
+    setDetailVisible(false);
+    setTimeout(() => setCalendarVisible(true), 300);
+  };
+
+  // Write review
+  const handleWriteReview = (hotel: Accommodation) => {
+    setSelectedHotel(hotel);
+    setDetailVisible(false);
+    setTimeout(() => setReviewVisible(true), 300);
   };
 
   const handleDateConfirm = (checkIn: Date, checkOut: Date) => {
@@ -68,24 +91,26 @@ export default function AccommodationTab({ trip }: AccommodationTabProps) {
     );
   };
 
-  const formatCurrency = (amount: number): string => {
-    return amount.toLocaleString('vi-VN') + '₫';
-  };
-
   const handleImageError = (id: string) => {
     setImgErrors((prev) => ({ ...prev, [id]: true }));
   };
 
-  const renderHotelCard = ({ item }: { item: Accommodation }) => {
+  const renderHotelCard = (item: Accommodation) => {
     const hasImage = item.images && !imgErrors[item.id];
     const displayAmenities = item.amenities?.slice(0, 3) ?? [];
     const extraCount = (item.amenities?.length ?? 0) - 3;
 
+    // Find cheapest room
+    const cheapestRoom = item.roomTypes?.length
+      ? item.roomTypes.reduce((min, r) => (r.price < min.price ? r : min), item.roomTypes[0])
+      : null;
+
     return (
       <TouchableOpacity
+        key={item.id}
         style={styles.hotelCard}
         activeOpacity={0.85}
-        onPress={() => handleSelectHotel(item)}
+        onPress={() => handleOpenDetail(item)}
       >
         {/* Image */}
         <View style={styles.imageContainer}>
@@ -101,11 +126,18 @@ export default function AccommodationTab({ trip }: AccommodationTabProps) {
             </View>
           )}
 
-          {/* Rating badge */}
+          {/* Rating badge — FIXED: show as X.X ★ not /10 */}
           {item.rating > 0 && (
             <View style={styles.ratingBadge}>
               <Text style={styles.ratingValue}>{item.rating.toFixed(1)}</Text>
-              <Text style={styles.ratingMax}>/10</Text>
+              <Feather name="star" size={10} color="rgba(255,255,255,0.9)" />
+            </View>
+          )}
+
+          {/* Category badge */}
+          {item.category && (
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryText}>{item.category}</Text>
             </View>
           )}
 
@@ -117,18 +149,37 @@ export default function AccommodationTab({ trip }: AccommodationTabProps) {
 
         {/* Info */}
         <View style={styles.infoSection}>
-          {/* Stars */}
+          {/* Stars — FIXED: use item.star directly */}
           <View style={styles.starsRow}>
-            {Array.from({ length: Math.round(item.rating / 2) }).map((_, i) => (
+            {Array.from({ length: item.star || 0 }).map((_, i) => (
               <Feather key={i} name="star" size={12} color="#F59E0B" />
             ))}
           </View>
 
           <Text style={styles.hotelName} numberOfLines={1}>{item.name}</Text>
 
+          {/* Address — IMPROVED: show city */}
           <View style={styles.addressRow}>
             <Feather name="map-pin" size={12} color="#9CA3AF" />
-            <Text style={styles.addressText} numberOfLines={1}>{item.address}</Text>
+            <Text style={styles.addressText} numberOfLines={1}>
+              {item.address}{item.city ? `, ${item.city}` : ''}
+            </Text>
+          </View>
+
+          {/* Distance + Reviews count — NEW */}
+          <View style={styles.metaRow}>
+            {item.distanceCenter > 0 && (
+              <View style={styles.metaItem}>
+                <Feather name="navigation" size={11} color="#9CA3AF" />
+                <Text style={styles.metaText}>{item.distanceCenter} km</Text>
+              </View>
+            )}
+            {item.reviewsCount > 0 && (
+              <View style={styles.metaItem}>
+                <Feather name="message-square" size={11} color="#9CA3AF" />
+                <Text style={styles.metaText}>{item.reviewsCount.toLocaleString()} đánh giá</Text>
+              </View>
+            )}
           </View>
 
           {/* Amenities chips */}
@@ -145,21 +196,18 @@ export default function AccommodationTab({ trip }: AccommodationTabProps) {
             </View>
           )}
 
-          {/* Price + book */}
+          {/* Price + view detail */}
           <View style={styles.priceRow}>
             <View>
               <Text style={styles.priceValue}>
-                {formatCurrency(item.pricePerNight)}
+                {cheapestRoom ? `Từ ${formatCurrency(cheapestRoom.price)}` : formatCurrency(item.pricePerNight)}
               </Text>
-              <Text style={styles.priceUnit}>/night</Text>
+              <Text style={styles.priceUnit}>/đêm</Text>
             </View>
-            <TouchableOpacity
-              style={styles.bookBtn}
-              activeOpacity={0.7}
-              onPress={() => handleSelectHotel(item)}
-            >
-              <Feather name="calendar" size={18} color={BRAND} />
-            </TouchableOpacity>
+            <View style={styles.viewDetailBtn}>
+              <Text style={styles.viewDetailText}>Xem chi tiết</Text>
+              <Feather name="chevron-right" size={14} color={BRAND} />
+            </View>
           </View>
         </View>
       </TouchableOpacity>
@@ -170,7 +218,7 @@ export default function AccommodationTab({ trip }: AccommodationTabProps) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={BRAND} />
-        <Text style={styles.loadingText}>Finding accommodations...</Text>
+        <Text style={styles.loadingText}>Đang tìm khách sạn...</Text>
       </View>
     );
   }
@@ -180,18 +228,38 @@ export default function AccommodationTab({ trip }: AccommodationTabProps) {
       {accommodations.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Feather name="home" size={44} color="#D1D5DB" />
-          <Text style={styles.emptyTitle}>No Accommodations</Text>
+          <Text style={styles.emptyTitle}>Không tìm thấy khách sạn</Text>
           <Text style={styles.emptySubtitle}>
-            No places to stay found. Try again later.
+            Chưa có nơi lưu trú. Vui lòng thử lại sau.
           </Text>
         </View>
       ) : (
-        accommodations.map((item) => (
-          <React.Fragment key={item.id}>
-            {renderHotelCard({ item })}
-          </React.Fragment>
-        ))
+        accommodations.map((item) => renderHotelCard(item))
       )}
+
+      {/* Detail Modal */}
+      <AccommodationDetailModal
+        visible={detailVisible}
+        hotel={selectedHotel}
+        trip={trip}
+        days={days}
+        onClose={() => { setDetailVisible(false); setSelectedHotel(null); }}
+        onBook={handleBook}
+        onWriteReview={handleWriteReview}
+      />
+
+      {/* Write Review Modal */}
+      <WriteReviewModal
+        visible={reviewVisible}
+        hotel={selectedHotel}
+        onClose={() => { setReviewVisible(false); }}
+        onReviewSubmitted={() => {
+          // Refresh to show new review
+          if (selectedHotel) {
+            setDetailVisible(true);
+          }
+        }}
+      />
 
       {/* Calendar Modal */}
       {selectedHotel && (
@@ -246,12 +314,18 @@ const styles = StyleSheet.create({
 
   ratingBadge: {
     position: 'absolute', left: 12, bottom: 12,
-    flexDirection: 'row', alignItems: 'baseline',
+    flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: BRAND, borderRadius: 8,
     paddingHorizontal: 8, paddingVertical: 4,
   },
   ratingValue: { fontSize: 14, fontWeight: '800', color: '#FFF' },
-  ratingMax: { fontSize: 10, fontWeight: '500', color: 'rgba(255,255,255,0.7)' },
+
+  categoryBadge: {
+    position: 'absolute', left: 12, top: 12,
+    backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 6,
+    paddingHorizontal: 8, paddingVertical: 3,
+  },
+  categoryText: { fontSize: 11, fontWeight: '700', color: '#FFF' },
 
   favBtn: {
     position: 'absolute', right: 12, top: 12,
@@ -269,6 +343,10 @@ const styles = StyleSheet.create({
   addressRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   addressText: { fontSize: 13, color: '#6B7280', flex: 1 },
 
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  metaText: { fontSize: 12, color: '#9CA3AF', fontWeight: '500' },
+
   amenitiesRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
   amenityChip: {
     backgroundColor: '#F3F4F6', borderRadius: 6,
@@ -284,9 +362,8 @@ const styles = StyleSheet.create({
   priceValue: { fontSize: 18, fontWeight: '800', color: BRAND },
   priceUnit: { fontSize: 11, color: '#9CA3AF', fontWeight: '500' },
 
-  bookBtn: {
-    width: 44, height: 44, borderRadius: 14,
-    backgroundColor: '#EBF5FF',
-    justifyContent: 'center', alignItems: 'center',
+  viewDetailBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 2,
   },
+  viewDetailText: { fontSize: 13, fontWeight: '600', color: BRAND },
 });
