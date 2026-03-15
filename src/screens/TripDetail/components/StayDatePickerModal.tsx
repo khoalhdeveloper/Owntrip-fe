@@ -11,7 +11,7 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
 const BRAND = '#4A7CFF';
-const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+const WEEKDAYS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 
 interface StayDatePickerModalProps {
   visible: boolean;
@@ -58,8 +58,8 @@ export default function StayDatePickerModal({
   const [checkOut, setCheckOut] = useState<Date | null>(null);
 
   const MONTHS = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
+    'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
+    'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12',
   ];
 
   // Build calendar grid
@@ -167,7 +167,7 @@ export default function StayDatePickerModal({
               onPress={() => { setCheckIn(null); setCheckOut(null); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <Text style={styles.clearBtn}>Clear</Text>
+              <Text style={styles.clearBtn}>Xóa</Text>
             </TouchableOpacity>
           ) : (
             <View />
@@ -179,12 +179,12 @@ export default function StayDatePickerModal({
 
         {/* Title */}
         <View style={styles.titleSection}>
-          <Text style={styles.title}>How long are you staying? 📅</Text>
+          <Text style={styles.title}>Bạn sẽ ở lại bao lâu? 📅</Text>
           <Text style={styles.subtitle}>
-            Select your dates to stay in <Text style={styles.hotelName}>{hotelName}</Text>
+            Chọn ngày bạn sẽ ở lại tại <Text style={styles.hotelName}>{hotelName}</Text>
           </Text>
           <Text style={styles.tapHint}>
-            {!checkIn ? 'Tap a date to set check-in' : !checkOut ? 'Now tap check-out date' : 'Dates selected! Tap Continue'}
+            {!checkIn ? 'Nhấn một ngày để chọn nhận phòng' : !checkOut ? 'Tiếp theo, hãy chọn ngày trả phòng' : 'Đã chọn xong! Nhấn Tiếp tục'}
           </Text>
         </View>
 
@@ -260,9 +260,9 @@ export default function StayDatePickerModal({
         {checkIn && (
           <View style={styles.selectionSummary}>
             <View style={styles.dateBox}>
-              <Text style={styles.dateLabel}>CHECK-IN</Text>
+              <Text style={styles.dateLabel}>NHẬN PHÒNG</Text>
               <Text style={styles.dateValue}>
-                {checkIn.getDate()} {MONTHS[checkIn.getMonth()].slice(0, 3)}
+                {checkIn.getDate()} {MONTHS[checkIn.getMonth()].replace('Tháng ', 'Th')}
               </Text>
             </View>
 
@@ -273,22 +273,22 @@ export default function StayDatePickerModal({
             <View style={[styles.dateBox, { alignItems: 'flex-end' }]}>
               {checkOut ? (
                 <>
-                  <Text style={styles.dateLabel}>CHECK-OUT</Text>
+                  <Text style={styles.dateLabel}>TRẢ PHÒNG</Text>
                   <Text style={styles.dateValue}>
-                    {checkOut.getDate()} {MONTHS[checkOut.getMonth()].slice(0, 3)}
+                    {checkOut.getDate()} {MONTHS[checkOut.getMonth()].replace('Tháng ', 'Th')}
                   </Text>
                 </>
               ) : (
                 <>
-                  <Text style={styles.dateLabel}>CHECK-OUT</Text>
-                  <Text style={styles.selectHint}>Select date</Text>
+                  <Text style={styles.dateLabel}>TRẢ PHÒNG</Text>
+                  <Text style={styles.selectHint}>Chọn ngày</Text>
                 </>
               )}
             </View>
 
             {nights > 0 && (
               <View style={styles.nightsBadge}>
-                <Text style={styles.nightsText}>{nights}N</Text>
+                <Text style={styles.nightsText}>{nights} đêm</Text>
               </View>
             )}
           </View>
@@ -304,7 +304,7 @@ export default function StayDatePickerModal({
           disabled={!(checkIn && checkOut)}
           onPress={handleConfirm}
         >
-          <Text style={styles.confirmBtnText}>Continue</Text>
+          <Text style={styles.confirmBtnText}>Tiếp tục</Text>
           <Feather name="chevron-right" size={18} color="#FFF" />
         </TouchableOpacity>
       </View>

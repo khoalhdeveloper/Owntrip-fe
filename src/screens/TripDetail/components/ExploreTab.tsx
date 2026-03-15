@@ -12,13 +12,13 @@ import {
   RefreshControl,
   ScrollView,
   Modal,
-  Alert,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { placesService, Place } from '@/services/placesService';
 import { Trip, TripDay, tripService, AddPlaceBody } from '@/services/tripService';
+import { useConfirm } from '@/components/ConfirmProvider';
 
 /* ─── Brand ─── */
 const BRAND = '#4A7CFF';
@@ -32,13 +32,13 @@ interface Category {
 }
 
 const CATEGORIES: Category[] = [
-  { key: 'all', label: 'All', emoji: '📍', apiType: '' },
-  { key: 'restaurant', label: 'Restaurants', emoji: '🍽️', apiType: 'restaurant' },
-  { key: 'cafe', label: 'Cafés', emoji: '☕', apiType: 'cafe' },
-  { key: 'attraction', label: 'Attractions', emoji: '🏛️', apiType: 'tourist_attraction' },
-  { key: 'lodging', label: 'Hotels', emoji: '🏨', apiType: 'lodging' },
-  { key: 'shopping', label: 'Shopping', emoji: '🛍️', apiType: 'shopping_mall' },
-  { key: 'nightlife', label: 'Nightlife', emoji: '🌙', apiType: 'bar' },
+  { key: 'all', label: 'Tất cả', emoji: '📍', apiType: '' },
+  { key: 'restaurant', label: 'Nhà hàng', emoji: '🍽️', apiType: 'restaurant' },
+  { key: 'cafe', label: 'Cà phê', emoji: '☕', apiType: 'cafe' },
+  { key: 'attraction', label: 'Tham quan', emoji: '🏛️', apiType: 'tourist_attraction' },
+  { key: 'lodging', label: 'Khách sạn', emoji: '🏨', apiType: 'lodging' },
+  { key: 'shopping', label: 'Mua sắm', emoji: '🛍️', apiType: 'shopping_mall' },
+  { key: 'nightlife', label: 'Giải trí', emoji: '🌙', apiType: 'bar' },
 ];
 
 /* ─── Helpers ─── */
@@ -68,6 +68,7 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
   const [showDayPicker, setShowDayPicker] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [addingToDay, setAddingToDay] = useState<string | null>(null);
+  const { alert: showAlert } = useConfirm();
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const STORAGE_KEY = `explore_saved_${trip._id}`;
@@ -219,11 +220,11 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
       };
       await tripService.addPlaceToDay(dayId, body);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Added! ✅', `${selectedPlace.name} has been added to your itinerary.`);
+      showAlert('Đã thêm! ✅', `${selectedPlace.name} đã được thêm vào lịch trình của bạn.`, 'success');
       setShowDayPicker(false);
       setSelectedPlace(null);
     } catch {
-      Alert.alert('Error', 'Failed to add place. Please try again.');
+      showAlert('Lỗi', 'Không thể thêm địa điểm. Vui lòng thử lại.', 'error');
     } finally {
       setAddingToDay(null);
     }
@@ -243,10 +244,10 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
 
   /* ─── Section title ─── */
   const sectionTitle = useMemo(() => {
-    if (searchQuery.trim().length > 0) return `Results for "${searchQuery}"`;
+    if (searchQuery.trim().length > 0) return `Kết quả cho "${searchQuery}"`;
     const cat = CATEGORIES.find(c => c.key === activeCategory);
     const count = places.length;
-    return `${cat?.emoji || '📍'} ${count} ${cat?.label || 'Places'} near ${trip.destination || trip.province}`;
+    return `${cat?.emoji || '📍'} ${count} ${cat?.label || 'Địa điểm'} gần ${trip.destination || trip.province}`;
   }, [searchQuery, activeCategory, trip.destination, trip.province, places.length]);
 
   /* ─── Render Place Card ─── */
@@ -280,7 +281,7 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
               <Feather name="star" size={13} color="#F59E0B" />
               <Text style={styles.ratingText}>{item.rating!.toFixed(1)}</Text>
               {(item.totalReviews ?? 0) > 0 && (
-                <Text style={styles.reviewCount}>({item.totalReviews} reviews)</Text>
+                <Text style={styles.reviewCount}>({item.totalReviews} đánh giá)</Text>
               )}
             </View>
           )}
@@ -296,7 +297,7 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
             {isAdded ? (
               <View style={styles.addedBadge}>
                 <Feather name="check" size={12} color="#10B981" />
-                <Text style={styles.addedText}>In itinerary</Text>
+                <Text style={styles.addedText}>Trong lịch trình</Text>
               </View>
             ) : (
               <TouchableOpacity
@@ -305,7 +306,7 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
                 activeOpacity={0.7}
               >
                 <Feather name="plus" size={13} color="#FFF" />
-                <Text style={styles.addBtnText}>Add to Trip</Text>
+                <Text style={styles.addBtnText}>Thêm vào chuyến đi</Text>
               </TouchableOpacity>
             )}
 
@@ -331,9 +332,9 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
     return (
       <View style={styles.emptyState}>
         <Feather name="map-pin" size={40} color="#D1D5DB" />
-        <Text style={styles.emptyTitle}>No places found</Text>
+        <Text style={styles.emptyTitle}>Không tìm thấy địa điểm</Text>
         <Text style={styles.emptySubtitle}>
-          {searchQuery ? 'Try a different search term' : 'Try another category or search'}
+          {searchQuery ? 'Hãy thử từ khóa tìm kiếm khác' : 'Hãy thử danh mục hoặc tìm kiếm khác'}
         </Text>
       </View>
     );
@@ -348,7 +349,7 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
           <View style={styles.savedHeader}>
             <View style={styles.savedTitleRow}>
               <Feather name="bookmark" size={16} color={BRAND} />
-              <Text style={styles.savedTitle}>Saved Places</Text>
+              <Text style={styles.savedTitle}>Địa điểm đã lưu</Text>
               <View style={styles.savedCount}>
                 <Text style={styles.savedCountText}>{savedPlaces.length}</Text>
               </View>
@@ -396,7 +397,7 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
         <Feather name="search" size={18} color="#9CA3AF" />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search places, activities..."
+          placeholder="Tìm kiếm địa điểm, hoạt động..."
           placeholderTextColor="#9CA3AF"
           value={searchQuery}
           onChangeText={handleSearchChange}
@@ -441,7 +442,7 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
       {loading && (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="small" color={BRAND} />
-          <Text style={styles.loadingText}>Finding places...</Text>
+          <Text style={styles.loadingText}>Đang tìm địa điểm...</Text>
         </View>
       )}
     </View>
@@ -452,9 +453,9 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
     return (
       <View style={styles.emptyState}>
         <Feather name="compass" size={40} color="#D1D5DB" />
-        <Text style={styles.emptyTitle}>Locating destination...</Text>
+        <Text style={styles.emptyTitle}>Đang xác định điểm đến...</Text>
         <Text style={styles.emptySubtitle}>
-          Add places to your itinerary to explore nearby
+          Thêm địa điểm vào lịch trình để khám phá xung quanh
         </Text>
       </View>
     );
@@ -477,7 +478,7 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
             {/* Handle bar */}
             <View style={styles.sheetHandle} />
 
-            <Text style={styles.dayPickerTitle}>Add to which day?</Text>
+            <Text style={styles.dayPickerTitle}>Thêm vào ngày nào?</Text>
             {selectedPlace && (
               <Text style={styles.dayPickerSubtitle} numberOfLines={1}>
                 {selectedPlace.name}
@@ -500,9 +501,9 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
                       <Text style={styles.dayCircleText}>{day.day}</Text>
                     </View>
                     <View style={styles.dayOptionInfo}>
-                      <Text style={styles.dayOptionTitle}>Day {day.day}</Text>
+                      <Text style={styles.dayOptionTitle}>Ngày {day.day}</Text>
                       <Text style={styles.dayOptionDate}>
-                        {formatDate(day.date)} · {placeCount} place{placeCount !== 1 ? 's' : ''}
+                        {formatDate(day.date)} · {placeCount} địa điểm
                       </Text>
                     </View>
                     {isAdding ? (
@@ -519,7 +520,7 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
               style={styles.cancelBtn}
               onPress={() => setShowDayPicker(false)}
             >
-              <Text style={styles.cancelBtnText}>Cancel</Text>
+              <Text style={styles.cancelBtnText}>Hủy bỏ</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>

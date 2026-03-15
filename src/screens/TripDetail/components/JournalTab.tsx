@@ -20,6 +20,7 @@ import * as Location from 'expo-location';
 import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Trip, TripDay } from '@/services/tripService';
+import { useConfirm } from '@/components/ConfirmProvider';
 
 // ── Extracted modules ──
 import { BRAND, MOCK_MEMORIES, MOCK_TIMES, MOCK_PLACES, TimelineEntry } from './journal/types';
@@ -50,6 +51,7 @@ export default function JournalTab({ trip, days, onScrollToMap }: JournalTabProp
   const [locatingUser, setLocatingUser] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<{ index: number; entry: TimelineEntry; distFromPrev: string | null } | null>(null);
   const [navigatingToPlace, setNavigatingToPlace] = useState(false);
+  const { alert: showAlert } = useConfirm();
 
   const webViewRef = useRef<WebView>(null);
   const fullscreenWebViewRef = useRef<WebView>(null);
@@ -147,7 +149,7 @@ export default function JournalTab({ trip, days, onScrollToMap }: JournalTabProp
       setLocatingUser(true);
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Please enable location services to use this feature.');
+        showAlert('Quyền bị từ chối', 'Vui lòng bật dịch vụ định vị để sử dụng tính năng này.', 'warning');
         setLocatingUser(false);
         return;
       }
@@ -156,7 +158,7 @@ export default function JournalTab({ trip, days, onScrollToMap }: JournalTabProp
       webRef.current?.injectJavaScript(`showUserLocation(${latitude}, ${longitude}); true;`);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
-      Alert.alert('Location Error', 'Unable to get your current location.');
+      showAlert('Lỗi định vị', 'Không thể lấy vị trí hiện tại của bạn.', 'error');
     } finally {
       setLocatingUser(false);
     }
@@ -168,7 +170,7 @@ export default function JournalTab({ trip, days, onScrollToMap }: JournalTabProp
       setNavigatingToPlace(true);
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Please enable location to get directions.');
+        showAlert('Quyền bị từ chối', 'Vui lòng bật định vị để lấy chỉ đường.', 'warning');
         setNavigatingToPlace(false);
         return;
       }
@@ -180,7 +182,7 @@ export default function JournalTab({ trip, days, onScrollToMap }: JournalTabProp
       }) || `https://www.google.com/maps/dir/?api=1&origin=${origLat},${origLng}&destination=${destLat},${destLng}`;
       await Linking.openURL(url);
     } catch {
-      Alert.alert('Error', 'Unable to open directions.');
+      showAlert('Lỗi', 'Không thể mở chỉ đường.', 'error');
     } finally {
       setNavigatingToPlace(false);
     }
@@ -191,7 +193,7 @@ export default function JournalTab({ trip, days, onScrollToMap }: JournalTabProp
       setNavigatingToPlace(true);
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Please enable location to navigate.');
+        showAlert('Quyền bị từ chối', 'Vui lòng bật định vị để dẫn đường.', 'warning');
         setNavigatingToPlace(false);
         return;
       }
@@ -203,7 +205,7 @@ export default function JournalTab({ trip, days, onScrollToMap }: JournalTabProp
       }) || `https://www.google.com/maps/dir/?api=1&origin=${origLat},${origLng}&destination=${destLat},${destLng}&travelmode=driving`;
       await Linking.openURL(url);
     } catch {
-      Alert.alert('Error', 'Unable to start navigation.');
+      showAlert('Lỗi', 'Không thể bắt đầu dẫn đường.', 'error');
     } finally {
       setNavigatingToPlace(false);
     }
@@ -301,7 +303,7 @@ export default function JournalTab({ trip, days, onScrollToMap }: JournalTabProp
             {visitedCount > 0 && (
               <View style={styles.visitedBadge}>
                 <View style={styles.visitedDot} />
-                <Text style={styles.visitedText}>{visitedCount} spots</Text>
+                <Text style={styles.visitedText}>{visitedCount} điểm</Text>
               </View>
             )}
             <TouchableOpacity
@@ -318,7 +320,7 @@ export default function JournalTab({ trip, days, onScrollToMap }: JournalTabProp
           {mapLoading && (
             <View style={styles.mapLoadingOverlay}>
               <ActivityIndicator size="small" color={BRAND} />
-              <Text style={styles.mapLoadingText}>Loading map...</Text>
+              <Text style={styles.mapLoadingText}>Đang tải bản đồ...</Text>
             </View>
           )}
           <WebView
@@ -387,7 +389,7 @@ export default function JournalTab({ trip, days, onScrollToMap }: JournalTabProp
                     <View style={styles.directionCardMeta}>
                       <Feather name="navigation" size={10} color={BRAND} />
                       <Text style={[styles.directionCardMetaText, { color: BRAND, fontWeight: '600' }]}>
-                        {selectedPlace.distFromPrev} from prev
+                        {selectedPlace.distFromPrev} từ điểm trước
                       </Text>
                     </View>
                   )}
@@ -405,7 +407,7 @@ export default function JournalTab({ trip, days, onScrollToMap }: JournalTabProp
                     ? <ActivityIndicator size="small" color="#FFF" />
                     : <Feather name="map" size={14} color="#FFF" />
                   }
-                  <Text style={styles.directionBtnText}>Directions</Text>
+                  <Text style={styles.directionBtnText}>Chỉ đường</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -415,7 +417,7 @@ export default function JournalTab({ trip, days, onScrollToMap }: JournalTabProp
                   disabled={navigatingToPlace}
                 >
                   <Feather name="navigation" size={14} color={BRAND} />
-                  <Text style={[styles.directionBtnText, styles.navigateBtnText]}>Navigate</Text>
+                  <Text style={[styles.directionBtnText, styles.navigateBtnText]}>Dẫn đường</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -426,7 +428,7 @@ export default function JournalTab({ trip, days, onScrollToMap }: JournalTabProp
       {/* ═══════ 2. TRAVEL TIMELINE ═══════ */}
       <View style={styles.timelineSection}>
         <View style={styles.timelineHeader}>
-          <Text style={styles.timelineTitle}>Travel Timeline</Text>
+          <Text style={styles.timelineTitle}>Dòng thời gian</Text>
           <View style={styles.timelineHeaderRight}>
             {reorderedTimeline && (
               <TouchableOpacity
@@ -439,10 +441,10 @@ export default function JournalTab({ trip, days, onScrollToMap }: JournalTabProp
                 activeOpacity={0.7}
               >
                 <Feather name="rotate-ccw" size={12} color="#EF4444" />
-                <Text style={styles.resetBtnText}>Reset</Text>
+                <Text style={styles.resetBtnText}>Đặt lại</Text>
               </TouchableOpacity>
             )}
-            <Text style={styles.timelineCount}>{visitedCount} places</Text>
+            <Text style={styles.timelineCount}>{visitedCount} điểm</Text>
           </View>
         </View>
 
@@ -548,7 +550,7 @@ export default function JournalTab({ trip, days, onScrollToMap }: JournalTabProp
                     <View style={styles.directionCardMeta}>
                       <Feather name="navigation" size={10} color={BRAND} />
                       <Text style={[styles.directionCardMetaText, { color: BRAND, fontWeight: '600' }]}>
-                        {selectedPlace.distFromPrev} from prev
+                        {selectedPlace.distFromPrev} từ điểm trước
                       </Text>
                     </View>
                   )}
@@ -565,7 +567,7 @@ export default function JournalTab({ trip, days, onScrollToMap }: JournalTabProp
                     ? <ActivityIndicator size="small" color="#FFF" />
                     : <Feather name="map" size={14} color="#FFF" />
                   }
-                  <Text style={styles.directionBtnText}>Directions</Text>
+                  <Text style={styles.directionBtnText}>Chỉ đường</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.directionBtn, styles.navigateBtn]}
@@ -574,7 +576,7 @@ export default function JournalTab({ trip, days, onScrollToMap }: JournalTabProp
                   disabled={navigatingToPlace}
                 >
                   <Feather name="navigation" size={14} color={BRAND} />
-                  <Text style={[styles.directionBtnText, styles.navigateBtnText]}>Navigate</Text>
+                  <Text style={[styles.directionBtnText, styles.navigateBtnText]}>Dẫn đường</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -596,7 +598,7 @@ export default function JournalTab({ trip, days, onScrollToMap }: JournalTabProp
                 <View style={styles.sheetBrandDot} />
                 <Text style={styles.sheetTitle}>{trip.destination}</Text>
               </View>
-              <Text style={styles.sheetCount}>{visitedCount} spots</Text>
+              <Text style={styles.sheetCount}>{visitedCount} điểm</Text>
             </View>
 
             {/* Scrollable Timeline inside Sheet */}
