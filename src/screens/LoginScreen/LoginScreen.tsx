@@ -58,7 +58,7 @@ export default function LoginScreen() {
         loginWithBackend(idToken);
       } else {
         loginCalled.current = false;
-        Toast.show({ type: 'error', text1: 'Google Login Failed', text2: 'No id token returned from Google.' });
+        Toast.show({ type: 'error', text1: 'Đăng nhập Google thất bại', text2: 'Không nhận được mã xác thực từ Google.' });
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -123,7 +123,7 @@ export default function LoginScreen() {
             disabled={!request}
           >
             <FontAwesome name="google" size={20} color="#4285F4" />
-            <Text style={styles.googleText}>Log in by Google</Text>
+            <Text style={styles.googleText}>Đăng nhập bằng Google</Text>
           </TouchableOpacity>
 
           {/* Nút Email — mở AuthModal */}
@@ -133,7 +133,7 @@ export default function LoginScreen() {
             activeOpacity={0.8}
           >
             <FontAwesome name="envelope" size={18} color="#FFFFFF" />
-            <Text style={styles.emailText}>Log in by Email</Text>
+            <Text style={styles.emailText}>Đăng nhập bằng Email</Text>
           </TouchableOpacity>
         </View>
       </ImageBackground>
