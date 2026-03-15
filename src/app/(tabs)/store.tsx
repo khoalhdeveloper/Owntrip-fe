@@ -23,6 +23,7 @@ import { decodeJWT } from '@/utils/jwtUtils';
 import { userService, UserProfile } from '@/services/userService';
 import { souvenirsService, Souvenir } from '@/services/souvenirsService';
 import { decorationsService, Decoration } from '@/services/decorationsService';
+import { useConfirm } from '@/components/ConfirmProvider';
 
 const { width } = Dimensions.get('window');
 const CARD_GAP = 12;
@@ -33,12 +34,12 @@ const DECORATION_CARD_WIDTH = 140;
 const DECORATION_SCROLL_PADDING_RIGHT = width - GRID_PADDING * 2 - DECORATION_CARD_WIDTH - 16;
 
 const DECORATION_TYPE_LABEL: Record<string, string> = {
-  banner: 'Profile banner',
-  avatar: 'Avatar frame',
-  bundle: 'Bundle',
+  banner: 'Ảnh bìa hồ sơ',
+  avatar: 'Khung ảnh đại diện',
+  bundle: 'Gói trang trí',
 };
 function getDecorationCategory(type?: string) {
-  return (type && DECORATION_TYPE_LABEL[type]) || 'Decoration';
+  return (type && DECORATION_TYPE_LABEL[type]) || 'Trang trí';
 }
 
 export default function StoreScreen() {
@@ -51,6 +52,7 @@ export default function StoreScreen() {
   const [selectedDecoration, setSelectedDecoration] = useState<Decoration | null>(null);
   const [selectedSouvenir, setSelectedSouvenir] = useState<Souvenir | null>(null);
   const [buying, setBuying] = useState(false);
+  const { alert: showAlert, confirm: showConfirm, show: customShow } = useConfirm();
   // Sử dụng 'points' làm 'coins' trong Store vì balance thường là tiền mặt/ví
   const coinBalance = profile?.points ?? 0;
 
@@ -116,38 +118,34 @@ export default function StoreScreen() {
 
   const handleBuyItem = async (item: { id: string, name: string, image: string, type: string, price: number }) => {
     if (!profile?.userId) {
-      Alert.alert('Notice', 'Please login to purchase items');
+      showAlert('Thông báo', 'Vui lòng đăng nhập để mua hàng', 'warning');
       return;
     }
 
-    Alert.alert(
-      'Confirm Purchase',
-      `Do you want to buy "${item.name}" for ${item.price} coins?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Buy',
-          onPress: async () => {
-            setBuying(true);
-            try {
-              const res = await userService.purchaseItem(profile.userId, item);
-              if (res.success) {
-                Alert.alert('Success', 'Item added to your inventory!');
-                loadProfile(); // Refresh balance
-                setSelectedDecoration(null);
-                setSelectedSouvenir(null);
-              } else {
-                Alert.alert('Error', res.message);
-              }
-            } catch (e) {
-              Alert.alert('Error', 'Something went wrong');
-            } finally {
-              setBuying(false);
-            }
-          }
-        }
-      ]
+    const isConfirmed = await showConfirm(
+      'Xác nhận mua hàng',
+      `Bạn có muốn mua "${item.name}" với giá ${item.price} xu không?`,
+      'Mua ngay'
     );
+
+    if (isConfirmed) {
+      setBuying(true);
+      try {
+        const res = await userService.purchaseItem(profile.userId, item);
+        if (res.success) {
+          showAlert('Thành công', 'Vật phẩm đã được thêm vào kho của bạn!', 'success');
+          loadProfile(); // Refresh balance
+          setSelectedDecoration(null);
+          setSelectedSouvenir(null);
+        } else {
+          showAlert('Lỗi', res.message, 'error');
+        }
+      } catch (e) {
+        showAlert('Lỗi', 'Đã có lỗi xảy ra', 'error');
+      } finally {
+        setBuying(false);
+      }
+    }
   };
 
   return (
@@ -156,7 +154,7 @@ export default function StoreScreen() {
       <SafeAreaView style={styles.safe} edges={['top']}>
         {/* Header: Settings */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Store</Text>
+          <Text style={styles.headerTitle}>Cửa hàng</Text>
           <TouchableOpacity style={styles.settingsBtn} onPress={() => {}}>
             <Feather name="settings" size={22} color="#64748B" />
           </TouchableOpacity>
@@ -174,7 +172,7 @@ export default function StoreScreen() {
                   <MaterialIcons name="stars" size={28} color="#FFB300" />
                 </View>
                 <View style={styles.coinTextWrap}>
-                  <Text style={styles.coinLabel}>My Coins (Points)</Text>
+                  <Text style={styles.coinLabel}>Xu của tôi (Điểm)</Text>
                 {profile ? (
                   <Text style={styles.coinValue}>{coinBalance.toLocaleString()}</Text>
                 ) : (
@@ -186,49 +184,26 @@ export default function StoreScreen() {
               <TouchableOpacity 
                 style={styles.topUpBtnWrap} 
                 activeOpacity={0.85}
-                onPress={() => {
-                  Alert.alert(
-                    'Recharge Points',
-                    'Choose a recharge method:',
-                    [
-                      { text: 'Cancel', style: 'cancel' },
-                      { 
-                        text: 'VNPay (100k VND)', 
-                        onPress: async () => {
-                          setBuying(true);
-                          try {
-                            const res = await userService.createVNPayPayment(100000);
-                            if (res.success && res.paymentUrl) {
-                              // Mở link thanh toán ngay trong ứng dụng
-                              console.log('🔗 [VNPAY] Opening URL:', res.paymentUrl);
-                              await WebBrowser.openBrowserAsync(res.paymentUrl);
-                              
-                              // Sau khi tắt trình duyệt, tự động tải lại điểm mới
-                              loadProfile();
-                            } else {
-                              Alert.alert('Error', res.message || 'Could not create payment link');
-                            }
-                          } catch (error) {
-                            Alert.alert('Error', 'Connection failed');
-                          } finally {
-                            setBuying(false);
-                          }
-                        } 
-                      },
-                      { 
-                        text: 'Simulate Top Up (50k)', 
-                        onPress: async () => {
-                          const res = await userService.topUpPoints(50000);
-                          if (res.success) {
-                            Alert.alert('Success', `Earned ${res.pointsEarned} points!`);
-                            loadProfile();
-                          } else {
-                            Alert.alert('Error', res.message);
-                          }
-                        } 
-                      }
+                onPress={async () => {
+                  const methodIdx = await customShow({
+                    title: 'Nạp điểm',
+                    message: 'Chọn phương thức nạp điểm:',
+                    icon: 'question',
+                    buttons: [
+                      { text: 'Huỷ', style: 'cancel' },
+                      { text: 'Simulate (50k)', style: 'default' },
                     ]
-                  );
+                  });
+                  
+                  if (methodIdx === 1) { // Simulate
+                    const res = await userService.topUpPoints(50000);
+                    if (res.success) {
+                      showAlert('Thành công', `Đã nhận được ${res.pointsEarned} điểm!`, 'success');
+                      loadProfile();
+                    } else {
+                      showAlert('Lỗi', res.message, 'error');
+                    }
+                  }
                 }}
               >
                 <LinearGradient
@@ -237,11 +212,11 @@ export default function StoreScreen() {
                   end={{ x: 1, y: 0 }}
                   style={styles.topUpBtn}
                 >
-                  <Text style={styles.topUpBtnText}>Get Points</Text>
+                  <Text style={styles.topUpBtnText}>Nạp điểm</Text>
                 </LinearGradient>
               </TouchableOpacity>
               <TouchableOpacity style={styles.historyBtn} activeOpacity={0.7} onPress={() => router.push('/achievement')}>
-                <Text style={styles.historyBtnText}>Achievements</Text>
+                <Text style={styles.historyBtnText}>Thành tựu</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -249,9 +224,9 @@ export default function StoreScreen() {
           {/* Souvenir collections - từ MockAPI */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Souvenir collections</Text>
+              <Text style={styles.sectionTitle}>Bộ sưu tập lưu niệm</Text>
               <TouchableOpacity>
-                <Text style={styles.viewAll}>View all &gt;</Text>
+                <Text style={styles.viewAll}>Xem tất cả &gt;</Text>
               </TouchableOpacity>
             </View>
             {loadingSouvenirs ? (
@@ -271,7 +246,7 @@ export default function StoreScreen() {
                       end={{ x: 1, y: 0 }}
                       style={styles.priceBtn}
                     >
-                      <Text style={styles.priceBtnText}>{item.amount} coins</Text>
+                      <Text style={styles.priceBtnText}>{item.amount} xu</Text>
                     </LinearGradient>
                   </TouchableOpacity>
                 ))}
@@ -282,9 +257,9 @@ export default function StoreScreen() {
           {/* Decoration - từ MockAPI */}
           <View style={styles.decorationSection}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Decoration</Text>
+              <Text style={styles.sectionTitle}>Trang trí</Text>
               <TouchableOpacity onPress={() => router.push('/decorations')}>
-                <Text style={styles.viewAll}>View all &gt;</Text>
+                <Text style={styles.viewAll}>Xem tất cả &gt;</Text>
               </TouchableOpacity>
             </View>
             {loadingDecorations ? (
@@ -306,7 +281,7 @@ export default function StoreScreen() {
                       <Text style={styles.decorationName} numberOfLines={2}>{item.name}</Text>
                       <View style={styles.coinsRow}>
                         <Feather name="award" size={14} color="#D97706" />
-                        <Text style={styles.coinsText}>{item.coins} coins</Text>
+                        <Text style={styles.coinsText}>{item.coins} xu</Text>
                       </View>
                     </TouchableOpacity>
                   ))}
@@ -318,7 +293,7 @@ export default function StoreScreen() {
           {/* Recent Activity */}
           <View style={styles.activitySection}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Recent Activity</Text>
+              <Text style={styles.sectionTitle}>Hoạt động gần đây</Text>
             </View>
             
             {!profile?.inventory || profile.inventory.length === 0 ? (
@@ -327,8 +302,8 @@ export default function StoreScreen() {
                   <Feather name="info" size={20} color="#3B82F6" />
                 </View>
                 <View style={styles.activityContent}>
-                  <Text style={styles.activityTitle}>No recent purchases</Text>
-                  <Text style={styles.activitySubtitle}>Start exploring the store!</Text>
+                  <Text style={styles.activityTitle}>Chưa có giao dịch gần đây</Text>
+                  <Text style={styles.activitySubtitle}>Bắt đầu khám phá cửa hàng ngay!</Text>
                 </View>
               </View>
             ) : (
@@ -338,8 +313,8 @@ export default function StoreScreen() {
                     <Feather name="shopping-bag" size={20} color="#EF4444" />
                   </View>
                   <View style={styles.activityContent}>
-                    <Text style={styles.activityTitle}>Purchased {item.name}</Text>
-                    <Text style={styles.activitySubtitle}>{new Date(item.purchasedAt).toLocaleDateString()}</Text>
+                    <Text style={styles.activityTitle}>Đã mua {item.name}</Text>
+                    <Text style={styles.activitySubtitle}>{new Date(item.purchasedAt).toLocaleDateString('vi-VN')}</Text>
                   </View>
                   <Text style={[styles.activityAmount, { color: '#EF4444' }]}>-{item.price}</Text>
                 </View>
@@ -386,11 +361,11 @@ export default function StoreScreen() {
                   {/* Giá */}
                   <View style={styles.detailPriceRow}>
                     <Feather name="award" size={22} color="#A78BFA" />
-                    <Text style={styles.detailPrice}>{selectedDecoration.coins} coins</Text>
+                    <Text style={styles.detailPrice}>{selectedDecoration.coins} xu</Text>
                   </View>
                   {/* Mô tả */}
                   <Text style={styles.detailDesc}>
-                    Decorate your profile with unique items. Items will be applied to your profile after purchase. Pay with Coin Balance.
+                    Trang trí hồ sơ của bạn với những vật phẩm độc đáo. Các vật phẩm sẽ được áp dụng cho hồ sơ của bạn sau khi mua. Thanh toán bằng số dư xu.
                   </Text>
                 </ScrollView>
 
@@ -413,7 +388,7 @@ export default function StoreScreen() {
                     ) : (
                       <>
                         <Feather name="award" size={20} color="#FFF" />
-                        <Text style={styles.detailBuyText}>Buy with {selectedDecoration.coins} coins</Text>
+                        <Text style={styles.detailBuyText}>Mua với {selectedDecoration.coins} xu</Text>
                       </>
                     )}
                   </TouchableOpacity>
@@ -456,10 +431,10 @@ export default function StoreScreen() {
                   <Text style={styles.detailName}>{selectedSouvenir.name}</Text>
                   <View style={styles.detailPriceRow}>
                     <Feather name="award" size={22} color="#A78BFA" />
-                    <Text style={styles.detailPrice}>{selectedSouvenir.amount} coins</Text>
+                    <Text style={styles.detailPrice}>{selectedSouvenir.amount} xu</Text>
                   </View>
                   <Text style={styles.detailDesc}>
-                    {selectedSouvenir.description || 'Souvenir from your travels. Pay with Coin Balance to add to your collection.'}
+                    {selectedSouvenir.description || 'Quà lưu niệm từ những chuyến đi của bạn. Thanh toán bằng số dư xu để thêm vào bộ sưu tập.'}
                   </Text>
                 </ScrollView>
 
@@ -481,7 +456,7 @@ export default function StoreScreen() {
                     ) : (
                       <>
                         <Feather name="award" size={20} color="#FFF" />
-                        <Text style={styles.detailBuyText}>Buy with {selectedSouvenir.amount} coins</Text>
+                        <Text style={styles.detailBuyText}>Mua với {selectedSouvenir.amount} xu</Text>
                       </>
                     )}
                   </TouchableOpacity>

@@ -38,11 +38,11 @@ const FILTERS: FilterType[] = ['all', 'upcoming', 'past'];
 function formatDateRange(start: string, end: string): string {
   const s = new Date(start);
   const e = new Date(end);
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const months = ['Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'];
   if (s.getMonth() === e.getMonth()) {
-    return `${months[s.getMonth()]} ${s.getDate()}–${e.getDate()}, ${e.getFullYear()}`;
+    return `${s.getDate()} – ${e.getDate()} ${months[e.getMonth()]}, ${e.getFullYear()}`;
   }
-  return `${months[s.getMonth()]} ${s.getDate()} – ${months[e.getMonth()]} ${e.getDate()}`;
+  return `${s.getDate()} ${months[s.getMonth()]} – ${e.getDate()} ${months[e.getMonth()]}, ${e.getFullYear()}`;
 }
 
 function getDaysUntil(startDate: string): number {
@@ -139,7 +139,7 @@ export default function TripsScreen() {
         <View style={styles.swipeDeleteCircle}>
           <Feather name="trash-2" size={18} color="#EF4444" />
         </View>
-        <Text style={styles.swipeDeleteText}>Delete</Text>
+        <Text style={styles.swipeDeleteText}>Xóa</Text>
       </TouchableOpacity>
     );
   };
@@ -197,14 +197,14 @@ export default function TripsScreen() {
             {status === 'ongoing' && (
               <View style={styles.liveIndicator}>
                 <View style={styles.liveDot} />
-                <Text style={styles.liveText}>Active</Text>
+                <Text style={styles.liveText}>Đang diễn ra</Text>
               </View>
             )}
 
             {status === 'upcoming' && daysUntil > 0 && daysUntil <= 30 && (
               <View style={styles.countdownBadge}>
                 <Text style={styles.countdownText}>
-                  {daysUntil === 1 ? 'Tomorrow' : `${daysUntil}d`}
+                  {daysUntil === 1 ? 'Ngày mai' : `Còn ${daysUntil}n`}
                 </Text>
               </View>
             )}
@@ -212,7 +212,7 @@ export default function TripsScreen() {
             <View style={styles.cardImageContent}>
               <Text style={styles.cardImageTitle} numberOfLines={2}>{item.title}</Text>
               <Text style={styles.cardImageMeta}>
-                {item.destination} · {item.totalDays} day{item.totalDays > 1 ? 's' : ''}
+                {item.destination} · {item.totalDays} ngày
               </Text>
             </View>
           </View>
@@ -234,7 +234,7 @@ export default function TripsScreen() {
 
       {/* ===== HEADER ===== */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Trips</Text>
+        <Text style={styles.headerTitle}>Chuyến đi</Text>
         <TouchableOpacity
           style={styles.planBtn}
           activeOpacity={0.7}
@@ -244,7 +244,7 @@ export default function TripsScreen() {
           }}
         >
           <Feather name="edit-3" size={14} color="#FFF" />
-          <Text style={styles.planBtnText}>Plan Trip</Text>
+          <Text style={styles.planBtnText}>Tạo chuyến đi</Text>
         </TouchableOpacity>
       </View>
 
@@ -259,9 +259,9 @@ export default function TripsScreen() {
         />
         {FILTERS.map((key) => {
           const active = filter === key;
-          const label = key === 'all' ? `All (${counts.all})`
-            : key === 'upcoming' ? `Upcoming (${counts.upcoming})`
-            : `Past (${counts.past})`;
+          const label = key === 'all' ? `Tất cả (${counts.all})`
+            : key === 'upcoming' ? `Sắp đi (${counts.upcoming})`
+            : `Đã đi (${counts.past})`;
           return (
             <TouchableOpacity
               key={key}
@@ -284,10 +284,10 @@ export default function TripsScreen() {
         <View style={styles.empty}>
           <Feather name="map" size={44} color="#D1D5DB" />
           <Text style={styles.emptyTitle}>
-            {filter === 'all' ? 'No trips yet' : `No ${filter} trips`}
+            {filter === 'all' ? 'Chưa có chuyến đi nào' : `Không có chuyến đi ${filter === 'upcoming' ? 'sắp tới' : 'đã qua'}`}
           </Text>
           <Text style={styles.emptySub}>
-            When you plan a trip, it will show up here.
+            Khi bạn lên kế hoạch, các chuyến đi sẽ hiện ở đây.
           </Text>
           {filter === 'all' && (
             <TouchableOpacity
@@ -295,7 +295,7 @@ export default function TripsScreen() {
               onPress={() => router.push('/create-trip' as any)}
             >
               <Feather name="edit-3" size={15} color="#FFF" />
-              <Text style={styles.emptyBtnText}>Plan Your First Trip</Text>
+              <Text style={styles.emptyBtnText}>Lên kế hoạch đầu tiên</Text>
             </TouchableOpacity>
           )}
         </View>
