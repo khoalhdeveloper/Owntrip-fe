@@ -15,6 +15,7 @@ import * as MediaLibrary from 'expo-media-library';
 import { Feather } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useConfirm } from '@/components/ConfirmProvider';
 
 const { width, height } = Dimensions.get('window');
 
@@ -28,6 +29,7 @@ export default function CheckinScreen() {
   
   const cameraRef = useRef<CameraView>(null);
   const flashAnim = useRef(new Animated.Value(0)).current;
+  const { alert: showAlert } = useConfirm();
 
   // Request permissions on mount
   useEffect(() => {
@@ -91,7 +93,7 @@ export default function CheckinScreen() {
       }
     } catch (error) {
       console.error('Failed to take picture:', error);
-      Alert.alert('Lỗi', 'Không thể chụp ảnh. Vui lòng thử lại.');
+      showAlert('Lỗi', 'Không thể chụp ảnh. Vui lòng thử lại.', 'error');
     } finally {
       setIsCapturing(false);
     }

@@ -89,7 +89,6 @@ export default function HomeScreen() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isNotifModalVisible, setIsNotifModalVisible] = useState(false);
-  const [loadingNotifs, setLoadingNotifs] = useState(false);
   const [selectedNotifForDetail, setSelectedNotifForDetail] = useState<Notification | null>(null);
 
   const { width } = Dimensions.get('window');
@@ -246,10 +245,10 @@ export default function HomeScreen() {
               <Text style={styles.pointsText}>{userProfile?.points?.toLocaleString() || '0'}</Text>
             </View>
             <TouchableOpacity 
-              style={styles.notifButton}
+              style={styles.notifButton} 
               onPress={() => setIsNotifModalVisible(true)}
             >
-              <Feather name="bell" size={20} color="#1A2B4A" />
+              <Feather name="bell" size={24} color="#1A2B4A" />
               {hasUnread && <View style={styles.notifDot} />}
             </TouchableOpacity>
           </View>
@@ -983,8 +982,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#FAFBFC',
   },
-
-  // Search
+  searchPlaceholder: { fontSize: 15, color: '#A0AEC0' },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -997,7 +995,6 @@ const styles = StyleSheet.create({
     borderColor: '#E8ECF0',
     marginBottom: 20,
   },
-  searchPlaceholder: { fontSize: 15, color: '#A0AEC0' },
 
   // Banner
   banner: {

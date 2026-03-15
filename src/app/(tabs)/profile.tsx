@@ -25,13 +25,16 @@ import { BlurView } from 'expo-blur';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useFocusEffect } from 'expo-router';
+import { FlatList } from 'react-native';
 
 import { userService, UserProfile } from '@/services/userService';
 import { tripService, Trip, TripDetailResponse } from '@/services/tripService';
+import { notificationService, Notification } from '@/services/notificationService';
 import TripDetailModal from '@/components/TripDetailModal';
 import { useChatbotSetting } from '@/context/ChatbotSettingContext';
 import { getImageSource } from '@/utils/imageUtils';
 import { decodeJWT } from '@/utils/jwtUtils';
+import { useConfirm } from '@/components/ConfirmProvider';
 
 const { width } = Dimensions.get('window');
 
@@ -50,6 +53,11 @@ export default function ProfileScreen() {
   const [selectedTripDetail, setSelectedTripDetail] = useState<TripDetailResponse | null>(null);
   const [loadingTripDetail, setLoadingTripDetail] = useState(false);
   const { aiButtonEnabled, setAiButtonEnabled } = useChatbotSetting();
+  const { alert: showAlert, confirm: showConfirm } = useConfirm();
+  
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isNotifModalVisible, setIsNotifModalVisible] = useState(false);
+  const [selectedNotifForDetail, setSelectedNotifForDetail] = useState<Notification | null>(null);
 
   const handleTripPress = async (id: string) => {
     setLoadingTripDetail(true);
@@ -106,12 +114,16 @@ export default function ProfileScreen() {
         setProfile({ ...profileData, inventory: localInv });
       }
       setTrips(tripsData || []);
+
+      // Fetch notifications
+      const notifs = await notificationService.getAll();
+      setNotifications(notifs || []);
     } catch (error: any) {
       console.error('🔥 Profile: Critical error in loadData:', error);
       if (error?.response?.status === 401) {
         router.replace('/(auth)/login');
       } else {
-        Alert.alert("Lỗi", "Không thể tải dữ liệu cá nhân. Vui lòng thử lại sau.");
+        showAlert("Lỗi", "Không thể tải dữ liệu cá nhân. Vui lòng thử lại sau.", "error");
       }
     } finally {
       setLoading(false);
@@ -144,21 +156,16 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = async () => {
-    Alert.alert(
+    const isConfirmed = await showConfirm(
       "Đăng xuất",
       "Bạn có chắc chắn muốn đăng xuất?",
-      [
-        { text: "Hủy", style: "cancel" },
-        { 
-          text: "Đăng xuất", 
-          style: "destructive",
-          onPress: async () => {
-            await AsyncStorage.multiRemove(['token', 'userId']);
-            router.replace('/(auth)/login');
-          }
-        }
-      ]
+      "Đăng xuất"
     );
+
+    if (isConfirmed) {
+      await AsyncStorage.multiRemove(['token', 'userId']);
+      router.replace('/(auth)/login');
+    }
   };
   const handleUpdate = async () => {
     if (!profile?.userId || !newDisplayName.trim()) return;
@@ -191,13 +198,13 @@ export default function ProfileScreen() {
             console.log('✅ Cloudinary URL:', finalImageUrl);
           } else {
             console.error('❌ Cloudinary Error:', cloudData);
-            Alert.alert("Lỗi", "Không thể upload ảnh lên Cloudinary");
+            showAlert("Lỗi", "Không thể upload ảnh lên Cloudinary", "error");
             setIsUpdating(false);
             return;
           }
         } catch (err) {
           console.error('🔥 Cloudinary Fetch Error:', err);
-          Alert.alert("Lỗi", "Lỗi kết nối Cloudinary");
+          showAlert("Lỗi", "Lỗi kết nối Cloudinary", "error");
           setIsUpdating(false);
           return;
         }
@@ -224,19 +231,37 @@ export default function ProfileScreen() {
         
         setEditModalVisible(false);
         setNewImage(''); // Xóa biến tạm
-        Alert.alert("Thành công", "Đã cập nhật hồ sơ");
+        showAlert("Thành công", "Đã cập nhật hồ sơ", "success");
         // Đợi 2 giây để server kịp đồng bộ DB
         setTimeout(() => loadData(), 2000);
       } else {
-        Alert.alert("Lỗi", "Không thể cập nhật hồ sơ. Vui lòng thử lại.");
+        showAlert("Lỗi", "Không thể cập nhật hồ sơ. Vui lòng thử lại.", "error");
       }
     } catch (error) {
       console.error('🔥 Update Error:', error);
-      Alert.alert("Lỗi", "Đã có lỗi xảy ra");
+      showAlert("Lỗi", "Đã có lỗi xảy ra", "error");
     } finally {
       setIsUpdating(false);
     }
   };
+
+  const handleMarkAsRead = async (id: string) => {
+    const success = await notificationService.markAsRead(id);
+    if (success) {
+      setNotifications(prev => 
+        prev.map(notif => notif._id === id ? { ...notif, isRead: true } : notif)
+      );
+    }
+  };
+
+  const handleNotifPress = (notif: Notification) => {
+    setSelectedNotifForDetail(notif);
+    if (!notif.isRead) {
+      handleMarkAsRead(notif._id);
+    }
+  };
+
+  const hasUnread = notifications.some(n => !n.isRead);
 
   const openEditModal = () => {
     setNewDisplayName(profile?.displayName || '');
@@ -410,17 +435,13 @@ export default function ProfileScreen() {
 
           {/* Settings Section */}
           <View style={styles.settingsGroup}>
-             <TouchableOpacity style={styles.settingItem}>
-                <View style={[styles.settingIcon, { backgroundColor: '#EBF8FF' }]}>
-                  <Feather name="shield" size={18} color="#3182CE" />
-                </View>
-                <Text style={styles.settingLabel}>Quyền riêng tư & Bảo mật</Text>
-                <Feather name="chevron-right" size={20} color="#CBD5E0" />
-             </TouchableOpacity>
-
-             <TouchableOpacity style={styles.settingItem}>
+             <TouchableOpacity 
+                style={styles.settingItem}
+                onPress={() => setIsNotifModalVisible(true)}
+              >
                 <View style={[styles.settingIcon, { backgroundColor: '#F0FFF4' }]}>
                   <Feather name="bell" size={18} color="#38A169" />
+                  {hasUnread && <View style={styles.notifDotMini} />}
                 </View>
                 <Text style={styles.settingLabel}>Thông báo</Text>
                 <Feather name="chevron-right" size={20} color="#CBD5E0" />
@@ -439,14 +460,6 @@ export default function ProfileScreen() {
                   thumbColor={aiButtonEnabled ? '#4A7CFF' : '#A0AEC0'}
                 />
              </View>
-
-             <TouchableOpacity style={styles.settingItem}>
-                <View style={[styles.settingIcon, { backgroundColor: '#EBEEF5' }]}>
-                  <Feather name="help-circle" size={18} color="#4A5568" />
-                </View>
-                <Text style={styles.settingLabel}>Trung tâm trợ giúp</Text>
-                <Feather name="chevron-right" size={20} color="#CBD5E0" />
-             </TouchableOpacity>
           </View>
 
           <View style={{ height: 100 }} />
@@ -538,6 +551,112 @@ export default function ProfileScreen() {
         }}
         onRefresh={loadData}
       />
+
+      {/* Notifications Modal */}
+      <Modal
+        visible={isNotifModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsNotifModalVisible(false)}
+      >
+        <View style={styles.notifModalOverlay}>
+          <TouchableOpacity
+            style={styles.modalCloseArea}
+            activeOpacity={1}
+            onPress={() => setIsNotifModalVisible(false)}
+          />
+          <View style={[styles.modalContentNotif, { height: '85%' }]}>
+            <View style={styles.notifHeader}>
+              <Text style={styles.notifTitle}>Thông báo</Text>
+              <TouchableOpacity onPress={() => setIsNotifModalVisible(false)}>
+                <Feather name="x" size={24} color="#1A2B4A" />
+              </TouchableOpacity>
+            </View>
+
+            {notifications.length === 0 ? (
+              <View style={styles.emptyNotifContainer}>
+                <Feather name="bell-off" size={48} color="#E2E8F0" />
+                <Text style={styles.emptyNotifText}>Bạn chưa có thông báo nào</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={notifications}
+                keyExtractor={(item) => item._id}
+                contentContainerStyle={{ paddingBottom: 20 }}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={[styles.notifItem, !item.isRead && styles.notifItemUnread]}
+                    onPress={() => handleNotifPress(item)}
+                  >
+                    <View style={[styles.notifIcon, { backgroundColor: item.isRead ? '#F7FAFC' : '#EBF8FF' }]}>
+                      <Feather
+                        name={item.type === 'promotion' ? 'tag' : 'bell'}
+                        size={18}
+                        color={item.isRead ? '#718096' : '#4299E1'}
+                      />
+                    </View>
+                    <View style={styles.notifInfo}>
+                      <Text style={[styles.notifItemTitle, !item.isRead && styles.notifTextUnread]}>
+                        {item.title}
+                      </Text>
+                      <Text style={styles.notifItemMessage} numberOfLines={2}>
+                        {item.message}
+                      </Text>
+                      <Text style={styles.notifItemTime}>
+                        {new Date(item.createdAt).toLocaleDateString('vi-VN')}
+                      </Text>
+                    </View>
+                    {!item.isRead && <View style={styles.unreadDot} />}
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Notification Detail Modal */}
+      <Modal
+        visible={!!selectedNotifForDetail}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setSelectedNotifForDetail(null)}
+      >
+        <View style={styles.detailNotifOverlay}>
+          <View style={styles.detailNotifContent}>
+            <View style={styles.detailNotifHeader}>
+              <View style={[styles.notifIconDetail, { backgroundColor: '#EBF8FF', marginBottom: 0 }]}>
+                 <Feather 
+                  name={selectedNotifForDetail?.type === 'promotion' ? 'tag' : 'bell'} 
+                  size={24} 
+                  color="#4299E1" 
+                />
+              </View>
+              <TouchableOpacity onPress={() => setSelectedNotifForDetail(null)}>
+                <Feather name="x" size={20} color="#CBD5E0" />
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={styles.detailNotifTitle}>{selectedNotifForDetail?.title}</Text>
+            <Text style={styles.detailNotifTime}>
+              {selectedNotifForDetail && new Date(selectedNotifForDetail.createdAt).toLocaleString('vi-VN')}
+            </Text>
+            
+            <View style={styles.detailNotifDivider} />
+            
+            <ScrollView style={{ maxHeight: 200 }}>
+              <Text style={styles.detailNotifMessage}>{selectedNotifForDetail?.message}</Text>
+            </ScrollView>
+
+            <TouchableOpacity 
+              style={styles.detailNotifButton}
+              onPress={() => setSelectedNotifForDetail(null)}
+            >
+              <Text style={styles.detailNotifButtonText}>Đóng</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -822,9 +941,10 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 32,
     alignItems: 'center',
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
     borderStyle: 'dashed',
   },
   inventoryScroll: {
@@ -994,5 +1114,176 @@ const styles = StyleSheet.create({
     color: '#A0AEC0',
     fontWeight: '600',
     letterSpacing: 1,
+  },
+  modalCloseArea: {
+    flex: 1,
+  },
+  notifModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContentNotif: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    width: '100%',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 20,
+  },
+  notifHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDF2F7',
+  },
+  notifTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1A2B4A',
+  },
+  emptyNotifContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyNotifText: {
+    marginTop: 16,
+    fontSize: 14,
+    color: '#A0AEC0',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  notifItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F7FAFC',
+  },
+  notifItemUnread: {
+    backgroundColor: '#F0F9FF',
+  },
+  notifIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    position: 'relative',
+  },
+  notifIconDetail: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  notifInfo: {
+    flex: 1,
+  },
+  notifItemTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#2D3748',
+    marginBottom: 4,
+  },
+  notifTextUnread: {
+    color: '#1A2B4A',
+    fontWeight: '700',
+  },
+  notifItemMessage: {
+    fontSize: 14,
+    color: '#718096',
+    marginBottom: 4,
+  },
+  notifItemTime: {
+    fontSize: 12,
+    color: '#A0AEC0',
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#4299E1',
+    marginLeft: 8,
+  },
+  notifDotMini: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#F56565',
+    borderWidth: 1.5,
+    borderColor: '#F0FFF4',
+  },
+  // Notification Detail Styles
+  detailNotifOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  detailNotifContent: {
+    backgroundColor: '#FFF',
+    borderRadius: 24,
+    width: '100%',
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  detailNotifHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  detailNotifTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1A2B4A',
+    marginBottom: 4,
+  },
+  detailNotifTime: {
+    fontSize: 12,
+    color: '#A0AEC0',
+    marginBottom: 16,
+  },
+  detailNotifDivider: {
+    height: 1,
+    backgroundColor: '#EDF2F7',
+    marginBottom: 16,
+  },
+  detailNotifMessage: {
+    fontSize: 15,
+    color: '#4A5568',
+    lineHeight: 22,
+  },
+  detailNotifButton: {
+    backgroundColor: '#007AFF',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 24,
+  },
+  detailNotifButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
