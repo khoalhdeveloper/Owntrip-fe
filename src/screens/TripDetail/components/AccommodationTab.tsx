@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
-  Alert,
+
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -16,6 +16,7 @@ import { accommodationService, Accommodation } from '@/services/accommodationSer
 import StayDatePickerModal from './StayDatePickerModal';
 import AccommodationDetailModal from './AccommodationDetailModal';
 import WriteReviewModal from './WriteReviewModal';
+import { useConfirm } from '@/components/ConfirmProvider';
 
 const BRAND = '#4A7CFF';
 
@@ -29,6 +30,7 @@ function formatCurrency(amount: number): string {
 }
 
 export default function AccommodationTab({ trip, days }: AccommodationTabProps) {
+  const { alert: showAlert } = useConfirm();
   const [accommodations, setAccommodations] = useState<Accommodation[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedHotel, setSelectedHotel] = useState<Accommodation | null>(null);
@@ -84,10 +86,10 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
     const formatDate = (d: Date) =>
       `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
 
-    Alert.alert(
-      '🎉 Booking Confirmed!',
-      `${selectedHotel.name}\n${formatDate(checkIn)} → ${formatDate(checkOut)}\n${nights} night${nights > 1 ? 's' : ''} · ${formatCurrency(totalCost)}`,
-      [{ text: 'OK' }]
+    showAlert(
+      '🎉 Đặt phòng thành công!',
+      `${selectedHotel.name}\n${formatDate(checkIn)} → ${formatDate(checkOut)}\n${nights} đêm · ${formatCurrency(totalCost)}`,
+      'success',
     );
   };
 
