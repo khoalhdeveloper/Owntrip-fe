@@ -1,8 +1,8 @@
 /* ─── Helpers ─── */
 export function formatShortDate(dateStr: string): string {
   const d = new Date(dateStr);
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${months[d.getMonth()]} ${d.getDate()}`;
+  const months = ['Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'];
+  return `${d.getDate()} ${months[d.getMonth()]}`;
 }
 
 export function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -18,11 +18,11 @@ export function haversineDistance(lat1: number, lon1: number, lat2: number, lon2
 
 export function estimateTravelTime(distKm: number): string {
   const mins = Math.round((distKm / 30) * 60);
-  if (mins < 1) return '< 1 min';
-  if (mins < 60) return `${mins} min`;
+  if (mins < 1) return '< 1 phút';
+  if (mins < 60) return `${mins} phút`;
   const h = Math.floor(mins / 60);
   const m = mins % 60;
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  return m > 0 ? `${h}giờ ${m}phút` : `${h}giờ`;
 }
 
 export function formatDistance(km: number): string {

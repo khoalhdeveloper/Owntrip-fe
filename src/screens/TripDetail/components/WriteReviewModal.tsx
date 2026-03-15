@@ -8,7 +8,6 @@ import {
   TextInput,
   ScrollView,
   Image,
-  Alert,
   ActivityIndicator,
   Platform,
   KeyboardAvoidingView,
@@ -17,6 +16,7 @@ import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import { Accommodation, accommodationService } from '@/services/accommodationService';
+import { useConfirm } from '@/components/ConfirmProvider';
 
 const BRAND = '#4A7CFF';
 const MAX_IMAGES = 5;
@@ -41,6 +41,7 @@ export default function WriteReviewModal({
   const [comment, setComment] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const { alert: showAlert, confirm: showConfirm } = useConfirm();
 
   const resetForm = () => {
     setRating(0);
@@ -48,12 +49,18 @@ export default function WriteReviewModal({
     setImages([]);
   };
 
-  const handleClose = () => {
+  const handleClose = async () => {
     if (rating > 0 || comment.length > 0 || images.length > 0) {
-      Alert.alert('Huỷ đánh giá?', 'Nội dung bạn nhập sẽ bị mất.', [
-        { text: 'Tiếp tục viết', style: 'cancel' },
-        { text: 'Huỷ', style: 'destructive', onPress: () => { resetForm(); onClose(); } },
-      ]);
+      const isConfirmed = await showConfirm(
+        'Huỷ đánh giá?', 
+        'Nội dung bạn nhập sẽ bị mất.', 
+        'Huỷ',
+        'question'
+      );
+      if (isConfirmed) {
+        resetForm(); 
+        onClose();
+      }
     } else {
       onClose();
     }
@@ -61,12 +68,12 @@ export default function WriteReviewModal({
 
   const pickFromCamera = async () => {
     if (images.length >= MAX_IMAGES) {
-      Alert.alert('Giới hạn', `Tối đa ${MAX_IMAGES} ảnh`);
+      showAlert('Giới hạn', `Tối đa ${MAX_IMAGES} ảnh`, 'warning');
       return;
     }
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Quyền truy cập', 'Cần cấp quyền camera để chụp ảnh');
+      showAlert('Quyền truy cập', 'Cần cấp quyền camera để chụp ảnh', 'warning');
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
@@ -81,7 +88,7 @@ export default function WriteReviewModal({
 
   const pickFromGallery = async () => {
     if (images.length >= MAX_IMAGES) {
-      Alert.alert('Giới hạn', `Tối đa ${MAX_IMAGES} ảnh`);
+      showAlert('Giới hạn', `Tối đa ${MAX_IMAGES} ảnh`, 'warning');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -121,11 +128,11 @@ export default function WriteReviewModal({
 
   const handleSubmit = async () => {
     if (rating === 0) {
-      Alert.alert('Lỗi', 'Vui lòng chọn số sao đánh giá');
+      showAlert('Lỗi', 'Vui lòng chọn số sao đánh giá', 'error');
       return;
     }
     if (comment.trim().length < 10) {
-      Alert.alert('Lỗi', 'Nhận xét cần ít nhất 10 ký tự');
+      showAlert('Lỗi', 'Nhận xét cần ít nhất 10 ký tự', 'error');
       return;
     }
     if (!hotel) return;
@@ -147,14 +154,15 @@ export default function WriteReviewModal({
 
       if (success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        Alert.alert('Thành công! 🎉', 'Đánh giá của bạn đã được gửi', [
-          { text: 'OK', onPress: () => { resetForm(); onReviewSubmitted(); onClose(); } },
-        ]);
+        await showAlert('Thành công! 🎉', 'Đánh giá của bạn đã được gửi', 'success');
+        resetForm(); 
+        onReviewSubmitted(); 
+        onClose();
       } else {
-        Alert.alert('Lỗi', 'Không thể gửi đánh giá. Vui lòng thử lại.');
+        showAlert('Lỗi', 'Không thể gửi đánh giá. Vui lòng thử lại.', 'error');
       }
     } catch {
-      Alert.alert('Lỗi', 'Đã xảy ra lỗi khi gửi đánh giá');
+      showAlert('Lỗi', 'Đã xảy ra lỗi khi gửi đánh giá', 'error');
     } finally {
       setSubmitting(false);
     }
