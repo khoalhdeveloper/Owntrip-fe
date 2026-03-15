@@ -20,6 +20,7 @@ import SummaryTab from './components/SummaryTab';
 import ItineraryTab from './components/ItineraryTab';
 import ExploreTab from './components/ExploreTab';
 import JournalTab from './components/JournalTab';
+import EditTripModal from './components/EditTripModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const HEADER_HEIGHT = 260;
@@ -59,6 +60,7 @@ export default function TripDetailScreen({ tripId }: { tripId: string }) {
   const [days, setDays] = useState<TripDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [editVisible, setEditVisible] = useState(false);
 
   const fetchTrip = useCallback(async () => {
     try {
@@ -185,11 +187,11 @@ export default function TripDetailScreen({ tripId }: { tripId: string }) {
             <Feather name="arrow-left" size={20} color="#FFF" />
           </TouchableOpacity>
           <View style={styles.topBarRight}>
-            <TouchableOpacity style={styles.topBarBtn}>
-              <Feather name="share-2" size={18} color="#FFF" />
+            <TouchableOpacity style={styles.topBarBtn} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setEditVisible(true); }}>
+              <Feather name="edit-2" size={18} color="#FFF" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.topBarBtn}>
-              <Feather name="more-horizontal" size={18} color="#FFF" />
+              <Feather name="share-2" size={18} color="#FFF" />
             </TouchableOpacity>
           </View>
         </View>
@@ -244,6 +246,17 @@ export default function TripDetailScreen({ tripId }: { tripId: string }) {
       >
         {renderTabContent()}
       </Animated.ScrollView>
+
+      {/* ===== Edit Trip Modal ===== */}
+      <EditTripModal
+        visible={editVisible}
+        trip={trip}
+        onClose={() => setEditVisible(false)}
+        onUpdated={(updated) => {
+          setTrip(updated);
+          fetchTrip(); // refresh days too
+        }}
+      />
     </View>
   );
 }
