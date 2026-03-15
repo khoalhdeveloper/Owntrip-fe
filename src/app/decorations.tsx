@@ -60,7 +60,7 @@ export default function DecorationsScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
             <Feather name="arrow-left" size={24} color="#E2E8F0" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Decoration</Text>
+          <Text style={styles.headerTitle}>Trang trí</Text>
           <TouchableOpacity style={styles.headerBtn}>
             <Feather name="settings" size={22} color="#94A3B8" />
           </TouchableOpacity>
@@ -80,7 +80,7 @@ export default function DecorationsScreen() {
             <View style={styles.promoRow}>
               <View style={styles.promoCard}>
                 <View style={styles.limitedBadge}>
-                  <Text style={styles.limitedBadgeText}>Limited Time</Text>
+                  <Text style={styles.limitedBadgeText}>Thời gian có hạn</Text>
                 </View>
                 <Text style={styles.promoTitle}>CHECKPOINT CACHE</Text>
                 <View style={styles.emojiRow}>
@@ -89,7 +89,7 @@ export default function DecorationsScreen() {
                   <View style={styles.emojiCircle}><Text style={styles.emojiText}>🐻</Text></View>
                 </View>
                 <TouchableOpacity style={styles.takeMeBtn} activeOpacity={0.85}>
-                  <Text style={styles.takeMeBtnText}>Take me there</Text>
+                  <Text style={styles.takeMeBtnText}>Khám phá ngay</Text>
                 </TouchableOpacity>
               </View>
               <View style={styles.promoCard}>
@@ -100,7 +100,7 @@ export default function DecorationsScreen() {
                   <View style={styles.emojiCircle}><Text style={styles.emojiText}>🌹</Text></View>
                 </View>
                 <TouchableOpacity style={styles.takeMeBtn} activeOpacity={0.85}>
-                  <Text style={styles.takeMeBtnText}>Take me there</Text>
+                  <Text style={styles.takeMeBtnText}>Khám phá ngay</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -109,9 +109,9 @@ export default function DecorationsScreen() {
             {featuredItems.length > 0 && (
               <View style={styles.section}>
                 <View style={styles.sectionRow}>
-                  <Text style={styles.sectionTitle}>Featured</Text>
+                  <Text style={styles.sectionTitle}>Nổi bật</Text>
                   <TouchableOpacity style={styles.buyAllBtn}>
-                    <Text style={styles.buyAllText}>Buy All</Text>
+                    <Text style={styles.buyAllText}>Mua tất cả</Text>
                   </TouchableOpacity>
                 </View>
                 <ScrollView
@@ -127,7 +127,7 @@ export default function DecorationsScreen() {
                       <Text style={styles.featuredName} numberOfLines={2}>{item.name}</Text>
                       <View style={styles.coinsRow}>
                         <Feather name="award" size={12} color="#C4B5FD" />
-                        <Text style={styles.coinsText}>{item.coins} coins</Text>
+                        <Text style={styles.coinsText}>{item.coins} xu</Text>
                       </View>
                     </TouchableOpacity>
                   ))}
@@ -138,8 +138,8 @@ export default function DecorationsScreen() {
             {/* All */}
             <View style={styles.section}>
               <View style={styles.sectionRow}>
-                <Text style={styles.sectionTitle}>All</Text>
-                <Text style={styles.pageInfo}>Page {page} of {totalPages}</Text>
+                <Text style={styles.sectionTitle}>Tất cả</Text>
+                <Text style={styles.pageInfo}>Trang {page} / {totalPages}</Text>
               </View>
               <View style={styles.grid}>
                 {pageItems.map((item) => (
@@ -150,7 +150,7 @@ export default function DecorationsScreen() {
                     <Text style={styles.gridName} numberOfLines={2}>{item.name}</Text>
                     <View style={styles.coinsRow}>
                       <Feather name="award" size={10} color="#C4B5FD" />
-                      <Text style={styles.gridCoins}>{item.coins} coins</Text>
+                      <Text style={styles.gridCoins}>{item.coins} xu</Text>
                     </View>
                   </TouchableOpacity>
                 ))}
@@ -162,14 +162,14 @@ export default function DecorationsScreen() {
                     onPress={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page <= 1}
                   >
-                    <Text style={styles.pageBtnText}>&lt; Previous</Text>
+                    <Text style={styles.pageBtnText}>&lt; Trước</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.pageBtn, page >= totalPages && styles.pageBtnDisabled]}
                     onPress={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page >= totalPages}
                   >
-                    <Text style={styles.pageBtnText}>Next &gt;</Text>
+                    <Text style={styles.pageBtnText}>Tiếp &gt;</Text>
                   </TouchableOpacity>
                 </View>
               )}

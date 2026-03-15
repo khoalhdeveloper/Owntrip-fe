@@ -15,11 +15,11 @@ export default function TabsLayout() {
             headerShown: false,
           }}
         >
-          <Tabs.Screen name="index" options={{ title: 'Home' }} />
-          <Tabs.Screen name="trips" options={{ title: 'Trips' }} />
+          <Tabs.Screen name="index" options={{ title: 'Khám phá' }} />
+          <Tabs.Screen name="trips" options={{ title: 'Lịch trình' }} />
           <Tabs.Screen name="checkin" options={{ title: 'Check-in' }} />
-          <Tabs.Screen name="store" options={{ title: 'Store' }} />
-          <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
+          <Tabs.Screen name="store" options={{ title: 'Cửa hàng' }} />
+          <Tabs.Screen name="profile" options={{ title: 'Cá nhân' }} />
         </Tabs>
 
         {/* DraggableChatbot đọc setting từ Context */}
