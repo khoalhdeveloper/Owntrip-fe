@@ -3,6 +3,8 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ConfirmProvider } from '@/components/ConfirmProvider';
+import Toast from 'react-native-toast-message';
+import { toastConfig } from '@/components/ui/ToastConfig';
 
 export default function RootLayout() {
   return (
@@ -20,7 +22,9 @@ export default function RootLayout() {
           <Stack.Screen name="create-trip" />
           <Stack.Screen name="instant-plan" />
         </Stack>
+        <Toast config={toastConfig} />
       </ConfirmProvider>
     </GestureHandlerRootView>
   );
 }
+

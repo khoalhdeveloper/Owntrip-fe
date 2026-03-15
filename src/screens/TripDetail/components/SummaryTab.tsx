@@ -153,6 +153,7 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
   };
 
   const { confirmDelete } = useConfirm();
+  const [viewingBooked, setViewingBooked] = useState(false);
 
   const handleRemoveAccommodation = async () => {
     const confirmed = await confirmDelete(
@@ -165,6 +166,33 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
       setBookedHotel(null);
       setCheckInDate(null);
       setCheckOutDate(null);
+    }
+  };
+
+  // Open booked hotel detail for viewing
+  const handleViewBookedHotel = () => {
+    if (!bookedHotel) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedHotel(bookedHotel);
+    setViewingBooked(true);
+    setDetailVisible(true);
+  };
+
+  // Cancel booking from detail modal
+  const handleCancelBookingFromDetail = async () => {
+    const confirmed = await confirmDelete(
+      'Hủy đặt phòng',
+      `Bạn có chắc muốn hủy đặt phòng "${bookedHotel?.name}" không?`,
+      'Hủy phòng',
+    );
+    if (confirmed) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setDetailVisible(false);
+      setBookedHotel(null);
+      setCheckInDate(null);
+      setCheckOutDate(null);
+      setSelectedHotel(null);
+      setViewingBooked(false);
     }
   };
 
@@ -205,8 +233,12 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
         />
 
         {bookedHotel && checkInDate && checkOutDate ? (
-          /* Booked hotel card */
-          <View style={styles.bookedCard}>
+          /* Booked hotel card — tappable to view detail */
+          <TouchableOpacity
+            style={styles.bookedCard}
+            activeOpacity={0.7}
+            onPress={handleViewBookedHotel}
+          >
             {bookedHotel.images && !imgErrors[`hotel-${bookedHotel.id}`] ? (
               <Image
                 source={{ uri: bookedHotel.images }}
@@ -231,7 +263,8 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
                 <Text style={styles.bookedTotal}>{formatCurrency(nights * bookedHotel.pricePerNight)}</Text>
               </View>
             </View>
-          </View>
+            <Feather name="chevron-right" size={18} color="#D1D5DB" />
+          </TouchableOpacity>
         ) : (
           /* Empty state */
           <View style={styles.emptyState}>
@@ -508,9 +541,11 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
         hotel={selectedHotel}
         trip={trip}
         days={days}
-        onClose={() => { setDetailVisible(false); setSelectedHotel(null); }}
+        onClose={() => { setDetailVisible(false); setSelectedHotel(null); setViewingBooked(false); }}
         onBook={handleBookFromDetail}
         onWriteReview={handleWriteReview}
+        isBooked={viewingBooked}
+        onCancelBooking={handleCancelBookingFromDetail}
       />
 
       {/* ===== WRITE REVIEW MODAL ===== */}
