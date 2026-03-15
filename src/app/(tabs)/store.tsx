@@ -10,12 +10,16 @@ import {
   StatusBar,
   ActivityIndicator,
   Modal,
+  Alert,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as WebBrowser from 'expo-web-browser';
+import { decodeJWT } from '@/utils/jwtUtils';
 import { userService, UserProfile } from '@/services/userService';
 import { souvenirsService, Souvenir } from '@/services/souvenirsService';
 import { decorationsService, Decoration } from '@/services/decorationsService';
@@ -46,14 +50,32 @@ export default function StoreScreen() {
   const [loadingDecorations, setLoadingDecorations] = useState(true);
   const [selectedDecoration, setSelectedDecoration] = useState<Decoration | null>(null);
   const [selectedSouvenir, setSelectedSouvenir] = useState<Souvenir | null>(null);
-  const coinBalance = profile?.balance ?? 2450;
+  const [buying, setBuying] = useState(false);
+  // Sử dụng 'points' làm 'coins' trong Store vì balance thường là tiền mặt/ví
+  const coinBalance = profile?.points ?? 0;
 
   const loadProfile = useCallback(async () => {
     try {
-      const userId = await AsyncStorage.getItem('userId');
+      let userId = await AsyncStorage.getItem('userId');
+      const token = await AsyncStorage.getItem('token');
+      
+      if (!userId && token) {
+        const decoded = decodeJWT(token);
+        if (decoded && decoded.userId) {
+          userId = decoded.userId;
+          await AsyncStorage.setItem('userId', userId as string);
+        }
+      }
+
       if (userId) {
-        const p = await userService.getMyProfile(userId);
-        setProfile(p ?? null);
+        const [p, localInv] = await Promise.all([
+          userService.getMyProfile(userId as string),
+          userService.getLocalInventory(userId as string)
+        ]);
+        
+        if (p) {
+          setProfile({ ...p, inventory: localInv });
+        }
       }
     } catch {
       setProfile(null);
@@ -92,6 +114,42 @@ export default function StoreScreen() {
     }, [loadProfile, loadSouvenirs, loadDecorations])
   );
 
+  const handleBuyItem = async (item: { id: string, name: string, image: string, type: string, price: number }) => {
+    if (!profile?.userId) {
+      Alert.alert('Notice', 'Please login to purchase items');
+      return;
+    }
+
+    Alert.alert(
+      'Confirm Purchase',
+      `Do you want to buy "${item.name}" for ${item.price} coins?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Buy',
+          onPress: async () => {
+            setBuying(true);
+            try {
+              const res = await userService.purchaseItem(profile.userId, item);
+              if (res.success) {
+                Alert.alert('Success', 'Item added to your inventory!');
+                loadProfile(); // Refresh balance
+                setSelectedDecoration(null);
+                setSelectedSouvenir(null);
+              } else {
+                Alert.alert('Error', res.message);
+              }
+            } catch (e) {
+              Alert.alert('Error', 'Something went wrong');
+            } finally {
+              setBuying(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -109,30 +167,81 @@ export default function StoreScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Coin Balance Card */}
-          <View style={styles.coinCard}>
-            <View style={styles.coinRow}>
-              <View style={styles.coinIconWrap}>
-                <Feather name="award" size={28} color="#0D9488" />
-              </View>
-              <View style={styles.coinTextWrap}>
-                <Text style={styles.coinLabel}>Coin Balance</Text>
-                <Text style={styles.coinValue}>{coinBalance.toLocaleString()}</Text>
+            {/* Coin Balance Card */}
+            <View style={styles.coinCard}>
+              <View style={styles.coinRow}>
+                <View style={styles.coinIconWrap}>
+                  <MaterialIcons name="stars" size={28} color="#FFB300" />
+                </View>
+                <View style={styles.coinTextWrap}>
+                  <Text style={styles.coinLabel}>My Coins (Points)</Text>
+                {profile ? (
+                  <Text style={styles.coinValue}>{coinBalance.toLocaleString()}</Text>
+                ) : (
+                  <ActivityIndicator size="small" color="#0D9488" style={{ alignSelf: 'flex-start', marginTop: 4 }} />
+                )}
               </View>
             </View>
             <View style={styles.coinButtons}>
-              <TouchableOpacity style={styles.topUpBtnWrap} activeOpacity={0.85}>
+              <TouchableOpacity 
+                style={styles.topUpBtnWrap} 
+                activeOpacity={0.85}
+                onPress={() => {
+                  Alert.alert(
+                    'Recharge Points',
+                    'Choose a recharge method:',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { 
+                        text: 'VNPay (100k VND)', 
+                        onPress: async () => {
+                          setBuying(true);
+                          try {
+                            const res = await userService.createVNPayPayment(100000);
+                            if (res.success && res.paymentUrl) {
+                              // Mở link thanh toán ngay trong ứng dụng
+                              console.log('🔗 [VNPAY] Opening URL:', res.paymentUrl);
+                              await WebBrowser.openBrowserAsync(res.paymentUrl);
+                              
+                              // Sau khi tắt trình duyệt, tự động tải lại điểm mới
+                              loadProfile();
+                            } else {
+                              Alert.alert('Error', res.message || 'Could not create payment link');
+                            }
+                          } catch (error) {
+                            Alert.alert('Error', 'Connection failed');
+                          } finally {
+                            setBuying(false);
+                          }
+                        } 
+                      },
+                      { 
+                        text: 'Simulate Top Up (50k)', 
+                        onPress: async () => {
+                          const res = await userService.topUpPoints(50000);
+                          if (res.success) {
+                            Alert.alert('Success', `Earned ${res.pointsEarned} points!`);
+                            loadProfile();
+                          } else {
+                            Alert.alert('Error', res.message);
+                          }
+                        } 
+                      }
+                    ]
+                  );
+                }}
+              >
                 <LinearGradient
-                  colors={['#3B82F6', '#10B981']}
+                  colors={['#F59E0B', '#D97706']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.topUpBtn}
                 >
-                  <Text style={styles.topUpBtnText}>Top Up</Text>
+                  <Text style={styles.topUpBtnText}>Get Points</Text>
                 </LinearGradient>
               </TouchableOpacity>
               <TouchableOpacity style={styles.historyBtn} activeOpacity={0.7} onPress={() => router.push('/achievement')}>
-                <Text style={styles.historyBtnText}>Achievement</Text>
+                <Text style={styles.historyBtnText}>Achievements</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -211,16 +320,31 @@ export default function StoreScreen() {
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Recent Activity</Text>
             </View>
-            <View style={styles.activityCard}>
-              <View style={styles.activityIconWrap}>
-                <Feather name="arrow-down" size={20} color="#16A34A" />
+            
+            {!profile?.inventory || profile.inventory.length === 0 ? (
+              <View style={styles.activityCard}>
+                <View style={[styles.activityIconWrap, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                  <Feather name="info" size={20} color="#3B82F6" />
+                </View>
+                <View style={styles.activityContent}>
+                  <Text style={styles.activityTitle}>No recent purchases</Text>
+                  <Text style={styles.activitySubtitle}>Start exploring the store!</Text>
+                </View>
               </View>
-              <View style={styles.activityContent}>
-                <Text style={styles.activityTitle}>Trip Cashback</Text>
-                <Text style={styles.activitySubtitle}>Today</Text>
-              </View>
-              <Text style={styles.activityAmount}>+180</Text>
-            </View>
+            ) : (
+              profile.inventory.slice(-3).reverse().map((item, idx) => (
+                <View key={idx} style={[styles.activityCard, { marginBottom: 8 }]}>
+                  <View style={[styles.activityIconWrap, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
+                    <Feather name="shopping-bag" size={20} color="#EF4444" />
+                  </View>
+                  <View style={styles.activityContent}>
+                    <Text style={styles.activityTitle}>Purchased {item.name}</Text>
+                    <Text style={styles.activitySubtitle}>{new Date(item.purchasedAt).toLocaleDateString()}</Text>
+                  </View>
+                  <Text style={[styles.activityAmount, { color: '#EF4444' }]}>-{item.price}</Text>
+                </View>
+              ))
+            )}
           </View>
 
           <View style={{ height: 100 }} />
@@ -273,12 +397,25 @@ export default function StoreScreen() {
                 {/* Nút Buy cố định đáy */}
                 <View style={styles.detailFooter}>
                   <TouchableOpacity
-                    style={styles.detailBuyBtn}
+                    style={[styles.detailBuyBtn, buying && { opacity: 0.7 }]}
                     activeOpacity={0.85}
-                    onPress={() => {}}
+                    onPress={() => handleBuyItem({
+                      id: selectedDecoration.id,
+                      name: selectedDecoration.name,
+                      image: selectedDecoration.image,
+                      type: selectedDecoration.type || 'decoration',
+                      price: selectedDecoration.coins
+                    })}
+                    disabled={buying}
                   >
-                    <Feather name="award" size={20} color="#FFF" />
-                    <Text style={styles.detailBuyText}>Buy with {selectedDecoration.coins} coins</Text>
+                    {buying ? (
+                      <ActivityIndicator color="#FFF" />
+                    ) : (
+                      <>
+                        <Feather name="award" size={20} color="#FFF" />
+                        <Text style={styles.detailBuyText}>Buy with {selectedDecoration.coins} coins</Text>
+                      </>
+                    )}
                   </TouchableOpacity>
                 </View>
               </SafeAreaView>
@@ -328,12 +465,25 @@ export default function StoreScreen() {
 
                 <View style={styles.detailFooter}>
                   <TouchableOpacity
-                    style={styles.detailBuyBtn}
+                    style={[styles.detailBuyBtn, buying && { opacity: 0.7 }]}
                     activeOpacity={0.85}
-                    onPress={() => {}}
+                    onPress={() => handleBuyItem({
+                      id: selectedSouvenir.id,
+                      name: selectedSouvenir.name,
+                      image: selectedSouvenir.image,
+                      type: 'souvenir',
+                      price: selectedSouvenir.amount
+                    })}
+                    disabled={buying}
                   >
-                    <Feather name="award" size={20} color="#FFF" />
-                    <Text style={styles.detailBuyText}>Buy with {selectedSouvenir.amount} coins</Text>
+                    {buying ? (
+                      <ActivityIndicator color="#FFF" />
+                    ) : (
+                      <>
+                        <Feather name="award" size={20} color="#FFF" />
+                        <Text style={styles.detailBuyText}>Buy with {selectedSouvenir.amount} coins</Text>
+                      </>
+                    )}
                   </TouchableOpacity>
                 </View>
               </SafeAreaView>
