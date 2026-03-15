@@ -31,36 +31,11 @@ import { tripService, Trip, TripDetailResponse } from '@/services/tripService';
 import TripDetailModal from '@/components/TripDetailModal';
 import { useChatbotSetting } from '@/context/ChatbotSettingContext';
 import { getImageSource } from '@/utils/imageUtils';
+import { decodeJWT } from '@/utils/jwtUtils';
 
 const { width } = Dimensions.get('window');
 
-// Helper to decode JWT payload safely in React Native
-const decodeJWT = (token: string | null) => {
-  try {
-    if (!token) return null;
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    
-    const base64Url = parts[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    
-    // Manual base64 decode to avoid 'atob' issues in some RN environments
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-    let str = base64.replace(/=+$/, '');
-    let output = '';
-    
-    if (str.length % 4 === 1) return null;
-    
-    for (let bc = 0, bs = 0, buffer, i = 0; buffer = str.charAt(i++); ~buffer && (bs = bc % 4 ? bs * 64 + buffer : buffer, bc++ % 4) ? output += String.fromCharCode(255 & bs >> (-2 * bc & 6)) : 0) {
-      buffer = chars.indexOf(buffer);
-    }
-    
-    return JSON.parse(output);
-  } catch (e) {
-    console.error('JWT Decode Error:', e);
-    return null;
-  }
-};
+// decodeJWT utility is now imported from @/utils/jwtUtils
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -118,16 +93,17 @@ export default function ProfileScreen() {
         return;
       }
 
-      console.log('📡 Profile: Fetching profile & trips for:', userId);
-      const [profileData, tripsData] = await Promise.all([
+      console.log('📡 Profile: Fetching profile, trips & inventory for:', userId);
+      const [profileData, tripsData, localInv] = await Promise.all([
         userService.getMyProfile(userId as string),
-        tripService.getMyTrips()
+        tripService.getMyTrips(),
+        userService.getLocalInventory(userId as string)
       ]);
 
       console.log('✨ Profile: Data fetch complete');
 
       if (profileData) {
-        setProfile(profileData);
+        setProfile({ ...profileData, inventory: localInv });
       }
       setTrips(tripsData || []);
     } catch (error: any) {
@@ -392,6 +368,44 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+          )}
+
+          {/* Inventory Section */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Kho vật phẩm của tôi</Text>
+            <TouchableOpacity onPress={() => router.push('/store')}>
+              <Text style={styles.viewAll}>Cửa hàng &gt;</Text>
+            </TouchableOpacity>
+          </View>
+
+          {!profile?.inventory || profile.inventory.length === 0 ? (
+            <View style={styles.emptyInventory}>
+              <Feather name="package" size={40} color="#CBD5E0" />
+              <Text style={styles.emptyText}>Chưa có vật phẩm nào</Text>
+            </View>
+          ) : (
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              contentContainerStyle={styles.inventoryList}
+              style={styles.inventoryScroll}
+            >
+              {profile.inventory.map((item, index) => (
+                <View key={index} style={styles.inventoryItemCard}>
+                  <View style={styles.inventoryImageWrap}>
+                    <ExpoImage 
+                      source={getImageSource(item.image)} 
+                      style={styles.inventoryImage} 
+                      contentFit="cover"
+                    />
+                  </View>
+                  <Text style={styles.inventoryName} numberOfLines={1}>{item.name}</Text>
+                  <View style={styles.inventoryBadge}>
+                    <Text style={styles.inventoryBadgeText}>{item.type.toUpperCase()}</Text>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
           )}
 
           {/* Settings Section */}
@@ -802,6 +816,65 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#1E293B',
+  },
+  emptyInventory: {
+    backgroundColor: '#FFF',
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    borderStyle: 'dashed',
+  },
+  inventoryScroll: {
+    marginBottom: 28,
+  },
+  inventoryList: {
+    paddingRight: 20,
+    gap: 16,
+  },
+  inventoryItemCard: {
+    width: 130,
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    padding: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  inventoryImageWrap: {
+    width: 100,
+    height: 100,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#F8FAFC',
+    marginBottom: 10,
+  },
+  inventoryImage: {
+    width: '100%',
+    height: '100%',
+  },
+  inventoryName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  inventoryBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  inventoryBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#64748B',
   },
   modalOverlay: {
     flex: 1,
