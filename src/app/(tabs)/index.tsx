@@ -26,7 +26,55 @@ import { tripService, Trip, TripDetailResponse } from '../../services/tripServic
 import { userService, UserProfile } from '../../services/userService';
 import { getImageSource } from '../../utils/imageUtils';
 
+const MOCK_TRIP_REVIEWS = [
+  {
+    id: '1',
+    userName: 'Trần Hoàng Nam',
+    rating: 5,
+    content: 'Lịch trình rất hợp lý, các điểm đến đều đẹp và dịch vụ tốt. Rất đáng tiền!',
+    date: '3 ngày trước',
+    userAvatar: 'https://i.pravatar.cc/150?u=4'
+  },
+  {
+    id: '2',
+    userName: 'Mai Phương Thảo',
+    rating: 5,
+    content: 'Gia đình tôi đã có một chuyến đi tuyệt vời nhờ lịch trình này. Cảm ơn OwnTrip!',
+    date: '1 tuần trước',
+    userAvatar: 'https://i.pravatar.cc/150?u=5'
+  }
+];
+
+const MOCK_REVIEWS = [
+
+  {
+    id: '1',
+    userName: 'Nguyễn Văn An',
+    rating: 5,
+    content: 'Địa điểm tuyệt vời, không khí rất trong lành và mát mẻ. Rất xứng đáng để ghé thăm!',
+    date: '2 ngày trước',
+    userAvatar: 'https://i.pravatar.cc/150?u=1'
+  },
+  {
+    id: '2',
+    userName: 'Lê Thị Bình',
+    rating: 4,
+    content: 'Cảnh quan đẹp tuyệt vời, tuy nhiên đường đi hơi đông đúc vào cuối tuần.',
+    date: '1 tuần trước',
+    userAvatar: 'https://i.pravatar.cc/150?u=2'
+  },
+  {
+    id: '3',
+    userName: 'Phạm Minh Đức',
+    rating: 5,
+    content: 'Hành trình chinh phục đỉnh núi rất thú vị. Tượng Phật Bà Tây Bổ Đà Sơn thật sự hùng vĩ.',
+    date: '2 tuần trước',
+    userAvatar: 'https://i.pravatar.cc/150?u=3'
+  }
+];
+
 export default function HomeScreen() {
+
   const router = useRouter();
   const [trendingPlaces, setTrendingPlaces] = useState<Place[]>([]);
   const [recommendedTrips, setRecommendedTrips] = useState<Trip[]>([]);
@@ -474,6 +522,39 @@ export default function HomeScreen() {
                       <Text style={styles.modalPrimaryButtonText}>Chỉ đường đến đây</Text>
                     </TouchableOpacity>
                   )}
+
+                  <View style={styles.modalDivider} />
+                  
+                  {/* Reviews Section */}
+                  <View style={styles.reviewsSection}>
+                    <View style={styles.reviewsHeader}>
+                      <Text style={styles.reviewsTitle}>Đánh giá từ cộng đồng</Text>
+                      <TouchableOpacity>
+                        <Text style={styles.writeReviewText}>Viết đánh giá</Text>
+                      </TouchableOpacity>
+                    </View>
+                    
+                    {MOCK_REVIEWS.map((review) => (
+                      <View key={review.id} style={styles.reviewItem}>
+                        <View style={styles.reviewUserRow}>
+                          <ExpoImage source={getImageSource(review.userAvatar)} style={styles.reviewAvatar} contentFit="cover" />
+                          <View style={styles.reviewUserInfo}>
+                            <Text style={styles.reviewUserName}>{review.userName}</Text>
+                            <Text style={styles.reviewDate}>{review.date}</Text>
+                          </View>
+                          <View style={styles.reviewRatingBadge}>
+                            <Feather name="star" size={10} color="#FFF" fill="#FFF" />
+                            <Text style={styles.reviewRatingText}>{review.rating}</Text>
+                          </View>
+                        </View>
+                        <Text style={styles.reviewContent}>{review.content}</Text>
+                      </View>
+                    ))}
+                    
+                    <TouchableOpacity style={styles.viewAllReviewsButton}>
+                      <Text style={styles.viewAllReviewsText}>Xem tất cả {selectedPlace.totalReviews?.toLocaleString() || ''} đánh giá</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </ScrollView>
             )}
@@ -579,6 +660,41 @@ export default function HomeScreen() {
                         ))}
                       </View>
                     )}
+                  </View>
+
+                  <View style={styles.modalDivider} />
+
+                  {/* Trip Reviews Section */}
+                  <View style={styles.reviewsSection}>
+                    <View style={styles.reviewsHeader}>
+                      <Text style={styles.reviewsTitle}>Đánh giá lịch trình</Text>
+                      <View style={styles.tripRatingSummary}>
+                        <Feather name="star" size={14} color="#ECC94B" fill="#ECC94B" />
+                        <Text style={styles.tripRatingScore}>5.0</Text>
+                        <Text style={styles.tripRatingCount}>(24)</Text>
+                      </View>
+                    </View>
+                    
+                    {MOCK_TRIP_REVIEWS.map((review) => (
+                      <View key={review.id} style={styles.reviewItem}>
+                        <View style={styles.reviewUserRow}>
+                          <ExpoImage source={getImageSource(review.userAvatar)} style={styles.reviewAvatar} contentFit="cover" />
+                          <View style={styles.reviewUserInfo}>
+                            <Text style={styles.reviewUserName}>{review.userName}</Text>
+                            <Text style={styles.reviewDate}>{review.date}</Text>
+                          </View>
+                          <View style={styles.reviewRatingBadge}>
+                            <Feather name="star" size={10} color="#FFF" fill="#FFF" />
+                            <Text style={styles.reviewRatingText}>{review.rating}</Text>
+                          </View>
+                        </View>
+                        <Text style={styles.reviewContent}>{review.content}</Text>
+                      </View>
+                    ))}
+                    
+                    <TouchableOpacity style={styles.viewAllReviewsButton}>
+                      <Text style={styles.viewAllReviewsText}>Xem tất cả đánh giá</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
               </ScrollView>
@@ -1376,5 +1492,57 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#4A7CFF',
+  },
+
+  // Reviews Styles
+  reviewsSection: { marginTop: 8 },
+  reviewsHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: 20 
+  },
+  reviewsTitle: { fontSize: 18, fontWeight: '700', color: '#1A2B4A' },
+  writeReviewText: { fontSize: 14, color: '#4A7CFF', fontWeight: '600' },
+  reviewItem: { 
+    backgroundColor: '#F8FAFC', 
+    borderRadius: 16, 
+    padding: 16, 
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#EDF2F7',
+  },
+  reviewUserRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  reviewAvatar: { width: 36, height: 36, borderRadius: 18, marginRight: 12 },
+  reviewUserInfo: { flex: 1 },
+  reviewUserName: { fontSize: 14, fontWeight: '600', color: '#1A2B4A' },
+  reviewDate: { fontSize: 12, color: '#A0AEC0' },
+  reviewRatingBadge: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 4, 
+    backgroundColor: '#ECC94B', 
+    paddingHorizontal: 8, 
+    paddingVertical: 4, 
+    borderRadius: 8 
+  },
+  reviewRatingText: { fontSize: 12, fontWeight: '700', color: '#FFF' },
+  reviewContent: { fontSize: 14, color: '#4A5568', lineHeight: 20 },
+  viewAllReviewsButton: { alignItems: 'center', paddingVertical: 12, marginTop: 8 },
+  viewAllReviewsText: { fontSize: 14, color: '#718096', fontWeight: '600' },
+  
+  tripRatingSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  tripRatingScore: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1A2B4A',
+  },
+  tripRatingCount: {
+    fontSize: 14,
+    color: '#A0AEC0',
   },
 });
