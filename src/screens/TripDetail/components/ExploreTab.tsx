@@ -62,13 +62,17 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [savedPlaces, setSavedPlaces] = useState<Place[]>([]);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Multi-select edit mode for saved places
+  const [editMode, setEditMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
 
   // Add to trip modal
   const [showDayPicker, setShowDayPicker] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [addingToDay, setAddingToDay] = useState<string | null>(null);
-  const { alert: showAlert } = useConfirm();
+  const { alert: showAlert, confirmDelete } = useConfirm();
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const STORAGE_KEY = `explore_saved_${trip._id}`;
@@ -193,6 +197,11 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
         ? prev.filter(p => p.placeId !== place.placeId)
         : [...prev, place];
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+      // Exit edit mode if fewer than 2 saved places remain
+      if (next.length < 2) {
+        setEditMode(false);
+        setSelectedIds(new Set());
+      }
       return next;
     });
   }, [STORAGE_KEY]);
@@ -297,7 +306,7 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
             {isAdded ? (
               <View style={styles.addedBadge}>
                 <Feather name="check" size={12} color="#10B981" />
-                <Text style={styles.addedText}>Trong lịch trình</Text>
+                <Text style={styles.addedText}>Đã thêm</Text>
               </View>
             ) : (
               <TouchableOpacity
@@ -306,7 +315,7 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
                 activeOpacity={0.7}
               >
                 <Feather name="plus" size={13} color="#FFF" />
-                <Text style={styles.addBtnText}>Thêm vào chuyến đi</Text>
+                <Text style={styles.addBtnText}>Thêm</Text>
               </TouchableOpacity>
             )}
 
@@ -354,6 +363,25 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
                 <Text style={styles.savedCountText}>{savedPlaces.length}</Text>
               </View>
             </View>
+            {/* Edit / Done toggle — only show when 2+ saved */}
+            {savedPlaces.length >= 2 && (
+              <TouchableOpacity
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  if (editMode) {
+                    setEditMode(false);
+                    setSelectedIds(new Set());
+                  } else {
+                    setEditMode(true);
+                  }
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
+              >
+                <Text style={styles.editToggleText}>
+                  {editMode ? 'Xong' : 'Sửa'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
           <ScrollView
             horizontal
@@ -362,16 +390,38 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
           >
             {savedPlaces.map(place => {
               const hasImg = place.photo && !failedImages.has(place.placeId);
+              const isSelected = selectedIds.has(place.placeId);
               return (
-                <View key={place.placeId} style={styles.savedCard}>
-                  {/* Remove btn */}
-                  <TouchableOpacity
-                    style={styles.savedRemoveBtn}
-                    onPress={() => toggleSave(place)}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Feather name="x" size={12} color="#6B7280" />
-                  </TouchableOpacity>
+                <TouchableOpacity
+                  key={place.placeId}
+                  style={[styles.savedCard, editMode && isSelected && styles.savedCardSelected]}
+                  activeOpacity={editMode ? 0.7 : 1}
+                  onPress={() => {
+                    if (editMode) {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setSelectedIds(prev => {
+                        const next = new Set(prev);
+                        if (next.has(place.placeId)) next.delete(place.placeId);
+                        else next.add(place.placeId);
+                        return next;
+                      });
+                    }
+                  }}
+                >
+                  {/* Normal mode: X button | Edit mode: checkbox */}
+                  {editMode ? (
+                    <View style={[styles.savedCheckbox, isSelected && styles.savedCheckboxChecked]}>
+                      {isSelected && <Feather name="check" size={10} color="#FFF" />}
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.savedRemoveBtn}
+                      onPress={() => toggleSave(place)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Feather name="x" size={12} color="#6B7280" />
+                    </TouchableOpacity>
+                  )}
                   {hasImg ? (
                     <Image source={{ uri: place.photo! }} style={styles.savedImage} />
                   ) : (
@@ -386,10 +436,69 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
                       <Text style={styles.savedRatingText}>{place.rating!.toFixed(1)}</Text>
                     </View>
                   )}
-                </View>
+                </TouchableOpacity>
               );
             })}
           </ScrollView>
+
+          {/* ── Edit Mode Toolbar ── */}
+          {editMode && (
+            <View style={styles.editToolbar}>
+              <TouchableOpacity
+                style={styles.selectAllBtn}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  if (selectedIds.size === savedPlaces.length) {
+                    setSelectedIds(new Set());
+                  } else {
+                    setSelectedIds(new Set(savedPlaces.map(p => p.placeId)));
+                  }
+                }}
+              >
+                <Feather
+                  name={selectedIds.size === savedPlaces.length ? 'check-square' : 'square'}
+                  size={16}
+                  color={BRAND}
+                />
+                <Text style={styles.selectAllText}>
+                  {selectedIds.size === savedPlaces.length ? 'Bỏ chọn' : 'Chọn tất cả'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.batchDeleteBtn,
+                  selectedIds.size === 0 && styles.batchDeleteBtnDisabled,
+                ]}
+                disabled={selectedIds.size === 0}
+                onPress={async () => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  const ok = await confirmDelete(
+                    `Xóa ${selectedIds.size} địa điểm đã lưu?`,
+                    'Hành động này không thể hoàn tác.',
+                  );
+                  if (ok) {
+                    setSavedPlaces(prev => {
+                      const next = prev.filter(p => !selectedIds.has(p.placeId));
+                      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+                      if (next.length < 2) setEditMode(false);
+                      setSelectedIds(new Set());
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                      return next;
+                    });
+                  }
+                }}
+              >
+                <Feather name="trash-2" size={14} color={selectedIds.size === 0 ? '#D1D5DB' : '#EF4444'} />
+                <Text style={[
+                  styles.batchDeleteText,
+                  selectedIds.size === 0 && styles.batchDeleteTextDisabled,
+                ]}>
+                  Xóa ({selectedIds.size})
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       )}
       {/* Search bar */}
@@ -706,6 +815,7 @@ const styles = StyleSheet.create({
     marginTop: 16, marginBottom: 4,
   },
   savedHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, marginBottom: 12,
   },
   savedTitleRow: {
@@ -721,23 +831,39 @@ const styles = StyleSheet.create({
   savedCountText: {
     fontSize: 11, fontWeight: '700', color: '#FFF',
   },
+  editToggleText: {
+    fontSize: 14, fontWeight: '600', color: BRAND,
+  },
   savedList: {
     paddingHorizontal: 16, gap: 12,
   },
   savedCard: {
     width: 120, alignItems: 'center',
     backgroundColor: '#FFF', borderRadius: 14,
-    padding: 10, borderWidth: 1, borderColor: '#F3F4F6',
+    padding: 10, borderWidth: 1.5, borderColor: '#F3F4F6',
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4 },
       android: { elevation: 1 },
     }),
+  },
+  savedCardSelected: {
+    borderColor: BRAND, backgroundColor: '#F0F5FF',
   },
   savedRemoveBtn: {
     position: 'absolute', top: 6, right: 6, zIndex: 1,
     width: 20, height: 20, borderRadius: 10,
     backgroundColor: '#F3F4F6',
     justifyContent: 'center', alignItems: 'center',
+  },
+  savedCheckbox: {
+    position: 'absolute', top: 6, left: 6, zIndex: 1,
+    width: 20, height: 20, borderRadius: 10,
+    borderWidth: 1.5, borderColor: '#D1D5DB',
+    backgroundColor: '#FFF',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  savedCheckboxChecked: {
+    backgroundColor: BRAND, borderColor: BRAND,
   },
   savedImage: {
     width: 60, height: 60, borderRadius: 12,
@@ -757,5 +883,34 @@ const styles = StyleSheet.create({
   },
   savedRatingText: {
     fontSize: 11, fontWeight: '600', color: '#F59E0B',
+  },
+
+  /* ── Edit Mode Toolbar ── */
+  editToolbar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginHorizontal: 16, marginTop: 12,
+    paddingHorizontal: 14, paddingVertical: 10,
+    backgroundColor: '#F9FAFB', borderRadius: 12,
+    borderWidth: 1, borderColor: '#E5E7EB',
+  },
+  selectAllBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+  },
+  selectAllText: {
+    fontSize: 13, fontWeight: '600', color: BRAND,
+  },
+  batchDeleteBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 12, paddingVertical: 7,
+    backgroundColor: '#FEF2F2', borderRadius: 8,
+  },
+  batchDeleteBtnDisabled: {
+    backgroundColor: '#F9FAFB',
+  },
+  batchDeleteText: {
+    fontSize: 13, fontWeight: '600', color: '#EF4444',
+  },
+  batchDeleteTextDisabled: {
+    color: '#D1D5DB',
   },
 });
