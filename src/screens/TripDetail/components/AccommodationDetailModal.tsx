@@ -226,6 +226,13 @@ export default function AccommodationDetailModal({
 
         {/* Header */}
         <View style={styles.header}>
+          <TouchableOpacity
+            onPress={onClose}
+            style={styles.headerBackBtn}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Feather name="arrow-left" size={22} color="#1A1A1A" />
+          </TouchableOpacity>
           <Text style={styles.headerTitle}>Chi tiết khách sạn</Text>
           <View style={styles.headerRight}>
             <TouchableOpacity
@@ -236,9 +243,6 @@ export default function AccommodationDetailModal({
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
               <Feather name="heart" size={20} color={liked ? '#EF4444' : '#9CA3AF'} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-              <Feather name="x" size={22} color="#6B7280" />
             </TouchableOpacity>
           </View>
         </View>
@@ -550,8 +554,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingBottom: 12,
     borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
   },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: '#1A1A1A' },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  headerBackBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  headerTitle: { fontSize: 17, fontWeight: '700', color: '#1A1A1A', flex: 1, textAlign: 'center' },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 16, width: 36, justifyContent: 'flex-end' },
 
   scroll: { paddingBottom: 20 },
 

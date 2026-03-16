@@ -128,13 +128,14 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
   const handleSelectHotel = (hotel: Accommodation) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSelectedHotel(hotel);
-    setHotelModalVisible(false);
-    setTimeout(() => setDetailVisible(true), 300);
+    // Keep hotelModalVisible open — detail opens on top
+    setDetailVisible(true);
   };
 
   const handleBookFromDetail = (hotel: Accommodation) => {
     setSelectedHotel(hotel);
     setDetailVisible(false);
+    // Calendar opens on top of hotel list modal
     setTimeout(() => setCalendarVisible(true), 300);
   };
 
@@ -146,6 +147,7 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
 
   const handleDateConfirm = (checkIn: Date, checkOut: Date) => {
     setCalendarVisible(false);
+    setHotelModalVisible(false); // Close hotel list — booking complete, back to summary
     setBookedHotel(selectedHotel);
     setCheckInDate(checkIn);
     setCheckOutDate(checkOut);
