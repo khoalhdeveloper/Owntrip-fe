@@ -13,6 +13,7 @@ import Constants from 'expo-constants';
 import AuthModal from './components/AuthModal';
 import { styles } from './styles/login.styles';
 import { authService } from '@/services/authService';
+import { decodeJWT } from '@/utils/jwtUtils';
 
 const loginBg = require('@/assets/images/login-bg.png');
 const logo = require('@/assets/images/logo.png');
@@ -75,7 +76,13 @@ export default function LoginScreen() {
           await AsyncStorage.setItem('userId', res.userId);
         }
         console.log('TOKEN & USERID SAVED');
-        router.replace('/(tabs)' as any);
+        // Phân quyền: chuyển hướng theo role
+        const decoded = decodeJWT(res.token);
+        if (decoded?.role === 'hotel_owner') {
+          router.replace('/hotel-management' as any);
+        } else {
+          router.replace('/(tabs)' as any);
+        }
       }
     } catch (error) {
       console.log('Google login error:', error);
@@ -99,7 +106,13 @@ export default function LoginScreen() {
         await AsyncStorage.setItem('userId', userId);
       }
       console.log('TOKEN & USERID SAVED');
-      router.replace('/(tabs)' as any);
+      // Phân quyền: chuyển hướng theo role
+      const decoded = decodeJWT(token);
+      if (decoded?.role === 'hotel_owner') {
+        router.replace('/hotel-management' as any);
+      } else {
+        router.replace('/(tabs)' as any);
+      }
     }
   };
 

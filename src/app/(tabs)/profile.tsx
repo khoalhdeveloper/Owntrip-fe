@@ -435,6 +435,20 @@ export default function ProfileScreen() {
 
           {/* Settings Section */}
           <View style={styles.settingsGroup}>
+             {/* Hotel Management - Chỉ hiện cho hotel_owner hoặc admin */}
+             {(profile?.role === 'hotel_owner' || profile?.role === 'admin') && (
+               <TouchableOpacity 
+                 style={styles.settingItem}
+                 onPress={() => router.push('/hotel-management')}
+               >
+                 <View style={[styles.settingIcon, { backgroundColor: '#FFF5EE' }]}>
+                   <FontAwesome5 name="hotel" size={16} color="#FF6B35" />
+                 </View>
+                 <Text style={styles.settingLabel}>Quản lý khách sạn</Text>
+                 <Feather name="chevron-right" size={20} color="#CBD5E0" />
+               </TouchableOpacity>
+             )}
+
              <TouchableOpacity 
                 style={styles.settingItem}
                 onPress={() => setIsNotifModalVisible(true)}

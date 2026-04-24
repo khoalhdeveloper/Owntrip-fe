@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { Redirect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { decodeJWT } from '@/utils/jwtUtils';
 
 export default function Index() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState<string>('user');
 
   useEffect(() => {
     checkAuth();
@@ -14,7 +16,13 @@ export default function Index() {
   const checkAuth = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
-      setIsLoggedIn(!!token);
+      if (token) {
+        setIsLoggedIn(true);
+        const decoded = decodeJWT(token);
+        if (decoded?.role) {
+          setUserRole(decoded.role);
+        }
+      }
     } catch {
       setIsLoggedIn(false);
     } finally {
@@ -31,6 +39,9 @@ export default function Index() {
   }
 
   if (isLoggedIn) {
+    if (userRole === 'hotel_owner') {
+      return <Redirect href={'/hotel-management' as any} />;
+    }
     return <Redirect href={'/(tabs)' as any} />;
   }
 
