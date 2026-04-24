@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,9 +10,9 @@ import {
   Linking,
   Modal,
   FlatList,
-
+  Animated,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather, FontAwesome } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Trip, TripDay, Destination, tripService } from '@/services/tripService';
 import { accommodationService, Accommodation } from '@/services/accommodationService';
@@ -32,7 +32,7 @@ function formatDateRange(start: string, end: string): string {
   if (s.getFullYear() === e.getFullYear()) {
     return `${s.getDate()} ${months[s.getMonth()]} – ${e.getDate()} ${months[e.getMonth()]}, ${e.getFullYear()}`;
   }
-  return `${s.getDate()} ${months[s.getMonth()]}, ${s.getFullYear()} – ${e.getDate()} ${months[e.getMonth()]}, ${e.getFullYear()}`;
+  return `${s.getDate()} ${months[s.getMonth()]}, ${e.getFullYear()} – ${e.getDate()} ${months[e.getMonth()]}, ${e.getFullYear()}`;
 }
 
 function formatDayShort(dateStr: string): string {
@@ -91,6 +91,9 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
   const [bookedHotel, setBookedHotel] = useState<Accommodation | null>(null);
   const [checkInDate, setCheckInDate] = useState<Date | null>(null);
   const [checkOutDate, setCheckOutDate] = useState<Date | null>(null);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const toastOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const fetch = async () => {
@@ -106,6 +109,30 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
     fetch();
   }, [trip._id]);
 
+  // Initialize from trip prop if accommodation exists
+  useEffect(() => {
+    if (trip?.accommodation && !bookedHotel) {
+      const acc = trip.accommodation;
+      setBookedHotel({
+        id: acc.hotelId,
+        hotelId: acc.hotelId,
+        name: acc.hotelName,
+        primaryImage: acc.hotelImage || '',
+        pricePerNight: acc.totalPrice,
+        address: { fullAddress: '' },
+        starRating: 4,
+        rating: 0,
+        reviewCount: 0,
+        images: acc.hotelImage ? [acc.hotelImage] : [],
+        rooms: [],
+        latitude: '0',
+        longitude: '0'
+      } as any);
+      setCheckInDate(new Date(acc.checkIn));
+      setCheckOutDate(new Date(acc.checkOut));
+    }
+  }, [trip]);
+
   const handleImageError = (id: string) => {
     setImgErrors((prev) => ({ ...prev, [id]: true }));
   };
@@ -116,7 +143,7 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
     setHotelModalVisible(true);
     setLoadingHotels(true);
     try {
-      const data = await accommodationService.getAll();
+      const data = await accommodationService.getAll(trip.destination || trip.province || '');
       setHotels(data);
     } catch (e) {
       console.error('Error fetching hotels:', e);
@@ -139,19 +166,58 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
     setTimeout(() => setCalendarVisible(true), 300);
   };
 
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setToastVisible(true);
+    Animated.sequence([
+      Animated.timing(toastOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.delay(2500),
+      Animated.timing(toastOpacity, { toValue: 0, duration: 300, useNativeDriver: true }),
+    ]).start(() => setToastVisible(false));
+  };
+
   const handleWriteReview = (hotel: Accommodation) => {
     setSelectedHotel(hotel);
     setDetailVisible(false);
     setTimeout(() => setReviewVisible(true), 300);
   };
 
-  const handleDateConfirm = (checkIn: Date, checkOut: Date) => {
+  const handleDateConfirm = async (checkIn: Date, checkOut: Date) => {
+    if (!selectedHotel) return;
+    
     setCalendarVisible(false);
-    setHotelModalVisible(false); // Close hotel list — booking complete, back to summary
-    setBookedHotel(selectedHotel);
-    setCheckInDate(checkIn);
-    setCheckOutDate(checkOut);
-    setSelectedHotel(null);
+    setHotelModalVisible(false);
+
+    const nights = Math.round((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+    const totalPrice = (selectedHotel.pricePerNight || 0) * (nights || 1);
+
+    try {
+      // Save to Backend
+      const updatedTrip = await tripService.updateTrip(trip._id, {
+        accommodation: {
+          hotelId: selectedHotel.id || selectedHotel.hotelId,
+          hotelName: selectedHotel.name,
+          hotelImage: selectedHotel.primaryImage || (selectedHotel.images ? selectedHotel.images[0] : ''),
+          checkIn: checkIn.toISOString(),
+          checkOut: checkOut.toISOString(),
+          totalPrice: totalPrice,
+          roomTypeId: 'default'
+        }
+      });
+
+      if (updatedTrip) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        showToast('Đặt phòng thành công! Chỗ ở đã được lưu.');
+        // Cập nhật state ngay lập tức từ dữ liệu Server trả về
+        setBookedHotel(selectedHotel);
+        setCheckInDate(checkIn);
+        setCheckOutDate(checkOut);
+        setSelectedHotel(null);
+      }
+    } catch (error) {
+      console.error('Error saving accommodation:', error);
+      alert('Không thể lưu thông tin đặt phòng. Vui lòng thử lại.');
+    }
   };
 
   const { confirmDelete } = useConfirm();
@@ -164,18 +230,44 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
       'Xóa',
     );
     if (confirmed) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setBookedHotel(null);
-      setCheckInDate(null);
-      setCheckOutDate(null);
+      try {
+        // Clear from Backend
+        await tripService.updateTrip(trip._id, {
+          accommodation: null as any
+        });
+        
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setBookedHotel(null);
+        setCheckInDate(null);
+        setCheckOutDate(null);
+      } catch (error) {
+        console.error('Error removing accommodation:', error);
+      }
     }
   };
 
   // Open booked hotel detail for viewing
-  const handleViewBookedHotel = () => {
+  const handleViewBookedHotel = async () => {
     if (!bookedHotel) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSelectedHotel(bookedHotel);
+    
+    try {
+      // Tải dữ liệu thật từ Server, kèm theo ngày đã đặt
+      const fullHotel = await accommodationService.getById(
+        bookedHotel.id || (bookedHotel as any).hotelId,
+        checkInDate?.toISOString(),
+        checkOutDate?.toISOString()
+      );
+      if (fullHotel) {
+        setSelectedHotel(fullHotel);
+      } else {
+        setSelectedHotel(bookedHotel);
+      }
+    } catch (error) {
+      console.error('Error fetching full hotel detail:', error);
+      setSelectedHotel(bookedHotel);
+    }
+    
     setViewingBooked(true);
     setDetailVisible(true);
   };
@@ -241,11 +333,11 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
             activeOpacity={0.7}
             onPress={handleViewBookedHotel}
           >
-            {bookedHotel.images && !imgErrors[`hotel-${bookedHotel.id}`] ? (
+            {bookedHotel.primaryImage && !imgErrors[`hotel-${bookedHotel.hotelId}`] ? (
               <Image
-                source={{ uri: bookedHotel.images }}
+                source={{ uri: bookedHotel.primaryImage }}
                 style={styles.bookedImage}
-                onError={() => handleImageError(`hotel-${bookedHotel.id}`)}
+                onError={() => handleImageError(`hotel-${bookedHotel.hotelId}`)}
               />
             ) : (
               <View style={[styles.bookedImage, styles.bookedImagePlaceholder]}>
@@ -473,11 +565,11 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
           ) : (
             <FlatList
               data={hotels}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item) => item.hotelId}
               contentContainerStyle={styles.hotelList}
               showsVerticalScrollIndicator={false}
               renderItem={({ item }) => {
-                const hasImg = item.images && !imgErrors[`modal-${item.id}`];
+                const hasImg = item.primaryImage && !imgErrors[`modal-${item.hotelId}`];
                 const chips = item.amenities?.slice(0, 3) ?? [];
                 const extra = (item.amenities?.length ?? 0) - 3;
                 return (
@@ -489,9 +581,9 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
                     <View style={styles.hotelImageWrap}>
                       {hasImg ? (
                         <Image
-                          source={{ uri: item.images }}
+                          source={{ uri: item.primaryImage }}
                           style={styles.hotelImage}
-                          onError={() => handleImageError(`modal-${item.id}`)}
+                          onError={() => handleImageError(`modal-${item.hotelId}`)}
                         />
                       ) : (
                         <View style={[styles.hotelImage, styles.hotelImagePlaceholder]}>
@@ -509,7 +601,7 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
                       <Text style={styles.hotelName} numberOfLines={1}>{item.name}</Text>
                       <View style={styles.hotelAddrRow}>
                         <Feather name="map-pin" size={11} color="#9CA3AF" />
-                        <Text style={styles.hotelAddr} numberOfLines={1}>{item.address}</Text>
+                        <Text style={styles.hotelAddr} numberOfLines={1}>{item.address?.fullAddress || ''}</Text>
                       </View>
                       {chips.length > 0 && (
                         <View style={styles.hotelChips}>
@@ -593,7 +685,43 @@ function BudgetRow({ label, amount, total }: { label: string; amount: number; to
 
 // ===== STYLES =====
 const styles = StyleSheet.create({
-  container: { padding: 16, gap: 12 },
+  container: { flex: 1, paddingBottom: 40, padding: 16, gap: 12 },
+
+  toastContainer: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    right: 20,
+    zIndex: 9999,
+    alignItems: 'center',
+  },
+  toastContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(26, 26, 26, 0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 50,
+    gap: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  toastIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#10B981',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  toastText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
 
   // Card — clean white card like reference
   card: {

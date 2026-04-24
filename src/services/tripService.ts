@@ -16,6 +16,15 @@ export interface Trip {
   budget?: number;
   createdAt?: string;
   updatedAt?: string;
+  accommodation?: {
+    hotelId: string;
+    roomTypeId: string;
+    hotelName: string;
+    hotelImage?: string;
+    checkIn: string;
+    checkOut: string;
+    totalPrice: number;
+  };
 }
 
 export interface TripDay {
@@ -166,10 +175,11 @@ export const tripService = {
     description?: string;
     isPublished?: boolean;
     budget?: number;
+    accommodation?: any;
   }): Promise<Trip | null> => {
     try {
       const url = ENDPOINTS.TRIPS.UPDATE(tripId);
-      const response = await axiosClient.put<any, any>(url, data);
+      const response = await axiosClient.patch<any, any>(url, data);
       return response?.trip ?? response ?? null;
     } catch (error) {
       console.error(`Error updating trip ${tripId}:`, error);

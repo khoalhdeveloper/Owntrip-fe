@@ -13,6 +13,7 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Trip, TripDay } from '@/services/tripService';
 import { accommodationService, Accommodation } from '@/services/accommodationService';
+import { bookingService } from '@/services/bookingService';
 import StayDatePickerModal from './StayDatePickerModal';
 import AccommodationDetailModal from './AccommodationDetailModal';
 import WriteReviewModal from './WriteReviewModal';
@@ -38,18 +39,21 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
   const [detailVisible, setDetailVisible] = useState(false);
   const [reviewVisible, setReviewVisible] = useState(false);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
+  const [bookingLoading, setBookingLoading] = useState(false);
 
   const fetchAccommodations = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await accommodationService.getAll();
+      // Lọc theo thành phố của trip (destination)
+      const city = trip.destination || trip.province || '';
+      const data = await accommodationService.getAll(city);
       setAccommodations(data);
     } catch (e) {
       console.error('Error fetching accommodations:', e);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [trip.destination, trip.province]);
 
   useEffect(() => { fetchAccommodations(); }, [fetchAccommodations]);
 
@@ -74,23 +78,76 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
     setTimeout(() => setReviewVisible(true), 300);
   };
 
-  const handleDateConfirm = (checkIn: Date, checkOut: Date) => {
+  const handleDateConfirm = async (checkIn: Date, checkOut: Date) => {
     setCalendarVisible(false);
-    if (!selectedHotel) return;
+    if (!selectedHotel || !selectedHotel.rooms || selectedHotel.rooms.length === 0) {
+      showAlert('Lỗi', 'Khách sạn chưa có loại phòng nào', 'error');
+      return;
+    }
 
-    const nights = Math.round(
-      (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    const totalCost = nights * selectedHotel.pricePerNight;
+    setBookingLoading(true);
 
-    const formatDate = (d: Date) =>
-      `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+    try {
+      const formatDate = (d: Date) =>
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-    showAlert(
-      '🎉 Đặt phòng thành công!',
-      `${selectedHotel.name}\n${formatDate(checkIn)} → ${formatDate(checkOut)}\n${nights} đêm · ${formatCurrency(totalCost)}`,
-      'success',
-    );
+      const checkInStr = formatDate(checkIn);
+      const checkOutStr = formatDate(checkOut);
+
+      // Use the first room type for booking
+      const roomType = selectedHotel.rooms[0];
+
+      // 1. Check availability first
+      const availability = await bookingService.checkAvailability({
+        hotelId: selectedHotel.hotelId,
+        roomTypeId: roomType.roomTypeId,
+        checkIn: checkInStr,
+        checkOut: checkOutStr,
+        roomCount: 1,
+      });
+
+      if (!availability || !availability.available) {
+        showAlert(
+          'Hết phòng',
+          availability?.message || 'Không đủ phòng trong khoảng thời gian này',
+          'warning',
+        );
+        return;
+      }
+
+      // 2. Create booking
+      const result = await bookingService.createBooking({
+        hotelId: selectedHotel.hotelId,
+        roomTypeId: roomType.roomTypeId,
+        checkIn: checkInStr,
+        checkOut: checkOutStr,
+        roomCount: 1,
+        guestInfo: {
+          fullName: 'Khách hàng OwnTrip',
+          phone: '0900000000',
+          email: 'guest@owntrip.vn',
+          specialRequests: '',
+        },
+        paymentMethod: 'balance',
+      });
+
+      if (result.success) {
+        const nights = availability.nights;
+        const total = availability.totalPrice;
+        showAlert(
+          '🎉 Đặt phòng thành công!',
+          `${selectedHotel.name}\nMã đặt phòng: ${result.data?.bookingId}\n${nights} đêm · ${formatCurrency(total)}`,
+          'success',
+        );
+      } else {
+        showAlert('Lỗi đặt phòng', result.message, 'error');
+      }
+    } catch (error) {
+      console.error('Booking error:', error);
+      showAlert('Lỗi', 'Đã xảy ra lỗi khi đặt phòng', 'error');
+    } finally {
+      setBookingLoading(false);
+    }
   };
 
   const handleImageError = (id: string) => {
@@ -98,18 +155,22 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
   };
 
   const renderHotelCard = (item: Accommodation) => {
-    const hasImage = item.images && !imgErrors[item.id];
+    const hasImage = item.primaryImage && !imgErrors[item.hotelId];
     const displayAmenities = item.amenities?.slice(0, 3) ?? [];
     const extraCount = (item.amenities?.length ?? 0) - 3;
 
     // Find cheapest room
-    const cheapestRoom = item.roomTypes?.length
-      ? item.roomTypes.reduce((min, r) => (r.price < min.price ? r : min), item.roomTypes[0])
+    const cheapestRoom = item.rooms?.length
+      ? item.rooms.reduce((min, r) => {
+          const minPrice = min.basePrice || min.price || 0;
+          const rPrice = r.basePrice || r.price || 0;
+          return rPrice < minPrice ? r : min;
+        }, item.rooms[0])
       : null;
 
     return (
       <TouchableOpacity
-        key={item.id}
+        key={item.hotelId}
         style={styles.hotelCard}
         activeOpacity={0.85}
         onPress={() => handleOpenDetail(item)}
@@ -118,9 +179,9 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
         <View style={styles.imageContainer}>
           {hasImage ? (
             <Image
-              source={{ uri: item.images }}
+              source={{ uri: item.primaryImage }}
               style={styles.hotelImage}
-              onError={() => handleImageError(item.id)}
+              onError={() => handleImageError(item.hotelId)}
             />
           ) : (
             <View style={[styles.hotelImage, styles.imagePlaceholder]}>
@@ -128,7 +189,7 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
             </View>
           )}
 
-          {/* Rating badge — FIXED: show as X.X ★ not /10 */}
+          {/* Rating badge */}
           {item.rating > 0 && (
             <View style={styles.ratingBadge}>
               <Text style={styles.ratingValue}>{item.rating.toFixed(1)}</Text>
@@ -136,10 +197,10 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
             </View>
           )}
 
-          {/* Category badge */}
-          {item.category && (
+          {/* Tags badge */}
+          {item.tags && item.tags.length > 0 && (
             <View style={styles.categoryBadge}>
-              <Text style={styles.categoryText}>{item.category}</Text>
+              <Text style={styles.categoryText}>{item.tags[0]}</Text>
             </View>
           )}
 
@@ -151,31 +212,25 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
 
         {/* Info */}
         <View style={styles.infoSection}>
-          {/* Stars — FIXED: use item.star directly */}
+          {/* Stars */}
           <View style={styles.starsRow}>
-            {Array.from({ length: item.star || 0 }).map((_, i) => (
+            {Array.from({ length: item.starRating || 0 }).map((_, i) => (
               <Feather key={i} name="star" size={12} color="#F59E0B" />
             ))}
           </View>
 
           <Text style={styles.hotelName} numberOfLines={1}>{item.name}</Text>
 
-          {/* Address — IMPROVED: show city */}
+          {/* Address */}
           <View style={styles.addressRow}>
             <Feather name="map-pin" size={12} color="#9CA3AF" />
             <Text style={styles.addressText} numberOfLines={1}>
-              {item.address}{item.city ? `, ${item.city}` : ''}
+              {item.address?.fullAddress || ''}{item.address?.city ? `, ${item.address.city}` : ''}
             </Text>
           </View>
 
-          {/* Distance + Reviews count — NEW */}
+          {/* Reviews count */}
           <View style={styles.metaRow}>
-            {item.distanceCenter > 0 && (
-              <View style={styles.metaItem}>
-                <Feather name="navigation" size={11} color="#9CA3AF" />
-                <Text style={styles.metaText}>{item.distanceCenter} km</Text>
-              </View>
-            )}
             {item.reviewsCount > 0 && (
               <View style={styles.metaItem}>
                 <Feather name="message-square" size={11} color="#9CA3AF" />
@@ -202,7 +257,7 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
           <View style={styles.priceRow}>
             <View>
               <Text style={styles.priceValue}>
-                {cheapestRoom ? `Từ ${formatCurrency(cheapestRoom.price)}` : formatCurrency(item.pricePerNight)}
+                {cheapestRoom ? `Từ ${formatCurrency(cheapestRoom.basePrice || cheapestRoom.price || 0)}` : formatCurrency(item.pricePerNight)}
               </Text>
               <Text style={styles.priceUnit}>/đêm</Text>
             </View>
@@ -216,11 +271,13 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
     );
   };
 
-  if (loading) {
+  if (loading || bookingLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={BRAND} />
-        <Text style={styles.loadingText}>Đang tìm khách sạn...</Text>
+        <Text style={styles.loadingText}>
+          {bookingLoading ? 'Đang xử lý đặt phòng...' : 'Đang tìm khách sạn...'}
+        </Text>
       </View>
     );
   }
@@ -232,7 +289,7 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
           <Feather name="home" size={44} color="#D1D5DB" />
           <Text style={styles.emptyTitle}>Không tìm thấy khách sạn</Text>
           <Text style={styles.emptySubtitle}>
-            Chưa có nơi lưu trú. Vui lòng thử lại sau.
+            Chưa có nơi lưu trú cho khu vực này. Vui lòng thử lại sau.
           </Text>
         </View>
       ) : (

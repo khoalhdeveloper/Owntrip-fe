@@ -1,5 +1,5 @@
 export const API_CONFIG = {
-  BASE_URL: process.env.EXPO_PUBLIC_API_URL || 'https://owntrip.vercel.app',
+  BASE_URL:'http://10.0.2.2:3000',
   TIMEOUT: 15000,
 };
 
@@ -47,5 +47,18 @@ export const ENDPOINTS = {
   NOTIFICATIONS: {
     GET_ALL: '/api/notifications',
     MARK_AS_READ: (id: string) => `/api/notifications/${id}/read`,
+  },
+  HOTELS: {
+    LIST: '/api/hotels',
+    DETAIL: (id: string) => `/api/hotels/${id}/page`,
+    REVIEW: '/api/hotels/review',
+    CREATE: '/api/hotels/create',
+  },
+  BOOKINGS: {
+    CHECK_AVAILABILITY: '/api/bookings/check-availability',
+    CREATE: '/api/bookings/create',
+    MY_BOOKINGS: '/api/bookings/my-bookings',
+    DETAIL: (id: string) => `/api/bookings/${id}`,
+    CANCEL: (id: string) => `/api/bookings/${id}/cancel`,
   },
 };

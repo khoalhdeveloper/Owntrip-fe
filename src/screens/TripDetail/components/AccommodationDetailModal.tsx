@@ -11,9 +11,10 @@ import {
   Linking,
   Dimensions,
   ActivityIndicator,
+  FlatList,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { Feather } from '@expo/vector-icons';
+import { Feather, FontAwesome } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import {
@@ -69,7 +70,10 @@ export default function AccommodationDetailModal({
 }: AccommodationDetailModalProps) {
   const [reviews, setReviews] = useState<AccommodationReview[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [selectedRoomImages, setSelectedRoomImages] = useState<string[] | null>(null);
   const [imgError, setImgError] = useState(false);
+  const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
   const [liked, setLiked] = useState(false);
   const [showAllAmenities, setShowAllAmenities] = useState(false);
   const [nearbyPlaces, setNearbyPlaces] = useState<{ name: string; latitude: number; longitude: number }[]>([]);
@@ -79,12 +83,30 @@ export default function AccommodationDetailModal({
 
   useEffect(() => {
     if (visible && hotel) {
-      setImgError(false);
+      setActiveImageIndex(0);
       setLiked(false);
       setShowAllAmenities(false);
       fetchReviews(hotel.id);
     }
   }, [visible, hotel]);
+
+  const getAmenityIcon = (name: string) => {
+    const n = name.toLowerCase();
+    if (n.includes('wifi')) return 'wifi';
+    if (n.includes('bể bơi') || n.includes('pool')) return 'droplet';
+    if (n.includes('gym') || n.includes('thể hình')) return 'activity';
+    if (n.includes('spa') || n.includes('massage')) return 'heart';
+    if (n.includes('nhà hàng') || n.includes('ăn')) return 'coffee';
+    if (n.includes('đỗ xe') || n.includes('parking')) return 'truck';
+    if (n.includes('điều hòa') || n.includes('ac')) return 'wind';
+    if (n.includes('tivi') || n.includes('tv')) return 'tv';
+    return 'check-circle';
+  };
+
+  const openImageViewer = (images: string[]) => {
+    setSelectedRoomImages(images);
+    setIsImageViewerVisible(true);
+  };
 
   const fetchReviews = async (hotelId: string) => {
     setLoadingReviews(true);
@@ -248,14 +270,41 @@ export default function AccommodationDetailModal({
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-          {/* ===== Hero Image ===== */}
+          {/* ===== Hero Image Slider ===== */}
           <View style={styles.heroContainer}>
-            {!imgError && hotel.images ? (
-              <Image
-                source={{ uri: hotel.images }}
-                style={styles.heroImage}
-                onError={() => setImgError(true)}
-              />
+            {hotel.images && hotel.images.length > 0 ? (
+              <View>
+                <FlatList
+                  data={hotel.images}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  onScroll={(e) => {
+                    const offset = e.nativeEvent.contentOffset.x;
+                    const index = Math.round(offset / SCREEN_WIDTH);
+                    setActiveImageIndex(index);
+                  }}
+                  scrollEventThrottle={16}
+                  keyExtractor={(_, index) => index.toString()}
+                  renderItem={({ item }) => (
+                    <Image source={{ uri: item }} style={styles.heroImage} />
+                  )}
+                />
+                {/* Pagination Dots */}
+                {hotel.images.length > 1 && (
+                  <View style={styles.paginationRow}>
+                    {hotel.images.map((_, i) => (
+                      <View 
+                        key={i} 
+                        style={[
+                          styles.dot, 
+                          activeImageIndex === i && styles.activeDot
+                        ]} 
+                      />
+                    ))}
+                  </View>
+                )}
+              </View>
             ) : (
               <View style={[styles.heroImage, styles.heroPlaceholder]}>
                 <Feather name="image" size={48} color="#D1D5DB" />
@@ -264,13 +313,18 @@ export default function AccommodationDetailModal({
             {/* Star + Category overlay */}
             <View style={styles.heroOverlay}>
               <View style={styles.starRow}>
-                {Array.from({ length: hotel.star || 0 }).map((_, i) => (
-                  <Feather key={i} name="star" size={14} color="#F59E0B" />
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <FontAwesome 
+                    key={i} 
+                    name="star" 
+                    size={14} 
+                    color={i < (hotel.starRating || 0) ? "#F59E0B" : "#D1D5DB"} 
+                  />
                 ))}
               </View>
-              {hotel.category ? (
+              {hotel.tags && hotel.tags.length > 0 ? (
                 <View style={styles.categoryBadge}>
-                  <Text style={styles.categoryText}>{hotel.category}</Text>
+                  <Text style={styles.categoryText}>{hotel.tags[0]}</Text>
                 </View>
               ) : null}
             </View>
@@ -282,15 +336,10 @@ export default function AccommodationDetailModal({
 
             <View style={styles.infoRow}>
               <Feather name="map-pin" size={14} color="#9CA3AF" />
-              <Text style={styles.infoText}>{hotel.address}{hotel.city ? `, ${hotel.city}` : ''}</Text>
+              <Text style={styles.infoText}>{hotel.address?.fullAddress || ''}{hotel.address?.city ? `, ${hotel.address.city}` : ''}</Text>
             </View>
 
-            {hotel.distanceCenter > 0 && (
-              <View style={styles.infoRow}>
-                <Feather name="navigation" size={14} color="#9CA3AF" />
-                <Text style={styles.infoText}>{hotel.distanceCenter} km đến trung tâm</Text>
-              </View>
-            )}
+
 
             <View style={styles.ratingRow}>
               <View style={styles.ratingBadge}>
@@ -303,24 +352,27 @@ export default function AccommodationDetailModal({
             </View>
           </View>
 
-          {/* ===== Amenities ===== */}
+          {/* ===== Amenities Grid ===== */}
           {hotel.amenities && hotel.amenities.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Tiện nghi</Text>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Tiện ích khách sạn</Text>
+                <TouchableOpacity onPress={() => setShowAllAmenities(!showAllAmenities)}>
+                  <Text style={styles.seeAllText}>
+                    {showAllAmenities ? 'Thu gọn' : `Xem tất cả (${hotel.amenities.length})`}
+                  </Text>
+                </TouchableOpacity>
+              </View>
               <View style={styles.amenitiesGrid}>
-                {(amenitiesDisplay ?? []).map((a, i) => (
-                  <View key={`amenity-${i}`} style={styles.amenityChip}>
-                    <Text style={styles.amenityText}>{a}</Text>
+                {(showAllAmenities ? hotel.amenities : hotel.amenities.slice(0, 8)).map((item, index) => (
+                  <View key={index} style={styles.amenityItem}>
+                    <View style={styles.amenityIconCircle}>
+                      <Feather name={getAmenityIcon(item)} size={18} color={BRAND} />
+                    </View>
+                    <Text style={styles.amenityText} numberOfLines={1}>{item}</Text>
                   </View>
                 ))}
               </View>
-              {hasMoreAmenities && !showAllAmenities && (
-                <TouchableOpacity onPress={() => setShowAllAmenities(true)}>
-                  <Text style={styles.showMoreText}>
-                    +{(hotel.amenities?.length ?? 0) - 6} tiện nghi khác
-                  </Text>
-                </TouchableOpacity>
-              )}
             </View>
           )}
 
@@ -367,23 +419,46 @@ export default function AccommodationDetailModal({
           </View>
 
           {/* ===== Room Types ===== */}
-          {hotel.roomTypes && hotel.roomTypes.length > 0 && (
+          {hotel.rooms && hotel.rooms.length > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Loại phòng</Text>
-              {hotel.roomTypes.map((room) => (
-                <View key={room.id} style={styles.roomCard}>
+              {hotel.rooms.map((room) => (
+                <TouchableOpacity 
+                  key={room.roomTypeId} 
+                  style={styles.roomCard}
+                  activeOpacity={0.9}
+                  onPress={() => room.images && room.images.length > 0 && openImageViewer(room.images)}
+                >
+                  {room.images && room.images.length > 0 ? (
+                    <View style={styles.roomImageContainer}>
+                      <Image 
+                        source={{ uri: room.images[0] }} 
+                        style={styles.roomCardImage} 
+                      />
+                      {room.images.length > 1 && (
+                        <View style={styles.imageCountBadge}>
+                          <Text style={styles.imageCountText}>+{room.images.length - 1}</Text>
+                        </View>
+                      )}
+                    </View>
+                  ) : (
+                    <View style={[styles.roomCardImage, styles.roomPlaceholder]}>
+                      <Feather name="image" size={20} color="#D1D5DB" />
+                    </View>
+                  )}
                   <View style={styles.roomInfo}>
                     <Text style={styles.roomName}>{room.name}</Text>
                     <View style={styles.roomMeta}>
-                      <Feather name="users" size={13} color="#9CA3AF" />
+                      <Feather name="users" size={13} color="#6B7280" />
                       <Text style={styles.roomCapacity}>{room.capacity} khách</Text>
                     </View>
+                    <Text style={styles.viewDetailText}>Xem chi tiết ảnh</Text>
                   </View>
                   <View style={styles.roomRight}>
-                    <Text style={styles.roomPrice}>{formatCurrency(room.price)}</Text>
+                    <Text style={styles.roomPrice}>{formatCurrency(room.basePrice || room.price || 0)}</Text>
                     <Text style={styles.roomPriceUnit}>/đêm</Text>
                   </View>
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
           )}
@@ -508,13 +583,14 @@ export default function AccommodationDetailModal({
             )}
           </View>
 
-          <View style={{ height: 100 }} />
         </ScrollView>
 
         {/* ===== CTA Footer ===== */}
         <View style={styles.footer}>
-          <View style={styles.footerPriceSection}>
-            <Text style={styles.footerPrice}>{formatCurrency(hotel.pricePerNight)}</Text>
+          <View style={styles.footerPriceInfo}>
+            <Text style={styles.footerPrice}>
+              {hotel.pricePerNight > 0 ? formatCurrency(hotel.pricePerNight) : 'Liên hệ'}
+            </Text>
             <Text style={styles.footerPriceUnit}>/đêm</Text>
           </View>
           {isBooked ? (
@@ -538,6 +614,30 @@ export default function AccommodationDetailModal({
           )}
         </View>
       </View>
+
+      {/* ===== Full Screen Image Viewer Modal ===== */}
+      <Modal visible={isImageViewerVisible} transparent={false} animationType="fade">
+        <View style={styles.viewerContainer}>
+          <TouchableOpacity 
+            style={styles.closeViewerBtn}
+            onPress={() => setIsImageViewerVisible(false)}
+          >
+            <Feather name="x" size={28} color="#FFF" />
+          </TouchableOpacity>
+          
+          <FlatList
+            data={selectedRoomImages}
+            horizontal
+            pagingEnabled
+            keyExtractor={(_, i) => i.toString()}
+            renderItem={({ item }) => (
+              <View style={styles.viewerSlide}>
+                <Image source={{ uri: item }} style={styles.viewerImage} resizeMode="contain" />
+              </View>
+            )}
+          />
+        </View>
+      </Modal>
     </Modal>
   );
 }
@@ -565,8 +665,25 @@ const styles = StyleSheet.create({
   scroll: { paddingBottom: 20 },
 
   // Hero
-  heroContainer: { position: 'relative' },
-  heroImage: { width: SCREEN_WIDTH, height: 240, backgroundColor: '#F3F4F6' },
+  heroContainer: { position: 'relative', width: SCREEN_WIDTH },
+  heroImage: { width: SCREEN_WIDTH, height: 260, backgroundColor: '#F3F4F6' },
+  paginationRow: {
+    position: 'absolute',
+    bottom: 12,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+  },
+  activeDot: {
+    width: 18,
+    backgroundColor: '#FFF',
+  },
   heroPlaceholder: { justifyContent: 'center', alignItems: 'center' },
   heroOverlay: {
     position: 'absolute', bottom: 12, left: 14,
@@ -605,13 +722,38 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 17, fontWeight: '700', color: '#1A1A1A', marginBottom: 12 },
 
   // Amenities
-  amenitiesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  amenityChip: {
-    backgroundColor: '#F3F4F6', borderRadius: 8,
-    paddingHorizontal: 12, paddingVertical: 6,
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
-  amenityText: { fontSize: 13, fontWeight: '500', color: '#4B5563' },
-  showMoreText: { fontSize: 13, color: BRAND, fontWeight: '600', marginTop: 8 },
+  seeAllText: { fontSize: 13, color: BRAND, fontWeight: '600' },
+  amenitiesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  amenityItem: {
+    width: (SCREEN_WIDTH - 64) / 4,
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  amenityIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#F0F7FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  amenityText: {
+    fontSize: 11,
+    color: '#4B5563',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
 
   // Info grid
   infoGrid: { flexDirection: 'row', gap: 16, marginBottom: 12 },
@@ -629,18 +771,53 @@ const styles = StyleSheet.create({
 
   // Room card
   roomCard: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: '#F9FAFB', borderRadius: 12, padding: 14,
-    marginBottom: 8,
-    borderWidth: 1, borderColor: '#F3F4F6',
+    flexDirection: 'row',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
-  roomInfo: { flex: 1, gap: 4 },
+  roomImageContainer: { position: 'relative' },
+  roomCardImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: '#E5E7EB',
+  },
+  imageCountBadge: {
+    position: 'absolute',
+    bottom: 4,
+    right: 16,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  imageCountText: { color: '#FFF', fontSize: 10, fontWeight: '700' },
+  roomInfo: { flex: 1, gap: 2 },
   roomName: { fontSize: 15, fontWeight: '600', color: '#1A1A1A' },
   roomMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  roomCapacity: { fontSize: 12, color: '#9CA3AF', fontWeight: '500' },
-  roomRight: { alignItems: 'flex-end' },
-  roomPrice: { fontSize: 16, fontWeight: '800', color: BRAND },
+  roomCapacity: { fontSize: 12, color: '#6B7280' },
+  viewDetailText: { fontSize: 11, color: BRAND, fontWeight: '600', marginTop: 4 },
+  roomRight: { alignItems: 'flex-end', marginLeft: 8 },
+  roomPrice: { fontSize: 16, fontWeight: '700', color: BRAND },
   roomPriceUnit: { fontSize: 11, color: '#9CA3AF' },
+
+  // Image Viewer
+  viewerContainer: { flex: 1, backgroundColor: '#000', justifyContent: 'center' },
+  closeViewerBtn: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 10,
+    padding: 10,
+  },
+  viewerSlide: { width: SCREEN_WIDTH, height: '100%', justifyContent: 'center' },
+  viewerImage: { width: '100%', height: '80%' },
 
   // Map
   mapContainer: {

@@ -36,8 +36,8 @@ export function generateAccommodationMapHtml(
   places: PlaceMarker[],
   brand: string
 ): string {
-  const hotelLat = parseFloat(hotel.latitude);
-  const hotelLng = parseFloat(hotel.longitude);
+  const hotelLat = hotel.address?.coordinates?.lat || 0;
+  const hotelLng = hotel.address?.coordinates?.lng || 0;
 
   // Compute center from all points
   const allLats = [hotelLat, ...places.map((p) => p.latitude)];
@@ -46,7 +46,7 @@ export function generateAccommodationMapHtml(
   const centerLng = (Math.min(...allLngs) + Math.max(...allLngs)) / 2;
   const zoomLevel = places.length > 0 ? 13 : 15;
 
-  const esc = (s: string) => s.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+  const esc = (s: string | undefined | null) => (s || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
   // Hotel marker
   const hotelMarkerJs = `
@@ -56,7 +56,7 @@ export function generateAccommodationMapHtml(
       iconSize: [44, 52], iconAnchor: [22, 52], popupAnchor: [0, -52]
     });
     var hotelMarker = L.marker([${hotelLat}, ${hotelLng}], {icon: hotelIcon, zIndexOffset: 500}).addTo(map)
-      .bindPopup('<div class="popup-content"><strong>${esc(hotel.name)}</strong><p>⭐ ${hotel.rating} · ${hotel.category || ''}</p><p>📍 ${esc(hotel.address || '')}</p></div>', {className: 'branded-popup'})
+      .bindPopup('<div class="popup-content"><strong>${esc(hotel.name)}</strong><p>⭐ ${hotel.rating || 0} · ${(hotel.tags && hotel.tags[0]) || ''}</p><p>📍 ${esc(hotel.address?.fullAddress || '')}</p></div>', {className: 'branded-popup'})
       .openPopup();
     hotelMarker.on('click', function() {
       window.ReactNativeWebView.postMessage(JSON.stringify({type:'hotelTap'}));

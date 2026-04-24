@@ -146,7 +146,7 @@ export default function WriteReviewModal({
         uploadedUrls = uploads.filter((u): u is string => u !== null);
       }
 
-      const success = await accommodationService.submitReview(hotel.id, {
+      const success = await accommodationService.submitReview(hotel.hotelId, {
         rating,
         comment: comment.trim(),
         images: uploadedUrls.length > 0 ? uploadedUrls : undefined,
