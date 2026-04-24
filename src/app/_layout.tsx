@@ -21,6 +21,7 @@ export default function RootLayout() {
           <Stack.Screen name="trip" />
           <Stack.Screen name="create-trip" />
           <Stack.Screen name="instant-plan" />
+          <Stack.Screen name="hotel-management" />
         </Stack>
         <Toast config={toastConfig} />
       </ConfirmProvider>
