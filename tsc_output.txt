@@ -1,0 +1,11 @@
+src/screens/TripDetail/components/journal/map-html.ts(57,10): error TS1127: Invalid character.
+src/screens/TripDetail/components/journal/map-html.ts(140,1): error TS1160: Unterminated template literal.
+src/screens/TripDetail/components/JournalTab.tsx(166,14): error TS1127: Invalid character.
+src/screens/TripDetail/components/JournalTab.tsx(166,15): error TS1136: Property assignment expected.
+src/screens/TripDetail/components/JournalTab.tsx(210,45): error TS1005: ',' expected.
+src/screens/TripDetail/components/JournalTab.tsx(210,58): error TS1005: ',' expected.
+src/screens/TripDetail/components/JournalTab.tsx(210,64): error TS1005: ')' expected.
+src/screens/TripDetail/components/JournalTab.tsx(218,43): error TS1005: ';' expected.
+src/screens/TripDetail/components/JournalTab.tsx(249,53): error TS1005: ';' expected.
+src/screens/TripDetail/components/JournalTab.tsx(249,66): error TS1005: ',' expected.
+src/screens/TripDetail/components/JournalTab.tsx(512,1): error TS1160: Unterminated template literal.
