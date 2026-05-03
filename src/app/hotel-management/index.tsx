@@ -215,6 +215,20 @@ export default function HotelManagementScreen() {
                     <Feather name="edit-3" size={14} color="#3B82F6" />
                     <Text style={styles.editButtonText}>Chỉnh sửa</Text>
                   </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.editButton, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' }]} 
+                    onPress={() => router.push(`/hotel-management/bookings?hotelId=${hotel.hotelId}&hotelName=${encodeURIComponent(hotel.name)}`)}
+                  >
+                    <Feather name="calendar" size={14} color="#16A34A" />
+                    <Text style={[styles.editButtonText, { color: '#16A34A' }]}>Đặt phòng</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.editButton, { backgroundColor: '#FFF7ED', borderColor: '#FFEDD5' }]} 
+                    onPress={() => router.push(`/hotel-management/inventory?hotelId=${hotel.hotelId}&hotelName=${encodeURIComponent(hotel.name)}`)}
+                  >
+                    <Feather name="layers" size={14} color="#EA580C" />
+                    <Text style={[styles.editButtonText, { color: '#EA580C' }]}>Kho phòng</Text>
+                  </TouchableOpacity>
                   <View style={styles.cardArrow}>
                     <Feather name="chevron-right" size={18} color="#CBD5E0" />
                   </View>

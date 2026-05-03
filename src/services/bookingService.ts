@@ -155,4 +155,49 @@ export const bookingService = {
       return { success: false, message };
     }
   },
+
+  /**
+   * Lấy danh sách booking cho khách sạn (Hotel Owner)
+   */
+  getHotelBookings: async (hotelId: string, page: number = 1, limit: number = 20, status?: string): Promise<any> => {
+    try {
+      let url = `${ENDPOINTS.BOOKINGS.HOTEL_BOOKINGS(hotelId)}?page=${page}&limit=${limit}`;
+      if (status) url += `&status=${status}`;
+      const response = await axiosClient.get<any, any>(url);
+      return response;
+    } catch (error) {
+      console.error('Error fetching hotel bookings:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Lấy lịch sử giao dịch cho khách sạn (Hotel Owner)
+   */
+  getHotelTransactions: async (hotelId: string, page: number = 1, limit: number = 20): Promise<any> => {
+    try {
+      const url = `${ENDPOINTS.BOOKINGS.HOTEL_TRANSACTIONS(hotelId)}?page=${page}&limit=${limit}`;
+      const response = await axiosClient.get<any, any>(url);
+      return response;
+    } catch (error) {
+      console.error('Error fetching hotel transactions:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Lấy thông tin tồn kho phòng (kiểm tra phòng trống)
+   */
+  getInventory: async (hotelId: string, startDate: string, endDate: string, roomTypeId?: string): Promise<any> => {
+    try {
+      let url = `${ENDPOINTS.INVENTORY.GET}?hotelId=${hotelId}&startDate=${startDate}&endDate=${endDate}`;
+      if (roomTypeId) url += `&roomTypeId=${roomTypeId}`;
+      const response = await axiosClient.get<any, any>(url);
+      return response;
+    } catch (error) {
+      console.error('Error fetching inventory:', error);
+      return null;
+    }
+  },
 };
+

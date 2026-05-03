@@ -20,6 +20,8 @@ interface StayDatePickerModalProps {
   tripStartDate: string;   // ISO string
   tripEndDate: string;      // ISO string
   onConfirm: (checkIn: Date, checkOut: Date) => void;
+  initialCheckIn?: Date | null;
+  initialCheckOut?: Date | null;
 }
 
 // Helpers
@@ -48,14 +50,31 @@ export default function StayDatePickerModal({
   tripStartDate,
   tripEndDate,
   onConfirm,
+  initialCheckIn,
+  initialCheckOut,
 }: StayDatePickerModalProps) {
   const tripStart = useMemo(() => stripTime(new Date(tripStartDate)), [tripStartDate]);
   const tripEnd = useMemo(() => stripTime(new Date(tripEndDate)), [tripEndDate]);
 
   const [currentMonth, setCurrentMonth] = useState(tripStart.getMonth());
   const [currentYear, setCurrentYear] = useState(tripStart.getFullYear());
-  const [checkIn, setCheckIn] = useState<Date | null>(null);
-  const [checkOut, setCheckOut] = useState<Date | null>(null);
+  const [checkIn, setCheckIn] = useState<Date | null>(initialCheckIn || null);
+  const [checkOut, setCheckOut] = useState<Date | null>(initialCheckOut || null);
+
+  React.useEffect(() => {
+    if (visible) {
+      if (initialCheckIn) {
+        setCheckIn(new Date(initialCheckIn));
+        setCurrentMonth(initialCheckIn.getMonth());
+        setCurrentYear(initialCheckIn.getFullYear());
+      } else {
+        setCheckIn(null);
+        setCurrentMonth(tripStart.getMonth());
+        setCurrentYear(tripStart.getFullYear());
+      }
+      setCheckOut(initialCheckOut ? new Date(initialCheckOut) : null);
+    }
+  }, [visible, initialCheckIn, initialCheckOut, tripStart]);
 
   const MONTHS = [
     'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
@@ -101,22 +120,20 @@ export default function StayDatePickerModal({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     if (!checkIn || (checkIn && checkOut)) {
-      // First tap or reset
+      // Bắt đầu chọn ngày mới
       setCheckIn(date);
       setCheckOut(null);
     } else {
-      // Second tap
-      if (date < checkIn) {
+      // Đã có ngày nhận, đang chọn ngày trả
+      if (sameDay(date, checkIn)) {
+        // Nhấn lại ngày cũ -> Xóa chọn
+        setCheckIn(null);
+        setCheckOut(null);
+      } else if (date < checkIn) {
+        // Nhấn ngày trước ngày nhận -> Đổi ngày nhận mới
         setCheckIn(date);
-        setCheckOut(checkIn);
-      } else if (sameDay(date, checkIn)) {
-        // Same day — treat as 1-night stay (next day checkout)
-        const nextDay = new Date(date);
-        nextDay.setDate(nextDay.getDate() + 1);
-        if (nextDay <= tripEnd) {
-          setCheckOut(nextDay);
-        }
       } else {
+        // Nhấn ngày sau ngày nhận -> Chọn làm ngày trả
         setCheckOut(date);
       }
     }
@@ -135,8 +152,14 @@ export default function StayDatePickerModal({
     onClose();
   };
 
-  // Check if a date is within trip range
-  const isInRange = (d: Date) => d >= tripStart && d <= tripEnd;
+  // Mở rộng phạm vi chọn ngày: cho phép chọn trước 1 tháng và sau 6 tháng so với ngày hiện tại
+  // thay vì chỉ bó buộc trong tripStart/tripEnd để người dùng linh hoạt hơn
+  const isInRange = (d: Date) => {
+    const now = stripTime(new Date());
+    const limit = new Date(now);
+    limit.setMonth(limit.getMonth() + 12); // Cho phép chọn trong vòng 1 năm tới
+    return d >= now && d <= limit;
+  };
 
   // Check if date is between checkIn and checkOut (for range highlight)
   const isBetween = (d: Date) => {

@@ -40,6 +40,13 @@ export interface Accommodation {
   tags?: string[];
   createdAt?: string;
   updatedAt?: string;
+  id?: string;
+  phone?: string;
+  website?: string;
+  checkIn?: string;
+  checkOut?: string;
+  latitude?: number;
+  longitude?: number;
 
   // ===== Computed helpers (populated by transformer) =====
   /** First image for display */

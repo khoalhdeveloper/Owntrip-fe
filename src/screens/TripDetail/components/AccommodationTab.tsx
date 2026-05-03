@@ -7,17 +7,19 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
-
+  Animated,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Trip, TripDay } from '@/services/tripService';
-import { accommodationService, Accommodation } from '@/services/accommodationService';
+import { accommodationService, Accommodation, IRoomType } from '@/services/accommodationService';
 import { bookingService } from '@/services/bookingService';
 import StayDatePickerModal from './StayDatePickerModal';
 import AccommodationDetailModal from './AccommodationDetailModal';
 import WriteReviewModal from './WriteReviewModal';
 import { useConfirm } from '@/components/ConfirmProvider';
+import { userService, UserProfile } from '@/services/userService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BRAND = '#4A7CFF';
 
@@ -35,11 +37,26 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
   const [accommodations, setAccommodations] = useState<Accommodation[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedHotel, setSelectedHotel] = useState<Accommodation | null>(null);
+  const [selectedRoom, setSelectedRoom] = useState<IRoomType | null>(null);
   const [calendarVisible, setCalendarVisible] = useState(false);
   const [detailVisible, setDetailVisible] = useState(false);
   const [reviewVisible, setReviewVisible] = useState(false);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const toastOpacity = useState(new Animated.Value(0))[0];
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setToastVisible(true);
+    Animated.sequence([
+      Animated.timing(toastOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.delay(2500),
+      Animated.timing(toastOpacity, { toValue: 0, duration: 300, useNativeDriver: true }),
+    ]).start(() => setToastVisible(false));
+  };
 
   const fetchAccommodations = useCallback(async () => {
     try {
@@ -55,7 +72,18 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
     }
   }, [trip.destination, trip.province]);
 
-  useEffect(() => { fetchAccommodations(); }, [fetchAccommodations]);
+  useEffect(() => { 
+    fetchAccommodations();
+    loadUserProfile();
+  }, [fetchAccommodations]);
+
+  const loadUserProfile = async () => {
+    const userId = await AsyncStorage.getItem('userId');
+    if (userId) {
+      const profile = await userService.getMyProfile(userId);
+      setCurrentUser(profile);
+    }
+  };
 
   // Open detail modal
   const handleOpenDetail = (hotel: Accommodation) => {
@@ -65,8 +93,9 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
   };
 
   // Book flow: open date picker
-  const handleBook = (hotel: Accommodation) => {
+  const handleBook = (hotel: Accommodation, room: IRoomType) => {
     setSelectedHotel(hotel);
+    setSelectedRoom(room);
     setDetailVisible(false);
     setTimeout(() => setCalendarVisible(true), 300);
   };
@@ -80,8 +109,8 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
 
   const handleDateConfirm = async (checkIn: Date, checkOut: Date) => {
     setCalendarVisible(false);
-    if (!selectedHotel || !selectedHotel.rooms || selectedHotel.rooms.length === 0) {
-      showAlert('Lỗi', 'Khách sạn chưa có loại phòng nào', 'error');
+    if (!selectedHotel || !selectedRoom) {
+      showAlert('Lỗi', 'Vui lòng chọn loại phòng', 'error');
       return;
     }
 
@@ -94,8 +123,7 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
       const checkInStr = formatDate(checkIn);
       const checkOutStr = formatDate(checkOut);
 
-      // Use the first room type for booking
-      const roomType = selectedHotel.rooms[0];
+      const roomType = selectedRoom;
 
       // 1. Check availability first
       const availability = await bookingService.checkAvailability({
@@ -123,9 +151,9 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
         checkOut: checkOutStr,
         roomCount: 1,
         guestInfo: {
-          fullName: 'Khách hàng OwnTrip',
-          phone: '0900000000',
-          email: 'guest@owntrip.vn',
+          fullName: currentUser?.displayName || 'Khách hàng OwnTrip',
+          phone: currentUser?.phone || '0900000000',
+          email: currentUser?.email || 'guest@owntrip.vn',
           specialRequests: '',
         },
         paymentMethod: 'balance',
@@ -134,11 +162,7 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
       if (result.success) {
         const nights = availability.nights;
         const total = availability.totalPrice;
-        showAlert(
-          '🎉 Đặt phòng thành công!',
-          `${selectedHotel.name}\nMã đặt phòng: ${result.data?.bookingId}\n${nights} đêm · ${formatCurrency(total)}`,
-          'success',
-        );
+        showToast(`🎉 Đặt phòng thành công! Đã trừ ${formatCurrency(total)} cho ${nights} đêm.`);
       } else {
         showAlert('Lỗi đặt phòng', result.message, 'error');
       }
@@ -302,7 +326,7 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
         hotel={selectedHotel}
         trip={trip}
         days={days}
-        onClose={() => { setDetailVisible(false); setSelectedHotel(null); }}
+        onClose={() => { setDetailVisible(false); setSelectedHotel(null); setSelectedRoom(null); }}
         onBook={handleBook}
         onWriteReview={handleWriteReview}
       />
@@ -324,12 +348,19 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
       {selectedHotel && (
         <StayDatePickerModal
           visible={calendarVisible}
-          onClose={() => { setCalendarVisible(false); setSelectedHotel(null); }}
+          onClose={() => { setCalendarVisible(false); setSelectedHotel(null); setSelectedRoom(null); }}
           hotelName={selectedHotel.name}
           tripStartDate={trip.startDate}
           tripEndDate={trip.endDate}
           onConfirm={handleDateConfirm}
         />
+      )}
+
+      {/* Toast Notification */}
+      {toastVisible && (
+        <Animated.View style={[styles.toastContainer, { opacity: toastOpacity }]}>
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </Animated.View>
       )}
     </View>
   );
@@ -425,4 +456,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 2,
   },
   viewDetailText: { fontSize: 13, fontWeight: '600', color: BRAND },
+  
+  // Toast
+  toastContainer: {
+    position: 'absolute', bottom: 100, left: 20, right: 20,
+    backgroundColor: 'rgba(0,0,0,0.8)', paddingVertical: 12, paddingHorizontal: 20,
+    borderRadius: 25, alignItems: 'center', zIndex: 9999,
+  },
+  toastText: { color: '#FFF', fontSize: 14, fontWeight: '600', textAlign: 'center' },
 });

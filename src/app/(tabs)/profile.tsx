@@ -58,6 +58,7 @@ export default function ProfileScreen() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isNotifModalVisible, setIsNotifModalVisible] = useState(false);
   const [selectedNotifForDetail, setSelectedNotifForDetail] = useState<Notification | null>(null);
+  const [isToppingUp, setIsToppingUp] = useState(false);
 
   const handleTripPress = async (id: string) => {
     setLoadingTripDetail(true);
@@ -245,6 +246,23 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleTestTopUp = async () => {
+    try {
+      setIsToppingUp(true);
+      const result = await userService.testTopUpBalance();
+      if (result.success) {
+        showAlert("Thành công", "Đã nạp 1.000.000 VND vào tài khoản của bạn!", "success");
+        loadData(); // Refresh profile to show new balance
+      } else {
+        showAlert("Lỗi", result.message || "Không thể nạp tiền", "error");
+      }
+    } catch (error) {
+      showAlert("Lỗi", "Đã có lỗi xảy ra", "error");
+    } finally {
+      setIsToppingUp(false);
+    }
+  };
+
   const handleMarkAsRead = async (id: string) => {
     const success = await notificationService.markAsRead(id);
     if (success) {
@@ -336,9 +354,23 @@ export default function ProfileScreen() {
               <View style={styles.assetIconContainer}>
                 <FontAwesome5 name="wallet" size={20} color="#005CB8" />
               </View>
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={styles.assetLabel}>Số dư</Text>
-                <Text style={styles.assetValue}>${profile?.balance?.toLocaleString() || 0}</Text>
+                <Text style={styles.assetValue} numberOfLines={1}>{profile?.balance?.toLocaleString() || 0}đ</Text>
+                <TouchableOpacity 
+                  style={[styles.topUpMiniBtn, { marginTop: 4, alignSelf: 'flex-start' }]} 
+                  onPress={handleTestTopUp}
+                  disabled={isToppingUp}
+                >
+                  {isToppingUp ? (
+                    <ActivityIndicator size="small" color="#005CB8" />
+                  ) : (
+                    <>
+                      <Feather name="plus-circle" size={12} color="#005CB8" />
+                      <Text style={styles.topUpText}>Nạp tiền</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -435,7 +467,7 @@ export default function ProfileScreen() {
 
           {/* Settings Section */}
           <View style={styles.settingsGroup}>
-             {/* Hotel Management - Chỉ hiện cho hotel_owner hoặc admin */}
+           
              {(profile?.role === 'hotel_owner' || profile?.role === 'admin') && (
                <TouchableOpacity 
                  style={styles.settingItem}
@@ -817,8 +849,22 @@ const styles = StyleSheet.create({
   },
   assetValue: {
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '900',
     color: '#1E293B',
+  },
+  topUpMiniBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 92, 184, 0.1)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    gap: 4,
+  },
+  topUpText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#005CB8',
   },
   assetDivider: {
     width: 1,

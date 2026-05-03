@@ -1,0 +1,30 @@
+﻿src/app/(tabs)/profile.tsx(471,16): error TS2367: This comparison appears to be unintentional because the types '"user" | "admin" | undefined' and '"hotel_owner"' have no overlap.
+src/screens/TripDetail/components/AccommodationDetailModal.tsx(95,26): error TS2339: Property 'id' does not exist on type 'Accommodation'.
+src/screens/TripDetail/components/AccommodationDetailModal.tsx(104,25): error TS2339: Property 'id' does not exist on type 'Accommodation'.
+src/screens/TripDetail/components/AccommodationDetailModal.tsx(189,38): error TS2339: Property 'latitude' does not exist on type 'Accommodation'.
+src/screens/TripDetail/components/AccommodationDetailModal.tsx(190,38): error TS2339: Property 'longitude' does not exist on type 'Accommodation'.
+src/screens/TripDetail/components/AccommodationDetailModal.tsx(218,16): error TS2339: Property 'phone' does not exist on type 'Accommodation'.
+src/screens/TripDetail/components/AccommodationDetailModal.tsx(219,36): error TS2339: Property 'phone' does not exist on type 'Accommodation'.
+src/screens/TripDetail/components/AccommodationDetailModal.tsx(224,16): error TS2339: Property 'website' does not exist on type 'Accommodation'.
+src/screens/TripDetail/components/AccommodationDetailModal.tsx(225,29): error TS2339: Property 'website' does not exist on type 'Accommodation'.
+src/screens/TripDetail/components/AccommodationDetailModal.tsx(231,23): error TS2339: Property 'latitude' does not exist on type 'Accommodation'.
+src/screens/TripDetail/components/AccommodationDetailModal.tsx(232,23): error TS2339: Property 'longitude' does not exist on type 'Accommodation'.
+src/screens/TripDetail/components/AccommodationDetailModal.tsx(427,22): error TS2339: Property 'checkIn' does not exist on type 'Accommodation'.
+src/screens/TripDetail/components/AccommodationDetailModal.tsx(432,63): error TS2339: Property 'checkIn' does not exist on type 'Accommodation'.
+src/screens/TripDetail/components/AccommodationDetailModal.tsx(436,22): error TS2339: Property 'checkOut' does not exist on type 'Accommodation'.
+src/screens/TripDetail/components/AccommodationDetailModal.tsx(441,63): error TS2339: Property 'checkOut' does not exist on type 'Accommodation'.
+src/screens/TripDetail/components/AccommodationDetailModal.tsx(447,20): error TS2339: Property 'phone' does not exist on type 'Accommodation'.
+src/screens/TripDetail/components/AccommodationDetailModal.tsx(450,57): error TS2339: Property 'phone' does not exist on type 'Accommodation'.
+src/screens/TripDetail/components/AccommodationDetailModal.tsx(455,20): error TS2339: Property 'website' does not exist on type 'Accommodation'.
+src/screens/TripDetail/components/AccommodationDetailModal.tsx(458,75): error TS2339: Property 'website' does not exist on type 'Accommodation'.
+src/screens/TripDetail/components/AccommodationDetailModal.tsx(497,66): error TS2551: Property 'roomPlaceholder' does not exist on type '{ container: { flex: number; backgroundColor: string; }; handleBar: { alignItems: "center"; paddingTop: number; paddingBottom: number; }; handle: { width: number; height: number; borderRadius: number; backgroundColor: string; }; ... 99 more ...; cancelCTAText: { ...; }; }'. Did you mean 'heroPlaceholder'?
+src/screens/TripDetail/components/AccommodationDetailModal.tsx(506,26): error TS18048: 'room.totalRooms' is possibly 'undefined'.
+src/screens/TripDetail/components/AccommodationDetailModal.tsx(672,31): error TS2551: Property 'footerPriceInfo' does not exist on type '{ container: { flex: number; backgroundColor: string; }; handleBar: { alignItems: "center"; paddingTop: number; paddingBottom: number; }; handle: { width: number; height: number; borderRadius: number; backgroundColor: string; }; ... 99 more ...; cancelCTAText: { ...; }; }'. Did you mean 'footerPrice'?
+src/screens/TripDetail/components/AccommodationDetailModal.tsx(1050,3): error TS1117: An object literal cannot have multiple properties with the same name.
+src/screens/TripDetail/components/SummaryTab.tsx(226,100): error TS2339: Property 'id' does not exist on type 'Accommodation'.
+src/screens/TripDetail/components/SummaryTab.tsx(226,121): error TS2339: Property 'id' does not exist on type 'Accommodation'.
+src/screens/TripDetail/components/SummaryTab.tsx(280,59): error TS2339: Property 'id' does not exist on type 'Accommodation'.
+src/screens/TripDetail/components/SummaryTab.tsx(307,34): error TS2339: Property 'id' does not exist on type 'Accommodation'.
+src/screens/TripDetail/components/SummaryTab.tsx(382,21): error TS2339: Property 'id' does not exist on type 'Accommodation'.
+src/screens/TripDetail/components/SummaryTab.tsx(1167,3): error TS1117: An object literal cannot have multiple properties with the same name.
+src/screens/TripDetail/components/SummaryTab.tsx(1183,3): error TS1117: An object literal cannot have multiple properties with the same name.

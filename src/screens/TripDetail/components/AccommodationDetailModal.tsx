@@ -21,10 +21,12 @@ import {
   Accommodation,
   AccommodationReview,
   accommodationService,
+  IRoomType,
 } from '@/services/accommodationService';
 import { Trip, TripDay } from '@/services/tripService';
 import { placesService } from '@/services/placesService';
 import { generateAccommodationMapHtml } from './accommodation/map-html';
+import { bookingService } from '@/services/bookingService';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const BRAND = '#4A7CFF';
@@ -35,7 +37,7 @@ interface AccommodationDetailModalProps {
   trip: Trip;
   days: TripDay[];
   onClose: () => void;
-  onBook: (hotel: Accommodation) => void;
+  onBook: (hotel: Accommodation, room: IRoomType) => void;
   onWriteReview: (hotel: Accommodation) => void;
   /** When true, CTA shows "Hủy phòng" instead of "Đặt phòng" */
   isBooked?: boolean;
@@ -79,6 +81,9 @@ export default function AccommodationDetailModal({
   const [nearbyPlaces, setNearbyPlaces] = useState<{ name: string; latitude: number; longitude: number }[]>([]);
   const [mapLoading, setMapLoading] = useState(true);
   const [locatingUser, setLocatingUser] = useState(false);
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const [roomAvailability, setRoomAvailability] = useState<Record<string, { total: number; booked: number }>>({});
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
   const webViewRef = useRef<WebView>(null);
 
   useEffect(() => {
@@ -86,9 +91,47 @@ export default function AccommodationDetailModal({
       setActiveImageIndex(0);
       setLiked(false);
       setShowAllAmenities(false);
-      fetchReviews(hotel.id);
+      setSelectedRoomId(null);
+      fetchReviews(hotel.id || hotel.hotelId);
+      fetchRoomAvailability(hotel);
     }
   }, [visible, hotel]);
+
+  // Fetch room availability from inventory
+  const fetchRoomAvailability = async (h: Accommodation) => {
+    try {
+      setLoadingAvailability(true);
+      const hotelId = h.id || h.hotelId;
+      // Use today + 1 day as default check period
+      const today = new Date();
+      const tomorrow = new Date();
+      tomorrow.setDate(today.getDate() + 1);
+      const startStr = today.toISOString().split('T')[0];
+      const endStr = tomorrow.toISOString().split('T')[0];
+      
+      const result = await bookingService.getInventory(hotelId, startStr, endStr);
+      if (result?.data) {
+        const availability: Record<string, { total: number; booked: number }> = {};
+        result.data.forEach((inv: any) => {
+          if (!availability[inv.roomTypeId]) {
+            availability[inv.roomTypeId] = { total: inv.totalInventory, booked: inv.bookedCount };
+          } else {
+            // Use the max booked across dates for the period
+            const existing = availability[inv.roomTypeId];
+            if (inv.bookedCount > existing.booked) {
+              existing.booked = inv.bookedCount;
+            }
+            existing.total = inv.totalInventory;
+          }
+        });
+        setRoomAvailability(availability);
+      }
+    } catch (error) {
+      console.error('Error fetching room availability:', error);
+    } finally {
+      setLoadingAvailability(false);
+    }
+  };
 
   const getAmenityIcon = (name: string) => {
     const n = name.toLowerCase();
@@ -143,8 +186,8 @@ export default function AccommodationDetailModal({
     // Fetch tourist_attraction near hotel
     (async () => {
       try {
-        const lat = parseFloat(hotel.latitude);
-        const lng = parseFloat(hotel.longitude);
+        const lat = hotel.latitude ?? hotel.address?.coordinates?.lat ?? 0;
+        const lng = hotel.longitude ?? hotel.address?.coordinates?.lng ?? 0;
         const results = await placesService.searchNearby({
           lat, lng, radius: 3000, type: 'tourist_attraction',
         });
@@ -422,44 +465,83 @@ export default function AccommodationDetailModal({
           {hotel.rooms && hotel.rooms.length > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Loại phòng</Text>
-              {hotel.rooms.map((room) => (
-                <TouchableOpacity 
-                  key={room.roomTypeId} 
-                  style={styles.roomCard}
-                  activeOpacity={0.9}
-                  onPress={() => room.images && room.images.length > 0 && openImageViewer(room.images)}
-                >
-                  {room.images && room.images.length > 0 ? (
-                    <View style={styles.roomImageContainer}>
-                      <Image 
-                        source={{ uri: room.images[0] }} 
-                        style={styles.roomCardImage} 
-                      />
-                      {room.images.length > 1 && (
-                        <View style={styles.imageCountBadge}>
-                          <Text style={styles.imageCountText}>+{room.images.length - 1}</Text>
+              {hotel.rooms.map((room) => {
+                const isSelected = selectedRoomId === room.roomTypeId;
+                const avail = roomAvailability[room.roomTypeId];
+                const availableRooms = avail ? avail.total - avail.booked : -1; // -1 = unknown
+                const isSoldOut = avail ? availableRooms <= 0 : false;
+                return (
+                  <TouchableOpacity 
+                    key={room.roomTypeId} 
+                    style={[styles.roomCard, isSelected && styles.roomCardSelected, isSoldOut && styles.roomCardSoldOut]}
+                    activeOpacity={isSoldOut ? 1 : 0.9}
+                    onPress={() => {
+                      if (isSoldOut) return;
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setSelectedRoomId(room.roomTypeId);
+                    }}
+                  >
+                    {room.images && room.images.length > 0 ? (
+                      <View style={styles.roomImageContainer}>
+                        <Image 
+                          source={{ uri: room.images[0] }} 
+                          style={[styles.roomCardImage, isSoldOut && { opacity: 0.5 }]} 
+                        />
+                        {room.images.length > 1 && (
+                          <View style={styles.imageCountBadge}>
+                            <Text style={styles.imageCountText}>+{room.images.length - 1}</Text>
+                          </View>
+                        )}
+                      </View>
+                    ) : (
+                      <View style={[styles.roomCardImage, styles.heroPlaceholder]}>
+                        <Feather name="image" size={20} color="#D1D5DB" />
+                      </View>
+                    )}
+                    <View style={[styles.roomInfo, isSoldOut && { opacity: 0.5 }]}>
+                      <Text style={styles.roomName}>{room.name}</Text>
+                      <View style={styles.roomMeta}>
+                        <Feather name="users" size={13} color="#6B7280" />
+                        <Text style={styles.roomCapacity}>{room.capacity} khách</Text>
+                        {(room.totalRooms ?? 0) > 0 && (
+                          <>
+                            <Text style={styles.roomCapacity}> · </Text>
+                            <Feather name="layers" size={12} color="#6B7280" />
+                            <Text style={styles.roomCapacity}>{room.totalRooms} phòng</Text>
+                          </>
+                        )}
+                      </View>
+                      {/* Room Availability Badge */}
+                      {avail ? (
+                        <View style={[styles.availBadge, isSoldOut ? styles.availBadgeSoldOut : styles.availBadgeAvailable]}>
+                          <View style={[styles.availDot, isSoldOut ? styles.availDotSoldOut : styles.availDotAvailable]} />
+                          <Text style={[styles.availText, isSoldOut && styles.availTextSoldOut]}>
+                            {isSoldOut ? 'Hết phòng' : `Còn ${availableRooms} phòng`}
+                          </Text>
+                        </View>
+                      ) : (
+                        <TouchableOpacity 
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            if (room.images && room.images.length > 0) openImageViewer(room.images);
+                          }}
+                        >
+                          <Text style={styles.viewDetailText}>Xem chi tiết ảnh</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                    <View style={styles.roomRight}>
+                      <Text style={[styles.roomPrice, isSoldOut && { color: '#9CA3AF' }]}>{formatCurrency(room.basePrice || room.price || 0)}</Text>
+                      <Text style={styles.roomPriceUnit}>/đêm</Text>
+                      {isSelected && !isSoldOut && (
+                        <View style={styles.selectedBadge}>
+                          <Feather name="check" size={12} color="#FFF" />
                         </View>
                       )}
                     </View>
-                  ) : (
-                    <View style={[styles.roomCardImage, styles.roomPlaceholder]}>
-                      <Feather name="image" size={20} color="#D1D5DB" />
-                    </View>
-                  )}
-                  <View style={styles.roomInfo}>
-                    <Text style={styles.roomName}>{room.name}</Text>
-                    <View style={styles.roomMeta}>
-                      <Feather name="users" size={13} color="#6B7280" />
-                      <Text style={styles.roomCapacity}>{room.capacity} khách</Text>
-                    </View>
-                    <Text style={styles.viewDetailText}>Xem chi tiết ảnh</Text>
-                  </View>
-                  <View style={styles.roomRight}>
-                    <Text style={styles.roomPrice}>{formatCurrency(room.basePrice || room.price || 0)}</Text>
-                    <Text style={styles.roomPriceUnit}>/đêm</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           )}
 
@@ -587,31 +669,28 @@ export default function AccommodationDetailModal({
 
         {/* ===== CTA Footer ===== */}
         <View style={styles.footer}>
-          <View style={styles.footerPriceInfo}>
+          <View style={styles.footerPriceSection}>
             <Text style={styles.footerPrice}>
               {hotel.pricePerNight > 0 ? formatCurrency(hotel.pricePerNight) : 'Liên hệ'}
             </Text>
             <Text style={styles.footerPriceUnit}>/đêm</Text>
           </View>
-          {isBooked ? (
-            <TouchableOpacity
-              style={styles.cancelCTA}
-              activeOpacity={0.8}
-              onPress={() => onCancelBooking?.(hotel)}
-            >
-              <Feather name="x-circle" size={18} color="#EF4444" />
-              <Text style={styles.cancelCTAText}>Hủy phòng</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              style={styles.bookCTA}
-              activeOpacity={0.8}
-              onPress={() => onBook(hotel)}
-            >
-              <Feather name="calendar" size={18} color="#FFF" />
-              <Text style={styles.bookCTAText}>Đặt phòng</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={[styles.bookCTA, !selectedRoomId && styles.bookCTADisabled]}
+            activeOpacity={0.8}
+            onPress={() => {
+              const room = hotel.rooms.find(r => r.roomTypeId === selectedRoomId);
+              if (room) {
+                onBook(hotel, room);
+              } else {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                alert('Vui lòng chọn loại phòng trước khi đặt.');
+              }
+            }}
+          >
+            <Feather name="calendar" size={18} color="#FFF" />
+            <Text style={styles.bookCTADisabled ? styles.bookCTAText : styles.bookCTAText}>{selectedRoomId ? 'Đặt phòng ngay' : 'Chọn loại phòng'}</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -780,6 +859,49 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F3F4F6',
   },
+  roomCardSelected: {
+    borderColor: BRAND,
+    backgroundColor: '#F0F7FF',
+    borderWidth: 2,
+  },
+  roomCardSoldOut: {
+    backgroundColor: '#F9FAFB',
+    borderColor: '#E5E7EB',
+  },
+  availBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginTop: 2,
+  },
+  availBadgeAvailable: {
+    backgroundColor: '#F0FDF4',
+  },
+  availBadgeSoldOut: {
+    backgroundColor: '#FEF2F2',
+  },
+  availDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  availDotAvailable: {
+    backgroundColor: '#22C55E',
+  },
+  availDotSoldOut: {
+    backgroundColor: '#EF4444',
+  },
+  availText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#16A34A',
+  },
+  availTextSoldOut: {
+    color: '#DC2626',
+  },
   roomImageContainer: { position: 'relative' },
   roomCardImage: {
     width: 80,
@@ -798,6 +920,25 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   imageCountText: { color: '#FFF', fontSize: 10, fontWeight: '700' },
+  bookCTADisabled: {
+    backgroundColor: '#9CA3AF',
+  },
+  selectedBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: BRAND,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1,
+  },
   roomInfo: { flex: 1, gap: 2 },
   roomName: { fontSize: 15, fontWeight: '600', color: '#1A1A1A' },
   roomMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },

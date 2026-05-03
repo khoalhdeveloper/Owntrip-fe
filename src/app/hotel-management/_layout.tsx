@@ -5,6 +5,7 @@ export default function HotelManagementLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="edit" />
+      <Stack.Screen name="bookings" />
     </Stack>
   );
 }
