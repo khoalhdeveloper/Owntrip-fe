@@ -19,6 +19,7 @@ export const ENDPOINTS = {
     PAY_WITH_POINTS: '/api/users/pay-with-points',
     VNPAY_CREATE: '/api/users/vnpay/create',
     TOP_UP: '/api/users/top-up',
+    TEST_TOP_UP: '/api/users/test-topup',
   },
   TRIPS: {
     LIST: '/api/trips',
@@ -60,5 +61,15 @@ export const ENDPOINTS = {
     MY_BOOKINGS: '/api/bookings/my-bookings',
     DETAIL: (id: string) => `/api/bookings/${id}`,
     CANCEL: (id: string) => `/api/bookings/${id}/cancel`,
+    HOTEL_BOOKINGS: (hotelId: string) => `/api/bookings/hotel/${hotelId}`,
+    HOTEL_TRANSACTIONS: (hotelId: string) => `/api/bookings/hotel/${hotelId}/transactions`,
+  },
+  INVENTORY: {
+    GET: '/api/inventory',
+    DASHBOARD: '/api/inventory/dashboard',
+    BULK_CREATE: '/api/inventory/bulk-create',
+    UPDATE: (id: string) => `/api/inventory/${id}`,
+    BULK_PRICE_UPDATE: '/api/inventory/bulk-price-update',
+    DELETE: '/api/inventory',
   },
 };

@@ -8,6 +8,7 @@ export interface IRoomType {
   basePrice: number;
   price?: number;
   capacity: number;
+  totalRooms: number;
   images: string[];
   amenities: string[];
 }

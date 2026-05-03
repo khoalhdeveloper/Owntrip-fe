@@ -11,15 +11,20 @@ import {
   Modal,
   FlatList,
   Animated,
+  TextInput,
 } from 'react-native';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Trip, TripDay, Destination, tripService } from '@/services/tripService';
-import { accommodationService, Accommodation } from '@/services/accommodationService';
+import { accommodationService, Accommodation, IRoomType } from '@/services/accommodationService';
 import StayDatePickerModal from './StayDatePickerModal';
 import AccommodationDetailModal from './AccommodationDetailModal';
 import WriteReviewModal from './WriteReviewModal';
+import { decodeJWT } from '@/utils/jwtUtils';
 import { useConfirm } from '@/components/ConfirmProvider';
+import { bookingService } from '@/services/bookingService';
+import { userService, UserProfile } from '@/services/userService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BRAND = '#4A7CFF';
 const BRAND_LIGHT = '#EBF5FF';
@@ -78,6 +83,9 @@ function SectionHeader({
 export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[] }) {
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [loadingDest, setLoadingDest] = useState(true);
+  const [loadingTripDetail, setLoadingTripDetail] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
 
   // Accommodation state
@@ -88,12 +96,18 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
   const [hotels, setHotels] = useState<Accommodation[]>([]);
   const [loadingHotels, setLoadingHotels] = useState(false);
   const [selectedHotel, setSelectedHotel] = useState<Accommodation | null>(null);
+  const [selectedRoom, setSelectedRoom] = useState<IRoomType | null>(null);
   const [bookedHotel, setBookedHotel] = useState<Accommodation | null>(null);
+  const [bookedRoomTypeId, setBookedRoomTypeId] = useState<string | null>(null);
   const [checkInDate, setCheckInDate] = useState<Date | null>(null);
   const [checkOutDate, setCheckOutDate] = useState<Date | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const toastOpacity = useRef(new Animated.Value(0)).current;
+  
+  // Filter & Sort state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortOrder, setSortOrder] = useState<'priceAsc' | 'priceDesc' | 'nameAsc' | 'none'>('none');
 
   useEffect(() => {
     const fetch = async () => {
@@ -130,17 +144,19 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
       } as any);
       setCheckInDate(new Date(acc.checkIn));
       setCheckOutDate(new Date(acc.checkOut));
+      setBookedRoomTypeId(acc.roomTypeId || null);
     }
   }, [trip]);
 
-  const handleImageError = (id: string) => {
-    setImgErrors((prev) => ({ ...prev, [id]: true }));
+  const loadUserProfile = async () => {
+    const userId = await AsyncStorage.getItem('userId');
+    if (userId) {
+      const profile = await userService.getMyProfile(userId);
+      setCurrentUser(profile);
+    }
   };
 
-  // Accommodation handlers
-  const openHotelModal = useCallback(async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setHotelModalVisible(true);
+  const fetchHotels = useCallback(async () => {
     setLoadingHotels(true);
     try {
       const data = await accommodationService.getAll(trip.destination || trip.province || '');
@@ -150,6 +166,21 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
     } finally {
       setLoadingHotels(false);
     }
+  }, [trip.destination, trip.province]);
+
+  useEffect(() => { 
+    fetchHotels();
+    loadUserProfile();
+  }, [fetchHotels]);
+
+  const handleImageError = (id: string) => {
+    setImgErrors((prev) => ({ ...prev, [id]: true }));
+  };
+
+  // Accommodation handlers
+  const openHotelModal = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setHotelModalVisible(true);
   }, []);
 
   const handleSelectHotel = (hotel: Accommodation) => {
@@ -159,8 +190,9 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
     setDetailVisible(true);
   };
 
-  const handleBookFromDetail = (hotel: Accommodation) => {
+  const handleBookFromDetail = (hotel: Accommodation, room: IRoomType) => {
     setSelectedHotel(hotel);
+    setSelectedRoom(room);
     setDetailVisible(false);
     // Calendar opens on top of hotel list modal
     setTimeout(() => setCalendarVisible(true), 300);
@@ -182,17 +214,94 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
     setTimeout(() => setReviewVisible(true), 300);
   };
 
+  const { confirm, alert, confirmDelete } = useConfirm();
+
   const handleDateConfirm = async (checkIn: Date, checkOut: Date) => {
     if (!selectedHotel) return;
     
     setCalendarVisible(false);
     setHotelModalVisible(false);
 
+    // Xác định xem có phải đang edit booking hiện tại không
+    const isEditing = bookedHotel && (bookedHotel.hotelId === selectedHotel.hotelId || bookedHotel.id === selectedHotel.id);
+    
+    const originalNights = isEditing && checkInDate && checkOutDate ? Math.round((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+    const originalPrice = isEditing ? (trip.accommodation?.totalPrice || 0) : 0;
+
+    const currentRoomTypeId = selectedRoom?.roomTypeId || bookedRoomTypeId || trip.accommodation?.roomTypeId || 'default';
+
     const nights = Math.round((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
-    const totalPrice = (selectedHotel.pricePerNight || 0) * (nights || 1);
+    const pricePerNight = selectedRoom?.basePrice || selectedRoom?.price || selectedHotel.pricePerNight || (isEditing ? (originalNights > 0 ? originalPrice / originalNights : 0) : 0);
+    const newTotalPrice = pricePerNight * (nights || 1);
+
+    let priceDifference = newTotalPrice;
+    if (isEditing) {
+      priceDifference = newTotalPrice - originalPrice;
+    }
+
+    if (isEditing && priceDifference > 0) {
+      const isConfirmed = await confirm(
+        'Thanh toán phụ phí',
+        `Bạn đã thêm ngày ở. Số tiền cần thanh toán thêm là ${formatCurrency(priceDifference)}.\nBạn có muốn thanh toán để cập nhật?`,
+        'Thanh toán ngay',
+        'info'
+      );
+      if (!isConfirmed) return; // Hủy ngang, giữ nguyên thông tin ban đầu
+    } else if (isEditing && priceDifference <= 0) {
+      const isConfirmed = await confirm(
+        'Xác nhận thay đổi',
+        `Bạn đang thay đổi ngày ở (không phát sinh thêm phí). Tiếp tục?`,
+        'Cập nhật',
+        'info'
+      );
+      if (!isConfirmed) return;
+    } else {
+      // Đặt phòng mới (không phải edit)
+      const isConfirmed = await confirm(
+        'Xác nhận thanh toán',
+        `Bạn đang đặt phòng với tổng số tiền là ${formatCurrency(newTotalPrice)}.\nBạn có đồng ý thanh toán từ ví để hoàn tất đặt phòng?`,
+        'Thanh toán ngay',
+        'info'
+      );
+      if (!isConfirmed) return;
+    }
 
     try {
-      // Save to Backend
+      // Bật trạng thái chờ (Loading Overlay sẽ được render dựa vào isUpdating)
+      setIsUpdating(true);
+      
+      let success = true;
+      let message = '';
+
+      // 1. Thực hiện thanh toán (chỉ tạo booking mới nếu không phải edit, hoặc nếu có payment API thì gọi ở đây)
+      // Tạm thời gọi createBooking để giả lập giao dịch trừ tiền.
+      if (!isEditing || priceDifference > 0) {
+        const bookingResult = await bookingService.createBooking({
+          hotelId: selectedHotel.hotelId || selectedHotel.id || '',
+          roomTypeId: currentRoomTypeId,
+          checkIn: checkIn.toISOString(),
+          checkOut: checkOut.toISOString(),
+          roomCount: 1,
+          guestInfo: {
+            fullName: currentUser?.displayName || 'Khách hàng OwnTrip',
+            phone: currentUser?.phone || '0900000000',
+            email: currentUser?.email || 'guest@owntrip.vn',
+            specialRequests: isEditing ? `Extending stay. Price diff: ${priceDifference}` : '',
+          },
+          paymentMethod: 'balance',
+        });
+
+        success = bookingResult.success;
+        message = bookingResult.message;
+      }
+
+      if (!success) {
+        await alert('Thanh toán thất bại', message || 'Vui lòng kiểm tra lại số dư.', 'error');
+        setIsUpdating(false);
+        return;
+      }
+
+      // 2. Lưu vào lịch trình chuyến đi (Update Trip)
       const updatedTrip = await tripService.updateTrip(trip._id, {
         accommodation: {
           hotelId: selectedHotel.id || selectedHotel.hotelId,
@@ -200,27 +309,42 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
           hotelImage: selectedHotel.primaryImage || (selectedHotel.images ? selectedHotel.images[0] : ''),
           checkIn: checkIn.toISOString(),
           checkOut: checkOut.toISOString(),
-          totalPrice: totalPrice,
-          roomTypeId: 'default'
+          totalPrice: newTotalPrice,
+          roomTypeId: currentRoomTypeId
         }
       });
 
       if (updatedTrip) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        showToast('Đặt phòng thành công! Chỗ ở đã được lưu.');
+        setIsUpdating(false); // Hide loading overlay before showing alert
+        
+        // Hiện Success Modal rõ ràng
+        if (isEditing && priceDifference > 0) {
+          await alert('Thành công', `Thanh toán thành công!\nĐã trừ ${formatCurrency(priceDifference)} từ ví. Cập nhật ngày ở hoàn tất.`, 'success');
+        } else if (isEditing) {
+          await alert('Thành công', `Cập nhật ngày ở thành công!`, 'success');
+        } else {
+          await alert('Thành công', `Thanh toán thành công!\nĐã trừ ${formatCurrency(newTotalPrice)} từ ví. Đặt phòng hoàn tất.`, 'success');
+        }
+        
         // Cập nhật state ngay lập tức từ dữ liệu Server trả về
         setBookedHotel(selectedHotel);
         setCheckInDate(checkIn);
         setCheckOutDate(checkOut);
+        if (currentRoomTypeId && currentRoomTypeId !== 'default') {
+          setBookedRoomTypeId(currentRoomTypeId);
+        }
         setSelectedHotel(null);
+        setSelectedRoom(null);
       }
     } catch (error) {
       console.error('Error saving accommodation:', error);
-      alert('Không thể lưu thông tin đặt phòng. Vui lòng thử lại.');
+      await alert('Lỗi', 'Không thể hoàn tất đặt phòng. Vui lòng thử lại.', 'error');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
-  const { confirmDelete } = useConfirm();
   const [viewingBooked, setViewingBooked] = useState(false);
 
   const handleRemoveAccommodation = async () => {
@@ -240,6 +364,7 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
         setBookedHotel(null);
         setCheckInDate(null);
         setCheckOutDate(null);
+        setBookedRoomTypeId(null);
       } catch (error) {
         console.error('Error removing accommodation:', error);
       }
@@ -277,7 +402,7 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
     const confirmed = await confirmDelete(
       'Hủy đặt phòng',
       `Bạn có chắc muốn hủy đặt phòng "${bookedHotel?.name}" không?`,
-      'Hủy phòng',
+      'Hủy phòng'
     );
     if (confirmed) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -285,6 +410,7 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
       setBookedHotel(null);
       setCheckInDate(null);
       setCheckOutDate(null);
+      setBookedRoomTypeId(null);
       setSelectedHotel(null);
       setViewingBooked(false);
     }
@@ -311,6 +437,16 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
   // Running index across all days
   let placeIndex = 0;
 
+  // Filtered and sorted hotels
+  const filteredHotels = hotels
+    .filter(h => h.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .sort((a, b) => {
+      if (sortOrder === 'priceAsc') return a.pricePerNight - b.pricePerNight;
+      if (sortOrder === 'priceDesc') return b.pricePerNight - a.pricePerNight;
+      if (sortOrder === 'nameAsc') return a.name.localeCompare(b.name);
+      return 0;
+    });
+
   return (
     <View style={styles.container}>
 
@@ -320,8 +456,11 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
           icon="home"
           title="Chỗ ở"
           right={bookedHotel ? (
-            <TouchableOpacity onPress={handleRemoveAccommodation} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Feather name="trash-2" size={16} color="#EF4444" />
+            <TouchableOpacity onPress={() => {
+              setSelectedHotel(bookedHotel as any);
+              setCalendarVisible(true);
+            }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Feather name="edit-3" size={16} color={BRAND} />
             </TouchableOpacity>
           ) : undefined}
         />
@@ -557,6 +696,49 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
             </TouchableOpacity>
           </View>
 
+          {/* Filters */}
+          <View style={styles.filterContainer}>
+            <View style={styles.searchBar}>
+              <Feather name="search" size={16} color="#9CA3AF" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Tìm theo tên..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholderTextColor="#9CA3AF"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <Feather name="x-circle" size={16} color="#9CA3AF" />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <View style={styles.sortContainer}>
+              <TouchableOpacity
+                style={[styles.sortBtn, sortOrder === 'priceAsc' && styles.sortBtnActive]}
+                onPress={() => setSortOrder(sortOrder === 'priceAsc' ? 'none' : 'priceAsc')}
+              >
+                <Feather name="trending-up" size={14} color={sortOrder === 'priceAsc' ? BRAND : '#6B7280'} />
+                <Text style={[styles.sortBtnText, sortOrder === 'priceAsc' && styles.sortBtnTextActive]}>Giá thấp</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sortBtn, sortOrder === 'priceDesc' && styles.sortBtnActive]}
+                onPress={() => setSortOrder(sortOrder === 'priceDesc' ? 'none' : 'priceDesc')}
+              >
+                <Feather name="trending-down" size={14} color={sortOrder === 'priceDesc' ? BRAND : '#6B7280'} />
+                <Text style={[styles.sortBtnText, sortOrder === 'priceDesc' && styles.sortBtnTextActive]}>Giá cao</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sortBtn, sortOrder === 'nameAsc' && styles.sortBtnActive]}
+                onPress={() => setSortOrder(sortOrder === 'nameAsc' ? 'none' : 'nameAsc')}
+              >
+                <Feather name="type" size={14} color={sortOrder === 'nameAsc' ? BRAND : '#6B7280'} />
+                <Text style={[styles.sortBtnText, sortOrder === 'nameAsc' && styles.sortBtnTextActive]}>Tên A-Z</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           {loadingHotels ? (
             <View style={styles.modalLoading}>
               <ActivityIndicator size="large" color={BRAND} />
@@ -564,7 +746,7 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
             </View>
           ) : (
             <FlatList
-              data={hotels}
+              data={filteredHotels}
               keyExtractor={(item) => item.hotelId}
               contentContainerStyle={styles.hotelList}
               showsVerticalScrollIndicator={false}
@@ -656,12 +838,32 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
       {selectedHotel && (
         <StayDatePickerModal
           visible={calendarVisible}
-          onClose={() => { setCalendarVisible(false); setSelectedHotel(null); }}
+          onClose={() => { setCalendarVisible(false); setSelectedHotel(null); setSelectedRoom(null); }}
           hotelName={selectedHotel.name}
           tripStartDate={trip.startDate}
           tripEndDate={trip.endDate}
           onConfirm={handleDateConfirm}
+          initialCheckIn={checkInDate}
+          initialCheckOut={checkOutDate}
         />
+      )}
+
+      {/* ===== TOAST NOTIFICATION ===== */}
+      {toastVisible && (
+        <Animated.View style={[styles.toastContainer, { opacity: toastOpacity }]}>
+          <Feather name="check-circle" size={18} color="#FFF" style={{ marginRight: 8 }} />
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </Animated.View>
+      )}
+
+      {/* ===== LOADING OVERLAY ===== */}
+      {isUpdating && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="large" color={BRAND} />
+            <Text style={styles.loadingText}>Đang xử lý giao dịch...</Text>
+          </View>
+        </View>
       )}
     </View>
   );
@@ -686,42 +888,6 @@ function BudgetRow({ label, amount, total }: { label: string; amount: number; to
 // ===== STYLES =====
 const styles = StyleSheet.create({
   container: { flex: 1, paddingBottom: 40, padding: 16, gap: 12 },
-
-  toastContainer: {
-    position: 'absolute',
-    top: 60,
-    left: 20,
-    right: 20,
-    zIndex: 9999,
-    alignItems: 'center',
-  },
-  toastContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(26, 26, 26, 0.9)',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 50,
-    gap: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
-  },
-  toastIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#10B981',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  toastText: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
 
   // Card — clean white card like reference
   card: {
@@ -798,6 +964,58 @@ const styles = StyleSheet.create({
   placeNumText: { fontSize: 14, fontWeight: '700', color: BRAND },
   placeContent: { flex: 1, gap: 1 },
   placeName: { fontSize: 15, fontWeight: '600', color: '#1A1A1A' },
+
+  // Modal Filters
+  filterContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 40,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#1A1A1A',
+    padding: 0,
+  },
+  sortContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  sortBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  sortBtnActive: {
+    backgroundColor: BRAND_LIGHT,
+    borderColor: BRAND,
+  },
+  sortBtnText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  sortBtnTextActive: {
+    color: BRAND,
+    fontWeight: '600',
+  },
   placeAddr: { fontSize: 12, color: '#9CA3AF', lineHeight: 16 },
   placeThumb: {
     width: 36, height: 36, borderRadius: 8, backgroundColor: '#F3F4F6',
@@ -908,4 +1126,50 @@ const styles = StyleSheet.create({
   hotelChipMore: { fontSize: 11, fontWeight: '600', color: '#9CA3AF' },
   hotelPrice: { fontSize: 17, fontWeight: '800', color: BRAND },
   hotelPriceUnit: { fontSize: 12, fontWeight: '500', color: '#9CA3AF' },
+  
+  // Toast & Loading Overlay
+  toastContainer: {
+    position: 'absolute',
+    bottom: 40,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 24,
+    zIndex: 1000,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+    }),
+  },
+  toastText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFF',
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  loadingCard: {
+    backgroundColor: '#FFF',
+    padding: 24,
+    borderRadius: 16,
+    alignItems: 'center',
+    gap: 12,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12 },
+      android: { elevation: 8 },
+    }),
+  },
+  loadingText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1A1A1A',
+  },
 });

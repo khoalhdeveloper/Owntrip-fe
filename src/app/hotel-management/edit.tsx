@@ -51,6 +51,7 @@ export default function HotelEditScreen() {
   const [roomDesc, setRoomDesc] = useState('');
   const [roomPrice, setRoomPrice] = useState('');
   const [roomCapacity, setRoomCapacity] = useState('2');
+  const [roomTotalRooms, setRoomTotalRooms] = useState('5');
   const [roomImages, setRoomImages] = useState<string[]>([]);
   const [roomAmenities, setRoomAmenities] = useState('');
 
@@ -121,12 +122,12 @@ export default function HotelEditScreen() {
     finally { setSaving(false); }
   };
 
-  const resetRoomForm = () => { setRoomName(''); setRoomDesc(''); setRoomPrice(''); setRoomCapacity('2'); setRoomImages([]); setRoomAmenities(''); setEditingRoomIdx(null); };
+  const resetRoomForm = () => { setRoomName(''); setRoomDesc(''); setRoomPrice(''); setRoomCapacity('2'); setRoomTotalRooms('5'); setRoomImages([]); setRoomAmenities(''); setEditingRoomIdx(null); };
 
   const openEditRoom = (idx: number) => {
     const r = rooms[idx];
     setRoomName(r.name); setRoomDesc(r.description || ''); setRoomPrice(String(r.basePrice || r.price || 0));
-    setRoomCapacity(String(r.capacity || 2)); setRoomImages(r.images || []); setRoomAmenities((r.amenities || []).join(', ')); setEditingRoomIdx(idx);
+    setRoomCapacity(String(r.capacity || 2)); setRoomTotalRooms(String(r.totalRooms || 1)); setRoomImages(r.images || []); setRoomAmenities((r.amenities || []).join(', ')); setEditingRoomIdx(idx);
   };
 
   const handleSaveRoom = () => {
@@ -134,7 +135,7 @@ export default function HotelEditScreen() {
     const newRoom: IRoomType = {
       roomTypeId: editingRoomIdx !== null ? rooms[editingRoomIdx].roomTypeId : `room_${Date.now()}`,
       name: roomName.trim(), description: roomDesc.trim(), basePrice: Number(roomPrice),
-      capacity: Number(roomCapacity) || 2, images: roomImages,
+      capacity: Number(roomCapacity) || 2, totalRooms: Number(roomTotalRooms) || 1, images: roomImages,
       amenities: roomAmenities.split(',').map(s => s.trim()).filter(Boolean),
     };
     if (editingRoomIdx !== null) {
@@ -261,8 +262,10 @@ export default function HotelEditScreen() {
                 <View style={s.rowFields}>
                   <View style={[s.field, { flex: 1 }]}><Text style={s.label}>Giá/đêm (VNĐ) *</Text>
                     <TextInput style={s.input} value={roomPrice} onChangeText={setRoomPrice} placeholder="2800000" keyboardType="number-pad" /></View>
-                  <View style={[s.field, { flex: 1 }]}><Text style={s.label}>Sức chứa</Text>
+                  <View style={[s.field, { flex: 0.5 }]}><Text style={s.label}>Sức chứa</Text>
                     <TextInput style={s.input} value={roomCapacity} onChangeText={setRoomCapacity} placeholder="2" keyboardType="number-pad" /></View>
+                  <View style={[s.field, { flex: 0.5 }]}><Text style={s.label}>Số lượng</Text>
+                    <TextInput style={s.input} value={roomTotalRooms} onChangeText={setRoomTotalRooms} placeholder="5" keyboardType="number-pad" /></View>
                 </View>
 
                 <View style={s.field}>
@@ -296,6 +299,9 @@ export default function HotelEditScreen() {
                         <View style={s.roomCardMeta}>
                           <Feather name="users" size={12} color="#718096" />
                           <Text style={s.roomCardMetaText}>{room.capacity} khách</Text>
+                          <View style={{ width: 8 }} />
+                          <Feather name="layers" size={12} color="#718096" />
+                          <Text style={s.roomCardMetaText}>{room.totalRooms} phòng</Text>
                         </View>
                       </View>
                       <View style={s.roomCardActions}>

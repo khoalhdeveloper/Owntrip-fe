@@ -17,9 +17,10 @@ export interface UserProfile {
   email: string;
   displayName: string;
   image?: string;
+  phone?: string;
   balance: number;
   points: number;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'hotel_owner';
   isVerified: boolean;
   inventory?: InventoryItem[];
   createdAt?: string;
@@ -42,6 +43,7 @@ export const userService = {
         email: data.email || '',
         displayName: data.displayName || data.name || 'User',
         image: data.image || '',
+        phone: data.phone || '',
         balance: data.balance ?? 0,
         points: data.points ?? 0,
         role: data.role || 'user',
@@ -127,6 +129,18 @@ export const userService = {
       const response: any = await axiosClient.post(ENDPOINTS.USERS.TOP_UP, { amount: amountVND });
       if (response.success) {
         return { success: true, pointsEarned: response.data?.pointsEarned };
+      }
+      return { success: false, message: response.message || 'Top up failed' };
+    } catch (error: any) {
+      return { success: false, message: error?.response?.data?.message || 'System error' };
+    }
+  },
+  
+  testTopUpBalance: async (): Promise<{ success: boolean; newBalance?: number; message?: string }> => {
+    try {
+      const response: any = await axiosClient.post(ENDPOINTS.USERS.TEST_TOP_UP);
+      if (response.success) {
+        return { success: true, newBalance: response.data?.newBalance };
       }
       return { success: false, message: response.message || 'Top up failed' };
     } catch (error: any) {

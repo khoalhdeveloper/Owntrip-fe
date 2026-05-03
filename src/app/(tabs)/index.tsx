@@ -820,7 +820,7 @@ export default function HomeScreen() {
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
               <Feather name="frown" size={48} color="#CBD5E0" />
               <Text style={{ marginTop: 16, fontSize: 16, color: '#718096', textAlign: 'center' }}>
-                Không tìm thấy địa điểm nào khớp với "{searchQuery}"
+                Không tìm thấy địa điểm nào khớp với &quot;{searchQuery}&quot;
               </Text>
             </View>
           ) : (

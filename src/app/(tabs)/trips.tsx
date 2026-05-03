@@ -221,6 +221,16 @@ export default function TripsScreen() {
             <Feather name="calendar" size={13} color="#9CA3AF" />
             <Text style={styles.cardBottomText}>{formatDateRange(item.startDate, item.endDate)}</Text>
             <View style={{ flex: 1 }} />
+            <TouchableOpacity
+              onPress={(e) => {
+                e.stopPropagation();
+                handleDeleteTrip(item);
+              }}
+              hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+              style={{ padding: 4, marginRight: 8 }}
+            >
+              <Feather name="trash-2" size={16} color="#EF4444" />
+            </TouchableOpacity>
             <Feather name="chevron-right" size={16} color="#D1D5DB" />
           </View>
         </TouchableOpacity>

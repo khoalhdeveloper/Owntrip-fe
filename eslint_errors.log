@@ -1,0 +1,123 @@
+﻿
+> owntrip@1.0.0 lint
+> expo lint
+
+
+D:\Semester 7\Exe201\Owntrip-fe\src\app\(tabs)\checkin.tsx
+   9:3   warning  'Alert' is defined but never used                                                                                                                                                      @typescript-eslint/no-unused-vars
+  20:9   warning  'width' is assigned a value but never used                                                                                                                                             @typescript-eslint/no-unused-vars
+  20:16  warning  'height' is assigned a value but never used                                                                                                                                            @typescript-eslint/no-unused-vars
+  38:6   warning  React Hook useEffect has missing dependencies: 'mediaPermission', 'permission', 'requestMediaPermission', and 'requestPermission'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\Semester 7\Exe201\Owntrip-fe\src\app\(tabs)\index.tsx
+    1:17  warning  'useEffect' is defined but never used                            @typescript-eslint/no-unused-vars
+    8:3   warning  'Image' is defined but never used                                @typescript-eslint/no-unused-vars
+  823:54  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  823:68  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+D:\Semester 7\Exe201\Owntrip-fe\src\app\(tabs)\profile.tsx
+    1:27  warning  'useEffect' is defined but never used                                                                           @typescript-eslint/no-unused-vars
+   12:3   warning  'Alert' is defined but never used                                                                               @typescript-eslint/no-unused-vars
+   19:8   warning  'D:\Semester 7\Exe201\Owntrip-fe\node_modules\react-native\index.js' imported multiple times                    import/no-duplicates
+   21:10  warning  'SafeAreaView' is defined but never used                                                                        @typescript-eslint/no-unused-vars
+   28:26  warning  'D:\Semester 7\Exe201\Owntrip-fe\node_modules\react-native\index.js' imported multiple times                    import/no-duplicates
+   39:9   warning  'width' is assigned a value but never used                                                                      @typescript-eslint/no-unused-vars
+  133:6   warning  React Hook useCallback has a missing dependency: 'showAlert'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  259:14  warning  'error' is defined but never used                                                                               @typescript-eslint/no-unused-vars
+
+D:\Semester 7\Exe201\Owntrip-fe\src\app\(tabs)\store.tsx
+   13:3   warning  'Alert' is defined but never used       @typescript-eslint/no-unused-vars
+   14:3   warning  'Linking' is defined but never used     @typescript-eslint/no-unused-vars
+   21:13  warning  'WebBrowser' is defined but never used  @typescript-eslint/no-unused-vars
+  143:16  warning  'e' is defined but never used           @typescript-eslint/no-unused-vars
+
+D:\Semester 7\Exe201\Owntrip-fe\src\app\create-trip.tsx
+   10:3   warning  'Alert' is defined but never used            @typescript-eslint/no-unused-vars
+   18:10  warning  'BlurView' is defined but never used         @typescript-eslint/no-unused-vars
+   25:9   warning  'width' is assigned a value but never used   @typescript-eslint/no-unused-vars
+   25:16  warning  'height' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  128:14  warning  'error' is defined but never used            @typescript-eslint/no-unused-vars
+
+D:\Semester 7\Exe201\Owntrip-fe\src\app\hotel-management\bookings.tsx
+   7:19  warning  'FontAwesome5' is defined but never used    @typescript-eslint/no-unused-vars
+  12:9   warning  'width' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\Semester 7\Exe201\Owntrip-fe\src\app\hotel-management\edit.tsx
+  12:34  warning  'IHotelManage' is defined but never used                                                                                            @typescript-eslint/no-unused-vars
+  58:56  warning  React Hook useEffect has missing dependencies: 'isEditing' and 'loadHotelData'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\Semester 7\Exe201\Owntrip-fe\src\app\hotel-management\index.tsx
+  14:7  warning  'CARD_WIDTH' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\Semester 7\Exe201\Owntrip-fe\src\app\hotel-management\inventory.tsx
+    8:19  warning  'FontAwesome5' is defined but never used                                                                          @typescript-eslint/no-unused-vars
+   11:28  warning  'DashboardStats' is defined but never used                                                                        @typescript-eslint/no-unused-vars
+   14:9   warning  'width' is assigned a value but never used                                                                        @typescript-eslint/no-unused-vars
+   71:6   warning  React Hook useCallback has a missing dependency: 'currentDate'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  114:14  warning  'e' is defined but never used                                                                                     @typescript-eslint/no-unused-vars
+
+D:\Semester 7\Exe201\Owntrip-fe\src\app\instant-plan.tsx
+   1:19  warning  'D:\Semester 7\Exe201\Owntrip-fe\node_modules\react\index.js' imported multiple times  import/no-duplicates
+   8:3   warning  'SafeAreaView' is defined but never used                                               @typescript-eslint/no-unused-vars
+  12:3   warning  'Alert' is defined but never used                                                      @typescript-eslint/no-unused-vars
+  13:3   warning  'ActivityIndicator' is defined but never used                                          @typescript-eslint/no-unused-vars
+  16:10  warning  'tripService' is defined but never used                                                @typescript-eslint/no-unused-vars
+  20:10  warning  'useState' is defined but never used                                                   @typescript-eslint/no-unused-vars
+  20:26  warning  'D:\Semester 7\Exe201\Owntrip-fe\node_modules\react\index.js' imported multiple times  import/no-duplicates
+
+D:\Semester 7\Exe201\Owntrip-fe\src\components\ChatbotModal.tsx
+  12:3  warning  'ActivityIndicator' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Semester 7\Exe201\Owntrip-fe\src\components\DraggableChatbot.tsx
+  3:3  warning  'View' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Semester 7\Exe201\Owntrip-fe\src\components\TripDetailModal.tsx
+  2:46  warning  'Image' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Semester 7\Exe201\Owntrip-fe\src\screens\TripDetail\components\AccommodationDetailModal.tsx
+    77:10  warning  'imgError' is assigned a value but never used             @typescript-eslint/no-unused-vars
+    77:20  warning  'setImgError' is assigned a value but never used          @typescript-eslint/no-unused-vars
+    86:10  warning  'loadingAvailability' is assigned a value but never used  @typescript-eslint/no-unused-vars
+   275:9   warning  'amenitiesDisplay' is assigned a value but never used     @typescript-eslint/no-unused-vars
+   278:9   warning  'hasMoreAmenities' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  1050:3   error    Duplicate key 'bookCTAText'                               no-dupe-keys
+
+D:\Semester 7\Exe201\Owntrip-fe\src\screens\TripDetail\components\ExploreTab.tsx
+    8:3   warning  'FlatList' is defined but never used                                                                            @typescript-eslint/no-unused-vars
+   12:3   warning  'RefreshControl' is defined but never used                                                                      @typescript-eslint/no-unused-vars
+   61:10  warning  'refreshing' is assigned a value but never used                                                                 @typescript-eslint/no-unused-vars
+  240:6   warning  React Hook useCallback has a missing dependency: 'showAlert'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  243:9   warning  'handleRefresh' is assigned a value but never used                                                              @typescript-eslint/no-unused-vars
+
+D:\Semester 7\Exe201\Owntrip-fe\src\screens\TripDetail\components\JournalTab.tsx
+   11:3  warning  'Alert' is defined but never used                                                                               @typescript-eslint/no-unused-vars
+  165:6  warning  React Hook useCallback has a missing dependency: 'showAlert'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  189:6  warning  React Hook useCallback has a missing dependency: 'showAlert'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  212:6  warning  React Hook useCallback has a missing dependency: 'showAlert'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\Semester 7\Exe201\Owntrip-fe\src\screens\TripDetail\components\StayDatePickerModal.tsx
+  57:9  warning  'tripEnd' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\Semester 7\Exe201\Owntrip-fe\src\screens\TripDetail\components\SummaryTab.tsx
+    16:19  warning  'FontAwesome' is defined but never used                                                                         @typescript-eslint/no-unused-vars
+    23:10  warning  'decodeJWT' is defined but never used                                                                           @typescript-eslint/no-unused-vars
+    33:10  warning  'formatDateRange' is defined but never used                                                                     @typescript-eslint/no-unused-vars
+    49:10  warning  'getTripStatus' is defined but never used                                                                       @typescript-eslint/no-unused-vars
+    86:10  warning  'loadingTripDetail' is assigned a value but never used                                                          @typescript-eslint/no-unused-vars
+    86:29  warning  'setLoadingTripDetail' is assigned a value but never used                                                       @typescript-eslint/no-unused-vars
+   149:6   warning  React Hook useEffect has a missing dependency: 'bookedHotel'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+   201:9   warning  'showToast' is assigned a value but never used                                                                  @typescript-eslint/no-unused-vars
+   350:9   warning  'handleRemoveAccommodation' is assigned a value but never used                                                  @typescript-eslint/no-unused-vars
+  1167:3   error    Duplicate key 'toastContainer'                                                                                  no-dupe-keys
+  1183:3   error    Duplicate key 'toastText'                                                                                       no-dupe-keys
+
+D:\Semester 7\Exe201\Owntrip-fe\src\services\accommodationService.ts
+   78:9   warning  'location' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  161:21  warning  Unreachable code                               no-unreachable
+
+D:\Semester 7\Exe201\Owntrip-fe\src\services\userService.ts
+  54:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+Γ£û 75 problems (5 errors, 70 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+
