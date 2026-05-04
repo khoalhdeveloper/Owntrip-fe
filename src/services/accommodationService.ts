@@ -10,7 +10,7 @@ export interface IRoomType {
   images?: string[];
   capacity: number;
   basePrice: number;
-  price?: number;        // alias used in some views
+  price?: number;       
   totalRooms?: number;
   availableRooms?: number;
   amenities?: string[];

@@ -16,6 +16,7 @@ import { accommodationService, Accommodation, IRoomType } from '@/services/accom
 import { bookingService } from '@/services/bookingService';
 import StayDatePickerModal from './StayDatePickerModal';
 import AccommodationDetailModal from './AccommodationDetailModal';
+import PayOSWebViewModal from '@/components/PayOSWebViewModal';
 import WriteReviewModal from './WriteReviewModal';
 import { useConfirm } from '@/components/ConfirmProvider';
 import { userService, UserProfile } from '@/services/userService';
@@ -47,6 +48,12 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const toastOpacity = useState(new Animated.Value(0))[0];
+
+  // PayOS states
+  const [payosCheckoutUrl, setPayosCheckoutUrl] = useState<string | null>(null);
+  const [payosBookingId, setPayosBookingId] = useState<string | null>(null);
+  const [payosModalVisible, setPayosModalVisible] = useState(false);
+  const [tempBookingInfo, setTempBookingInfo] = useState<{ total: number; nights: number } | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -143,8 +150,8 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
         return;
       }
 
-      // 2. Create booking
-      const result = await bookingService.createBooking({
+      // 2. Create booking with PayOS payment
+      const result = await bookingService.createBookingWithPayment({
         hotelId: selectedHotel.hotelId,
         roomTypeId: roomType.roomTypeId,
         checkIn: checkInStr,
@@ -156,22 +163,43 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
           email: currentUser?.email || 'guest@owntrip.vn',
           specialRequests: '',
         },
-        paymentMethod: 'balance',
+        paymentMethod: 'credit_card', // Will be ignored by BE for PayOS
       });
 
-      if (result.success) {
+      if (result.success && result.data?.checkoutUrl) {
+        setTempBookingInfo({ total: availability.totalPrice, nights: availability.nights });
+        setPayosCheckoutUrl(result.data.checkoutUrl);
+        setPayosBookingId(result.data.bookingId);
+        setPayosModalVisible(true);
+      } else if (result.success) {
+        // Fallback in case there is no checkoutUrl but booking succeeded
         const nights = availability.nights;
         const total = availability.totalPrice;
-        showToast(`🎉 Đặt phòng thành công! Đã trừ ${formatCurrency(total)} cho ${nights} đêm.`);
+        showToast(`🎉 Đặt phòng thành công! (Giá: ${formatCurrency(total)} cho ${nights} đêm)`);
       } else {
         showAlert('Lỗi đặt phòng', result.message, 'error');
       }
     } catch (error) {
       console.error('Booking error:', error);
-      showAlert('Lỗi', 'Đã xảy ra lỗi khi đặt phòng', 'error');
+      showAlert('Lỗi', 'Đã xảy ra lỗi khi tạo đơn đặt phòng', 'error');
     } finally {
       setBookingLoading(false);
     }
+  };
+
+  const handlePayOSSuccess = (bookingId: string) => {
+    setPayosModalVisible(false);
+    if (tempBookingInfo) {
+      showToast(`🎉 Đặt phòng thành công! Đã thanh toán ${formatCurrency(tempBookingInfo.total)} cho ${tempBookingInfo.nights} đêm.`);
+    } else {
+      showToast(`🎉 Đặt phòng thành công!`);
+    }
+    setTempBookingInfo(null);
+  };
+
+  const handlePayOSCancel = () => {
+    setPayosModalVisible(false);
+    showAlert('Đã hủy thanh toán', 'Đơn đặt phòng của bạn chưa được thanh toán.', 'warning');
   };
 
   const handleImageError = (id: string) => {
@@ -362,6 +390,16 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
           <Text style={styles.toastText}>{toastMessage}</Text>
         </Animated.View>
       )}
+
+      {/* PayOS Modal */}
+      <PayOSWebViewModal
+        visible={payosModalVisible}
+        checkoutUrl={payosCheckoutUrl}
+        bookingId={payosBookingId}
+        title="Thanh toán phòng khách sạn"
+        onPaymentSuccess={handlePayOSSuccess}
+        onPaymentCancel={handlePayOSCancel}
+      />
     </View>
   );
 }

@@ -130,31 +130,52 @@ export default function HotelEditScreen() {
     setRoomCapacity(String(r.capacity || 2)); setRoomTotalRooms(String(r.totalRooms || 1)); setRoomImages(r.images || []); setRoomAmenities((r.amenities || []).join(', ')); setEditingRoomIdx(idx);
   };
 
-  const handleSaveRoom = () => {
+  const autoSaveHotel = async (updatedRooms: IRoomType[]) => {
+    if (!isEditing || !hotelId) return;
+    try {
+      setSaving(true);
+      const hotelData: any = { rooms: updatedRooms };
+      await hotelManagementService.updateHotel(hotelId, hotelData);
+    } catch (error) {
+      console.error("Auto save failed", error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveRoom = async () => {
     if (!roomName.trim() || !roomPrice.trim()) { Alert.alert('Thiếu thông tin', 'Tên phòng và giá là bắt buộc'); return; }
     const newRoom: IRoomType = {
       roomTypeId: editingRoomIdx !== null ? rooms[editingRoomIdx].roomTypeId : `room_${Date.now()}`,
-      name: roomName.trim(), description: roomDesc.trim(), basePrice: Number(roomPrice),
+      name: roomName.trim(), description: roomDesc.trim(), basePrice: Number(roomPrice), price: Number(roomPrice),
       capacity: Number(roomCapacity) || 2, totalRooms: Number(roomTotalRooms) || 1, images: roomImages,
       amenities: roomAmenities.split(',').map(s => s.trim()).filter(Boolean),
     };
+    
+    let updatedRooms;
     if (editingRoomIdx !== null) {
-      const u = [...rooms]; u[editingRoomIdx] = newRoom; setRooms(u);
+      updatedRooms = [...rooms]; updatedRooms[editingRoomIdx] = newRoom; 
+      setRooms(updatedRooms);
       Toast.show({ type: 'success', text1: 'Cập nhật thành công', text2: `Đã sửa phòng "${roomName.trim()}"` });
     } else {
-      setRooms([...rooms, newRoom]);
+      updatedRooms = [...rooms, newRoom];
+      setRooms(updatedRooms);
       Toast.show({ type: 'success', text1: 'Thêm thành công', text2: `Đã thêm phòng "${roomName.trim()}"` });
     }
+    
+    await autoSaveHotel(updatedRooms);
     resetRoomForm();
   };
 
   const handleDeleteRoom = (idx: number) => {
     Alert.alert('Xóa loại phòng', `Bạn có chắc muốn xóa "${rooms[idx].name}"?`, [
       { text: 'Hủy', style: 'cancel' },
-      { text: 'Xóa', style: 'destructive', onPress: () => {
+      { text: 'Xóa', style: 'destructive', onPress: async () => {
         const deletedName = rooms[idx].name;
-        setRooms(rooms.filter((_, i) => i !== idx));
+        const updatedRooms = rooms.filter((_, i) => i !== idx);
+        setRooms(updatedRooms);
         Toast.show({ type: 'success', text1: 'Xóa thành công', text2: `Đã xóa phòng "${deletedName}"` });
+        await autoSaveHotel(updatedRooms);
       }},
     ]);
   };

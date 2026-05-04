@@ -23,6 +23,8 @@ import WriteReviewModal from './WriteReviewModal';
 import { decodeJWT } from '@/utils/jwtUtils';
 import { useConfirm } from '@/components/ConfirmProvider';
 import { bookingService } from '@/services/bookingService';
+import { paymentService } from '@/services/paymentService';
+import PayOSWebViewModal from '@/components/PayOSWebViewModal';
 import { userService, UserProfile } from '@/services/userService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -104,6 +106,12 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const toastOpacity = useRef(new Animated.Value(0)).current;
+
+  // PayOS states
+  const [payosCheckoutUrl, setPayosCheckoutUrl] = useState<string | null>(null);
+  const [payosBookingId, setPayosBookingId] = useState<string | null>(null);
+  const [payosModalVisible, setPayosModalVisible] = useState(false);
+  const [pendingTripUpdate, setPendingTripUpdate] = useState<any>(null);
   
   // Filter & Sort state
   const [searchQuery, setSearchQuery] = useState('');
@@ -223,7 +231,14 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
     setHotelModalVisible(false);
 
     // Xác định xem có phải đang edit booking hiện tại không
-    const isEditing = bookedHotel && (bookedHotel.hotelId === selectedHotel.hotelId || bookedHotel.id === selectedHotel.id);
+    const isEditing = !!(bookedHotel && (bookedHotel.hotelId === selectedHotel.hotelId || bookedHotel.id === selectedHotel.id));
+    
+    // Nếu không thay đổi ngày so với ban đầu thì không làm gì
+    if (isEditing && checkInDate && checkOutDate && 
+        checkIn.getTime() === checkInDate.getTime() && 
+        checkOut.getTime() === checkOutDate.getTime()) {
+      return;
+    }
     
     const originalNights = isEditing && checkInDate && checkOutDate ? Math.round((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
     const originalPrice = isEditing ? (trip.accommodation?.totalPrice || 0) : 0;
@@ -267,16 +282,14 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
     }
 
     try {
-      // Bật trạng thái chờ (Loading Overlay sẽ được render dựa vào isUpdating)
+      // Bật trạng thái chờ
       setIsUpdating(true);
       
-      let success = true;
-      let message = '';
-
       // 1. Thực hiện thanh toán (chỉ tạo booking mới nếu không phải edit, hoặc nếu có payment API thì gọi ở đây)
-      // Tạm thời gọi createBooking để giả lập giao dịch trừ tiền.
-      if (!isEditing || priceDifference > 0) {
-        const bookingResult = await bookingService.createBooking({
+      // 1. Thực hiện thanh toán
+      if (!isEditing) {
+        // ĐẶT PHÒNG MỚI: Gọi API tạo booking + thanh toán toàn bộ
+        const bookingResult = await bookingService.createBookingWithPayment({
           hotelId: selectedHotel.hotelId || selectedHotel.id || '',
           roomTypeId: currentRoomTypeId,
           checkIn: checkIn.toISOString(),
@@ -286,27 +299,81 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
             fullName: currentUser?.displayName || 'Khách hàng OwnTrip',
             phone: currentUser?.phone || '0900000000',
             email: currentUser?.email || 'guest@owntrip.vn',
-            specialRequests: isEditing ? `Extending stay. Price diff: ${priceDifference}` : '',
           },
-          paymentMethod: 'balance',
+          paymentMethod: 'credit_card',
         });
 
-        success = bookingResult.success;
-        message = bookingResult.message;
+        if (bookingResult.success && bookingResult.data?.checkoutUrl) {
+          setPendingTripUpdate({
+            isEditing: false,
+            priceDifference: 0,
+            newTotalPrice,
+            checkIn,
+            checkOut,
+            currentRoomTypeId,
+            selectedHotel
+          });
+          setPayosCheckoutUrl(bookingResult.data.checkoutUrl);
+          setPayosBookingId(bookingResult.data.bookingId);
+          setPayosModalVisible(true);
+          setIsUpdating(false);
+          return;
+        } else if (!bookingResult.success) {
+          await alert('Lỗi thanh toán', bookingResult.message || 'Không thể tạo đơn đặt phòng', 'error');
+          setIsUpdating(false);
+          return;
+        }
+      } else if (priceDifference > 0) {
+        // GIA HẠN PHÒNG (EDIT): Chỉ thanh toán số tiền chênh lệch (priceDifference)
+        const tempId = `temp_${Date.now()}`;
+        const paymentResult = await paymentService.createPaymentLink({
+          bookingId: tempId,
+          amount: priceDifference,
+          description: `Phu phi gia han phong`.slice(0, 25),
+          hotelId: selectedHotel.hotelId || selectedHotel.id || '', 
+        });
+
+        if (paymentResult.success && paymentResult.data?.checkoutUrl) {
+          setPendingTripUpdate({
+            isEditing: true,
+            priceDifference,
+            newTotalPrice,
+            checkIn,
+            checkOut,
+            currentRoomTypeId,
+            selectedHotel
+          });
+          setPayosCheckoutUrl(paymentResult.data.checkoutUrl);
+          setPayosBookingId(tempId); // Dùng tempId để polling status
+          setPayosModalVisible(true);
+          setIsUpdating(false);
+          return;
+        } else {
+          showToast(paymentResult.message || 'Không thể tạo link thanh toán phụ phí');
+          setIsUpdating(false);
+          return;
+        }
       }
 
-      if (!success) {
-        await alert('Thanh toán thất bại', message || 'Vui lòng kiểm tra lại số dư.', 'error');
-        setIsUpdating(false);
-        return;
-      }
+     
+      await executeTripUpdate(checkIn, checkOut, newTotalPrice, currentRoomTypeId, selectedHotel, isEditing, priceDifference);
+      
+    } catch (error) {
+      console.error('Error during booking:', error);
+      showToast('Đã xảy ra lỗi hệ thống.');
+      setIsUpdating(false);
+    }
+  };
 
+  const executeTripUpdate = async (checkIn: Date, checkOut: Date, newTotalPrice: number, currentRoomTypeId: string, sHotel: Accommodation, isEditing: boolean, priceDifference: number) => {
+    try {
+      setIsUpdating(true);
       // 2. Lưu vào lịch trình chuyến đi (Update Trip)
       const updatedTrip = await tripService.updateTrip(trip._id, {
         accommodation: {
-          hotelId: selectedHotel.id || selectedHotel.hotelId,
-          hotelName: selectedHotel.name,
-          hotelImage: selectedHotel.primaryImage || (selectedHotel.images ? selectedHotel.images[0] : ''),
+          hotelId: sHotel.id || sHotel.hotelId,
+          hotelName: sHotel.name,
+          hotelImage: sHotel.primaryImage || (sHotel.images ? sHotel.images[0] : ''),
           checkIn: checkIn.toISOString(),
           checkOut: checkOut.toISOString(),
           totalPrice: newTotalPrice,
@@ -316,19 +383,18 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
 
       if (updatedTrip) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        setIsUpdating(false); // Hide loading overlay before showing alert
         
-        // Hiện Success Modal rõ ràng
+        // Hiện Toast thông báo
         if (isEditing && priceDifference > 0) {
-          await alert('Thành công', `Thanh toán thành công!\nĐã trừ ${formatCurrency(priceDifference)} từ ví. Cập nhật ngày ở hoàn tất.`, 'success');
+          showToast(`Thanh toán thành công ${formatCurrency(priceDifference)}!`);
         } else if (isEditing) {
-          await alert('Thành công', `Cập nhật ngày ở thành công!`, 'success');
+          showToast('Cập nhật ngày ở thành công!');
         } else {
-          await alert('Thành công', `Thanh toán thành công!\nĐã trừ ${formatCurrency(newTotalPrice)} từ ví. Đặt phòng hoàn tất.`, 'success');
+          showToast(`Thanh toán thành công ${formatCurrency(newTotalPrice)}!`);
         }
         
         // Cập nhật state ngay lập tức từ dữ liệu Server trả về
-        setBookedHotel(selectedHotel);
+        setBookedHotel(sHotel);
         setCheckInDate(checkIn);
         setCheckOutDate(checkOut);
         if (currentRoomTypeId && currentRoomTypeId !== 'default') {
@@ -339,10 +405,32 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
       }
     } catch (error) {
       console.error('Error saving accommodation:', error);
-      await alert('Lỗi', 'Không thể hoàn tất đặt phòng. Vui lòng thử lại.', 'error');
+      showToast('Không thể hoàn tất đặt phòng. Vui lòng thử lại.');
     } finally {
       setIsUpdating(false);
     }
+  };
+
+  const handlePayOSSuccess = async (bookingId: string) => {
+    setPayosModalVisible(false);
+    if (pendingTripUpdate) {
+        await executeTripUpdate(
+            pendingTripUpdate.checkIn,
+            pendingTripUpdate.checkOut,
+            pendingTripUpdate.newTotalPrice,
+            pendingTripUpdate.currentRoomTypeId,
+            pendingTripUpdate.selectedHotel,
+            pendingTripUpdate.isEditing,
+            pendingTripUpdate.priceDifference
+        );
+        setPendingTripUpdate(null);
+    }
+  };
+
+  const handlePayOSCancel = async () => {
+    setPayosModalVisible(false);
+    setPendingTripUpdate(null);
+    showToast('Bạn đã hủy thanh toán.');
   };
 
   const [viewingBooked, setViewingBooked] = useState(false);
@@ -865,6 +953,16 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
           </View>
         </View>
       )}
+
+      {/* ===== PAYOS WEBVIEW MODAL ===== */}
+      <PayOSWebViewModal
+        visible={payosModalVisible}
+        checkoutUrl={payosCheckoutUrl}
+        bookingId={payosBookingId}
+        title="Thanh toán"
+        onPaymentSuccess={handlePayOSSuccess}
+        onPaymentCancel={handlePayOSCancel}
+      />
     </View>
   );
 }

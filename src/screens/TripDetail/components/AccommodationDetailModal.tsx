@@ -671,7 +671,11 @@ export default function AccommodationDetailModal({
         <View style={styles.footer}>
           <View style={styles.footerPriceSection}>
             <Text style={styles.footerPrice}>
-              {hotel.pricePerNight > 0 ? formatCurrency(hotel.pricePerNight) : 'Liên hệ'}
+              {(() => {
+                const room = hotel.rooms.find(r => r.roomTypeId === selectedRoomId);
+                const displayPrice = room ? (room.basePrice || room.price || 0) : hotel.pricePerNight;
+                return displayPrice > 0 ? formatCurrency(displayPrice) : 'Liên hệ';
+              })()}
             </Text>
             <Text style={styles.footerPriceUnit}>/đêm</Text>
           </View>
