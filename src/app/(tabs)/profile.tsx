@@ -16,6 +16,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Switch,
+  Animated,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -31,10 +32,12 @@ import { userService, UserProfile } from '@/services/userService';
 import { tripService, Trip, TripDetailResponse } from '@/services/tripService';
 import { notificationService, Notification } from '@/services/notificationService';
 import TripDetailModal from '@/components/TripDetailModal';
+import PayOSWebViewModal from '@/components/PayOSWebViewModal';
 import { useChatbotSetting } from '@/context/ChatbotSettingContext';
 import { getImageSource } from '@/utils/imageUtils';
 import { decodeJWT } from '@/utils/jwtUtils';
 import { useConfirm } from '@/components/ConfirmProvider';
+import { paymentService } from '@/services/paymentService';
 
 const { width } = Dimensions.get('window');
 
@@ -59,6 +62,28 @@ export default function ProfileScreen() {
   const [isNotifModalVisible, setIsNotifModalVisible] = useState(false);
   const [selectedNotifForDetail, setSelectedNotifForDetail] = useState<Notification | null>(null);
   const [isToppingUp, setIsToppingUp] = useState(false);
+
+  // PayOS top-up states
+  const [topUpAmountModal, setTopUpAmountModal] = useState(false);
+  const [topUpAmount, setTopUpAmount] = useState('100000');
+  const [payosCheckoutUrl, setPayosCheckoutUrl] = useState<string | null>(null);
+  const [payosBookingId, setPayosBookingId] = useState<string | null>(null);
+  const [payosModalVisible, setPayosModalVisible] = useState(false);
+
+  // Toast states
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const toastOpacity = React.useRef(new Animated.Value(0)).current;
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setToastVisible(true);
+    Animated.sequence([
+      Animated.timing(toastOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.delay(2500),
+      Animated.timing(toastOpacity, { toValue: 0, duration: 300, useNativeDriver: true }),
+    ]).start(() => setToastVisible(false));
+  };
 
   const handleTripPress = async (id: string) => {
     setLoadingTripDetail(true);
@@ -232,11 +257,11 @@ export default function ProfileScreen() {
         
         setEditModalVisible(false);
         setNewImage(''); // Xóa biến tạm
-        showAlert("Thành công", "Đã cập nhật hồ sơ", "success");
+        showToast("Đã cập nhật hồ sơ");
         // Đợi 2 giây để server kịp đồng bộ DB
         setTimeout(() => loadData(), 2000);
       } else {
-        showAlert("Lỗi", "Không thể cập nhật hồ sơ. Vui lòng thử lại.", "error");
+        showToast("Không thể cập nhật hồ sơ. Vui lòng thử lại.");
       }
     } catch (error) {
       console.error('🔥 Update Error:', error);
@@ -246,12 +271,58 @@ export default function ProfileScreen() {
     }
   };
 
+  // Nạp tiền bằng PayOS
+  const handlePayOSTopUp = async () => {
+    const amount = parseInt(topUpAmount.replace(/\D/g, ''), 10);
+    if (!amount || amount < 2000) {
+      showAlert('Lỗi', 'Số tiền nạp tối thiểu là 2.000 VNĐ', 'error');
+      return;
+    }
+
+    try {
+      setIsToppingUp(true);
+      setTopUpAmountModal(false);
+
+
+      const desc = `Nap tien ${amount.toLocaleString()}d`;
+      const tempBookingId = `topup_${Date.now()}`;
+
+      const result = await paymentService.createPaymentLink({
+        bookingId: tempBookingId,
+        amount,
+        description: desc.slice(0, 25),
+      });
+
+      if (result.success && result.data?.checkoutUrl) {
+        setPayosCheckoutUrl(result.data.checkoutUrl);
+        setPayosBookingId(tempBookingId);
+        setPayosModalVisible(true);
+      } else {
+        showAlert('Lỗi', result.message || 'Không thể tạo link thanh toán', 'error');
+      }
+    } catch (error) {
+      showAlert('Lỗi', 'Đã có lỗi xảy ra', 'error');
+    } finally {
+      setIsToppingUp(false);
+    }
+  };
+
+  const handlePayOSSuccess = (_bookingId: string) => {
+    setPayosModalVisible(false);
+    showAlert('Thành công', 'Nạp tiền thành công! Số dư sẽ được cập nhật.', 'success');
+    setTimeout(() => loadData(), 2000);
+  };
+
+  const handlePayOSCancel = () => {
+    setPayosModalVisible(false);
+  };
+
   const handleTestTopUp = async () => {
     try {
       setIsToppingUp(true);
       const result = await userService.testTopUpBalance();
       if (result.success) {
-        showAlert("Thành công", "Đã nạp 1.000.000 VND vào tài khoản của bạn!", "success");
+        showAlert("Thành công", "Đã nạp tiền vào tài khoản của bạn!", "success");
         loadData(); // Refresh profile to show new balance
       } else {
         showAlert("Lỗi", result.message || "Không thể nạp tiền", "error");
@@ -359,7 +430,7 @@ export default function ProfileScreen() {
                 <Text style={styles.assetValue} numberOfLines={1}>{profile?.balance?.toLocaleString() || 0}đ</Text>
                 <TouchableOpacity 
                   style={[styles.topUpMiniBtn, { marginTop: 4, alignSelf: 'flex-start' }]} 
-                  onPress={handleTestTopUp}
+                  onPress={() => setTopUpAmountModal(true)}
                   disabled={isToppingUp}
                 >
                   {isToppingUp ? (
@@ -587,6 +658,14 @@ export default function ProfileScreen() {
         </BlurView>
       </Modal>
 
+      {/* ===== TOAST NOTIFICATION ===== */}
+      {toastVisible && (
+        <Animated.View style={[styles.toastContainer, { opacity: toastOpacity }]}>
+          <Feather name="check-circle" size={18} color="#FFF" style={{ marginRight: 8 }} />
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </Animated.View>
+      )}
+
       {/* Trip Detail Modal */}
       <TripDetailModal
         visible={!!selectedTripDetail || loadingTripDetail}
@@ -703,6 +782,69 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* === Top-Up Amount Picker Modal === */}
+      <Modal
+        visible={topUpAmountModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setTopUpAmountModal(false)}
+      >
+        <View style={styles.topUpOverlay}>
+          <View style={styles.topUpCard}>
+            <Text style={styles.topUpTitle}>Nạp tiền vào ví</Text>
+            <Text style={styles.topUpSubtitle}>Thanh toán · An toàn & Nhanh chóng</Text>
+
+            <Text style={styles.topUpLabel}>Số tiền nạp (VNĐ)</Text>
+            <TextInput
+              style={styles.topUpInput}
+              value={topUpAmount}
+              onChangeText={setTopUpAmount}
+              keyboardType="numeric"
+              placeholder="Nhập số tiền"
+              placeholderTextColor="#A0AEC0"
+            />
+
+            {/* Quick amount chips */}
+            <View style={styles.quickAmounts}>
+              {['50000', '100000', '200000', '500000'].map((amt) => (
+                <TouchableOpacity
+                  key={amt}
+                  style={[styles.quickAmtChip, topUpAmount === amt && styles.quickAmtChipActive]}
+                  onPress={() => setTopUpAmount(amt)}
+                >
+                  <Text style={[styles.quickAmtText, topUpAmount === amt && styles.quickAmtTextActive]}>
+                    {parseInt(amt).toLocaleString()}đ
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.topUpActions}>
+              <TouchableOpacity style={styles.topUpCancelBtn} onPress={() => setTopUpAmountModal(false)}>
+                <Text style={styles.topUpCancelText}>Hủy</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.topUpConfirmBtn} onPress={handlePayOSTopUp} disabled={isToppingUp}>
+                {isToppingUp ? (
+                  <ActivityIndicator color="#FFF" size="small" />
+                ) : (
+                  <Text style={styles.topUpConfirmText}>Thanh toán PayOS</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* === PayOS WebView Modal === */}
+      <PayOSWebViewModal
+        visible={payosModalVisible}
+        checkoutUrl={payosCheckoutUrl}
+        bookingId={payosBookingId}
+        title="Nạp tiền qua PayOS"
+        onPaymentSuccess={handlePayOSSuccess}
+        onPaymentCancel={handlePayOSCancel}
+      />
     </View>
   );
 }
@@ -1345,5 +1487,129 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  // Top-up Modal styles
+  topUpOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  topUpCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 24,
+    padding: 24,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  topUpTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1A1A2E',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  topUpSubtitle: {
+    fontSize: 13,
+    color: '#718096',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  topUpLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#4A5568',
+    marginBottom: 8,
+  },
+  topUpInput: {
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1A1A2E',
+    backgroundColor: '#F8FAFC',
+    marginBottom: 16,
+  },
+  quickAmounts: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 24,
+  },
+  quickAmtChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+  },
+  quickAmtChipActive: {
+    backgroundColor: '#EBF4FF',
+    borderColor: '#007AFF',
+  },
+  quickAmtText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  quickAmtTextActive: {
+    color: '#007AFF',
+  },
+  topUpActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  topUpCancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+  },
+  topUpCancelText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  topUpConfirmBtn: {
+    flex: 2,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: '#007AFF',
+    alignItems: 'center',
+  },
+  topUpConfirmText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  toastContainer: {
+    position: 'absolute',
+    bottom: 100,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 9999,
+  },
+  toastText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

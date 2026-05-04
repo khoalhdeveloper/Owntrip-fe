@@ -72,4 +72,11 @@ export const ENDPOINTS = {
     BULK_PRICE_UPDATE: '/api/inventory/bulk-price-update',
     DELETE: '/api/inventory',
   },
+  PAYMENT: {
+    CREATE_BOOKING_PAYMENT: '/api/payment/create-booking-payment',
+    CREATE_PAYMENT_LINK: '/api/payment/create-payment-link',
+    STATUS: (bookingId: string) => `/api/payment/status/${bookingId}`,
+    CANCEL: (orderCode: string) => `/api/payment/${orderCode}/cancel`,
+    INFO: (orderCode: string) => `/api/payment/${orderCode}`,
+  },
 };

@@ -199,5 +199,34 @@ export const bookingService = {
       return null;
     }
   },
+
+  /**
+   * Tạo booking + PayOS payment link trong 1 request (dùng cho thanh toán phòng)
+   */
+  createBookingWithPayment: async (data: CreateBookingRequest): Promise<{
+    success: boolean;
+    message: string;
+    data?: {
+      bookingId: string;
+      totalPrice: number;
+      nights: number;
+      status: string;
+      checkoutUrl: string | null;
+      orderCode: number | null;
+    };
+  }> => {
+    try {
+      const { paymentMethod, ...rest } = data; // paymentMethod không cần cho endpoint này
+      const response = await axiosClient.post<any, any>(
+        ENDPOINTS.PAYMENT.CREATE_BOOKING_PAYMENT,
+        rest
+      );
+      return response;
+    } catch (error: any) {
+      const message = error?.response?.data?.message || 'Không thể đặt phòng';
+      return { success: false, message };
+    }
+  },
 };
+
 
