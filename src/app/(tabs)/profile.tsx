@@ -35,6 +35,7 @@ import { useChatbotSetting } from '@/context/ChatbotSettingContext';
 import { getImageSource } from '@/utils/imageUtils';
 import { decodeJWT } from '@/utils/jwtUtils';
 import { useConfirm } from '@/components/ConfirmProvider';
+import { hotelRequestService } from '@/services/hotelRequestService';
 
 const { width } = Dimensions.get('window');
 
@@ -58,6 +59,7 @@ export default function ProfileScreen() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isNotifModalVisible, setIsNotifModalVisible] = useState(false);
   const [selectedNotifForDetail, setSelectedNotifForDetail] = useState<Notification | null>(null);
+  const [hotelRequest, setHotelRequest] = useState<any>(null);
 
   const handleTripPress = async (id: string) => {
     setLoadingTripDetail(true);
@@ -118,6 +120,16 @@ export default function ProfileScreen() {
       // Fetch notifications
       const notifs = await notificationService.getAll();
       setNotifications(notifs || []);
+
+      // Fetch hotel request status
+      try {
+        const reqResult = await hotelRequestService.getMyRequests();
+        if (reqResult.success && reqResult.data.length > 0) {
+          setHotelRequest(reqResult.data[0]); // Get the latest one
+        }
+      } catch (err) {
+        console.error('Error fetching hotel request:', err);
+      }
     } catch (error: any) {
       console.error('🔥 Profile: Critical error in loadData:', error);
       if (error?.response?.status === 401) {
@@ -445,6 +457,34 @@ export default function ProfileScreen() {
                    <FontAwesome5 name="hotel" size={16} color="#FF6B35" />
                  </View>
                  <Text style={styles.settingLabel}>Quản lý khách sạn</Text>
+                 <Feather name="chevron-right" size={20} color="#CBD5E0" />
+               </TouchableOpacity>
+             )}
+
+             {/* Hotel Owner Registration - Only for users */}
+             {profile?.role === 'user' && (
+               <TouchableOpacity 
+                 style={styles.settingItem}
+                 onPress={() => {
+                   if (hotelRequest?.status === 'pending') {
+                     showAlert("Thông báo", "Đơn đăng ký của bạn đang được duyệt. Vui lòng chờ kết quả.", "info");
+                   } else {
+                     router.push('/hotel-management/register');
+                   }
+                 }}
+               >
+                 <View style={[styles.settingIcon, { backgroundColor: '#F0F9FF' }]}>
+                   <FontAwesome5 name="hotel" size={16} color="#007AFF" />
+                 </View>
+                 <View style={{ flex: 1 }}>
+                   <Text style={styles.settingLabel}>Đăng ký chủ khách sạn</Text>
+                   {hotelRequest?.status === 'pending' && (
+                     <Text style={{ fontSize: 10, color: '#FFB300', fontWeight: '600' }}>Đang chờ duyệt...</Text>
+                   )}
+                   {hotelRequest?.status === 'rejected' && (
+                     <Text style={{ fontSize: 10, color: '#E53E3E', fontWeight: '600' }}>Đã bị từ chối. Nhấn để đăng ký lại.</Text>
+                   )}
+                 </View>
                  <Feather name="chevron-right" size={20} color="#CBD5E0" />
                </TouchableOpacity>
              )}

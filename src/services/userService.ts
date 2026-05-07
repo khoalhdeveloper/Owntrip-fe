@@ -19,7 +19,7 @@ export interface UserProfile {
   image?: string;
   balance: number;
   points: number;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'hotel_owner';
   isVerified: boolean;
   inventory?: InventoryItem[];
   createdAt?: string;
