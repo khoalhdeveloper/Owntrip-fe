@@ -10,15 +10,12 @@ import {
   StatusBar,
   ActivityIndicator,
   Modal,
-  Alert,
-  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as WebBrowser from 'expo-web-browser';
 import { decodeJWT } from '@/utils/jwtUtils';
 import { userService, UserProfile } from '@/services/userService';
 import { souvenirsService, Souvenir } from '@/services/souvenirsService';
@@ -30,7 +27,6 @@ const CARD_GAP = 12;
 const GRID_PADDING = 20;
 const CARD_WIDTH = (width - GRID_PADDING * 2 - CARD_GAP) / 2;
 const DECORATION_CARD_WIDTH = 140;
-/** Padding phải đủ để scroll card cuối vào view (tránh bị cắt) */
 const DECORATION_SCROLL_PADDING_RIGHT = width - GRID_PADDING * 2 - DECORATION_CARD_WIDTH - 16;
 
 const DECORATION_TYPE_LABEL: Record<string, string> = {
@@ -53,7 +49,6 @@ export default function StoreScreen() {
   const [selectedSouvenir, setSelectedSouvenir] = useState<Souvenir | null>(null);
   const [buying, setBuying] = useState(false);
   const { alert: showAlert, confirm: showConfirm, show: customShow } = useConfirm();
-  // Sử dụng 'points' làm 'coins' trong Store vì balance thường là tiền mặt/ví
   const coinBalance = profile?.points ?? 0;
 
   const loadProfile = useCallback(async () => {
@@ -152,7 +147,6 @@ export default function StoreScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={styles.safe} edges={['top']}>
-        {/* Header: Settings */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Cửa hàng</Text>
           <TouchableOpacity style={styles.settingsBtn} onPress={() => {}}>
@@ -165,7 +159,6 @@ export default function StoreScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-            {/* Coin Balance Card */}
             <View style={styles.coinCard}>
               <View style={styles.coinRow}>
                 <View style={styles.coinIconWrap}>
@@ -185,24 +178,10 @@ export default function StoreScreen() {
                 style={styles.topUpBtnWrap} 
                 activeOpacity={0.85}
                 onPress={async () => {
-                  const methodIdx = await customShow({
-                    title: 'Nạp điểm',
-                    message: 'Chọn phương thức nạp điểm:',
-                    icon: 'question',
-                    buttons: [
-                      { text: 'Huỷ', style: 'cancel' },
-                      { text: 'Simulate (50k)', style: 'default' },
-                    ]
-                  });
-                  
-                  if (methodIdx === 1) { // Simulate
-                    const res = await userService.topUpPoints(50000);
-                    if (res.success) {
-                      showAlert('Thành công', `Đã nhận được ${res.pointsEarned} điểm!`, 'success');
-                      loadProfile();
-                    } else {
-                      showAlert('Lỗi', res.message, 'error');
-                    }
+                  const res = await userService.topUpPoints(50000);
+                  if (res.success) {
+                    showAlert('Thành công', `Đã nhận được ${res.pointsEarned} điểm!`, 'success');
+                    loadProfile();
                   }
                 }}
               >
@@ -221,7 +200,6 @@ export default function StoreScreen() {
             </View>
           </View>
 
-          {/* Souvenir collections - từ MockAPI */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Bộ sưu tập lưu niệm</Text>
@@ -254,7 +232,6 @@ export default function StoreScreen() {
             )}
           </View>
 
-          {/* Decoration - từ MockAPI */}
           <View style={styles.decorationSection}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Trang trí</Text>
@@ -263,34 +240,19 @@ export default function StoreScreen() {
               </TouchableOpacity>
             </View>
             {loadingDecorations ? (
-              <View style={styles.loadingRow}>
-                <ActivityIndicator size="small" color="#3B82F6" />
-              </View>
+              <ActivityIndicator size="small" color="#3B82F6" />
             ) : (
-              <View style={styles.decorationScrollWrap}>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={[styles.decorationScroll, { paddingRight: Math.max(GRID_PADDING, DECORATION_SCROLL_PADDING_RIGHT), paddingBottom: 16 }]}
-                >
-                  {decorations.map((item) => (
-                    <TouchableOpacity key={item.id} style={styles.decorationCard} activeOpacity={0.85} onPress={() => setSelectedDecoration(item)}>
-                      <View style={styles.decorationImageWrap}>
-                        <Image source={{ uri: item.image }} style={styles.decorationImage} />
-                      </View>
-                      <Text style={styles.decorationName} numberOfLines={2}>{item.name}</Text>
-                      <View style={styles.coinsRow}>
-                        <Feather name="award" size={14} color="#D97706" />
-                        <Text style={styles.coinsText}>{item.coins} xu</Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.decorationScroll}>
+                {decorations.map((item) => (
+                  <TouchableOpacity key={item.id} style={styles.decorationCard} activeOpacity={0.85} onPress={() => setSelectedDecoration(item)}>
+                    <Image source={{ uri: item.image }} style={styles.decorationImage} />
+                    <Text style={styles.decorationName} numberOfLines={1}>{item.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             )}
           </View>
 
-          {/* Recent Activity */}
           <View style={styles.activitySection}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Hoạt động gần đây</Text>
@@ -324,147 +286,6 @@ export default function StoreScreen() {
 
           <View style={{ height: 100 }} />
         </ScrollView>
-
-        {/* Trang chi tiết Decoration (full-screen như hình) */}
-        <Modal
-          visible={!!selectedDecoration}
-          animationType="slide"
-          onRequestClose={() => setSelectedDecoration(null)}
-        >
-          {selectedDecoration && (
-            <View style={styles.detailContainer}>
-              <StatusBar barStyle="light-content" />
-              <SafeAreaView style={styles.detailSafe} edges={['top']}>
-                {/* Header: back + title */}
-                <View style={styles.detailHeader}>
-                  <TouchableOpacity onPress={() => setSelectedDecoration(null)} style={styles.detailBackBtn}>
-                    <Feather name="arrow-left" size={24} color="#F8FAFC" />
-                  </TouchableOpacity>
-                  <Text style={styles.detailHeaderTitle} numberOfLines={1}>{selectedDecoration.name}</Text>
-                  <View style={styles.detailHeaderRight} />
-                </View>
-
-                <ScrollView
-                  style={styles.detailScroll}
-                  contentContainerStyle={styles.detailScrollContent}
-                  showsVerticalScrollIndicator={false}
-                >
-                  {/* Ảnh lớn bo góc */}
-                  <View style={styles.detailImageWrap}>
-                    <Image source={{ uri: selectedDecoration.image }} style={styles.detailImage} />
-                  </View>
-
-                  {/* Category */}
-                  <Text style={styles.detailCategory}>{getDecorationCategory(selectedDecoration.type)}</Text>
-                  {/* Tên */}
-                  <Text style={styles.detailName}>{selectedDecoration.name}</Text>
-                  {/* Giá */}
-                  <View style={styles.detailPriceRow}>
-                    <Feather name="award" size={22} color="#A78BFA" />
-                    <Text style={styles.detailPrice}>{selectedDecoration.coins} xu</Text>
-                  </View>
-                  {/* Mô tả */}
-                  <Text style={styles.detailDesc}>
-                    Trang trí hồ sơ của bạn với những vật phẩm độc đáo. Các vật phẩm sẽ được áp dụng cho hồ sơ của bạn sau khi mua. Thanh toán bằng số dư xu.
-                  </Text>
-                </ScrollView>
-
-                {/* Nút Buy cố định đáy */}
-                <View style={styles.detailFooter}>
-                  <TouchableOpacity
-                    style={[styles.detailBuyBtn, buying && { opacity: 0.7 }]}
-                    activeOpacity={0.85}
-                    onPress={() => handleBuyItem({
-                      id: selectedDecoration.id,
-                      name: selectedDecoration.name,
-                      image: selectedDecoration.image,
-                      type: selectedDecoration.type || 'decoration',
-                      price: selectedDecoration.coins
-                    })}
-                    disabled={buying}
-                  >
-                    {buying ? (
-                      <ActivityIndicator color="#FFF" />
-                    ) : (
-                      <>
-                        <Feather name="award" size={20} color="#FFF" />
-                        <Text style={styles.detailBuyText}>Mua với {selectedDecoration.coins} xu</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </SafeAreaView>
-            </View>
-          )}
-        </Modal>
-
-        {/* Trang chi tiết Souvenir (full-screen tương tự Decoration) */}
-        <Modal
-          visible={!!selectedSouvenir}
-          animationType="slide"
-          onRequestClose={() => setSelectedSouvenir(null)}
-        >
-          {selectedSouvenir && (
-            <View style={styles.detailContainer}>
-              <StatusBar barStyle="light-content" />
-              <SafeAreaView style={styles.detailSafe} edges={['top']}>
-                <View style={styles.detailHeader}>
-                  <TouchableOpacity onPress={() => setSelectedSouvenir(null)} style={styles.detailBackBtn}>
-                    <Feather name="arrow-left" size={24} color="#F8FAFC" />
-                  </TouchableOpacity>
-                  <Text style={styles.detailHeaderTitle} numberOfLines={1}>{selectedSouvenir.name}</Text>
-                  <View style={styles.detailHeaderRight} />
-                </View>
-
-                <ScrollView
-                  style={styles.detailScroll}
-                  contentContainerStyle={styles.detailScrollContent}
-                  showsVerticalScrollIndicator={false}
-                >
-                  <View style={styles.detailImageWrap}>
-                    <Image source={{ uri: selectedSouvenir.image }} style={styles.detailImage} />
-                  </View>
-
-                  <Text style={styles.detailCategory}>
-                    {selectedSouvenir.type.charAt(0).toUpperCase() + selectedSouvenir.type.slice(1)}
-                  </Text>
-                  <Text style={styles.detailName}>{selectedSouvenir.name}</Text>
-                  <View style={styles.detailPriceRow}>
-                    <Feather name="award" size={22} color="#A78BFA" />
-                    <Text style={styles.detailPrice}>{selectedSouvenir.amount} xu</Text>
-                  </View>
-                  <Text style={styles.detailDesc}>
-                    {selectedSouvenir.description || 'Quà lưu niệm từ những chuyến đi của bạn. Thanh toán bằng số dư xu để thêm vào bộ sưu tập.'}
-                  </Text>
-                </ScrollView>
-
-                <View style={styles.detailFooter}>
-                  <TouchableOpacity
-                    style={[styles.detailBuyBtn, buying && { opacity: 0.7 }]}
-                    activeOpacity={0.85}
-                    onPress={() => handleBuyItem({
-                      id: selectedSouvenir.id,
-                      name: selectedSouvenir.name,
-                      image: selectedSouvenir.image,
-                      type: 'souvenir',
-                      price: selectedSouvenir.amount
-                    })}
-                    disabled={buying}
-                  >
-                    {buying ? (
-                      <ActivityIndicator color="#FFF" />
-                    ) : (
-                      <>
-                        <Feather name="award" size={20} color="#FFF" />
-                        <Text style={styles.detailBuyText}>Mua với {selectedSouvenir.amount} xu</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </SafeAreaView>
-            </View>
-          )}
-        </Modal>
       </SafeAreaView>
     </View>
   );
@@ -528,59 +349,31 @@ const styles = StyleSheet.create({
 
   section: { marginBottom: 28 },
   loadingRow: { paddingVertical: 32, alignItems: 'center', justifyContent: 'center' },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, paddingHorizontal: 0 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   sectionTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B' },
   viewAll: { fontSize: 14, color: '#3B82F6', fontWeight: '600' },
 
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: CARD_GAP,
-  },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: CARD_GAP },
   productCard: {
     width: CARD_WIDTH,
     backgroundColor: '#FFF',
     borderRadius: 16,
     padding: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 8,
     elevation: 3,
   },
   productImage: { width: '100%', aspectRatio: 1, borderRadius: 12, backgroundColor: '#F1F5F9' },
-  productName: { fontSize: 14, fontWeight: '700', color: '#1E293B', marginTop: 10, marginBottom: 2 },
+  productName: { fontSize: 14, fontWeight: '700', color: '#1E293B', marginTop: 10 },
   productArtist: { fontSize: 12, color: '#64748B', marginBottom: 10 },
   priceBtn: { borderRadius: 10, paddingVertical: 8, alignItems: 'center' },
   priceBtnText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
 
-  decorationSection: { marginBottom: 28, overflow: 'visible' },
-  decorationScrollWrap: { paddingBottom: 12, marginBottom: 4 },
+  decorationSection: { marginBottom: 28 },
   decorationScroll: { gap: 16 },
-  decorationCard: {
-    width: DECORATION_CARD_WIDTH,
-    backgroundColor: '#FFF',
-    borderRadius: 20,
-    padding: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  decorationImageWrap: {
-    width: 112,
-    height: 112,
-    borderRadius: 56,
-    alignSelf: 'center',
-    backgroundColor: '#000',
-    overflow: 'hidden',
-  },
-  decorationImage: { width: '100%', height: '100%', resizeMode: 'cover' },
-  decorationName: { fontSize: 13, fontWeight: '700', color: '#1E293B', marginTop: 12, marginBottom: 6, textAlign: 'center' },
-  coinsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
-  coinsText: { fontSize: 12, color: '#64748B', fontWeight: '600' },
-
+  decorationCard: { width: DECORATION_CARD_WIDTH, alignItems: 'center' },
+  decorationImage: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#000' },
+  decorationName: { fontSize: 13, fontWeight: '700', color: '#1E293B', marginTop: 8 },
   activitySection: { marginTop: 8, marginBottom: 28 },
   activityCard: {
     flexDirection: 'row',
@@ -609,57 +402,4 @@ const styles = StyleSheet.create({
   activityTitle: { fontSize: 15, fontWeight: '700', color: '#1E293B', marginBottom: 2 },
   activitySubtitle: { fontSize: 13, color: '#64748B', fontWeight: '500' },
   activityAmount: { fontSize: 16, fontWeight: '800', color: '#16A34A' },
-
-  detailContainer: { flex: 1, backgroundColor: '#1e1b2e' },
-  detailSafe: { flex: 1 },
-  detailHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
-  },
-  detailBackBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center', marginRight: 8 },
-  detailHeaderTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: '#F8FAFC' },
-  detailHeaderRight: { width: 40 },
-  detailScroll: { flex: 1 },
-  detailScrollContent: { paddingHorizontal: 20, paddingBottom: 24 },
-  detailImageWrap: {
-    width: '100%',
-    aspectRatio: 1,
-    borderRadius: 20,
-    backgroundColor: '#000',
-    overflow: 'hidden',
-    marginTop: 16,
-    marginBottom: 20,
-  },
-  detailImage: { width: '100%', height: '100%', resizeMode: 'cover' },
-  detailCategory: { fontSize: 13, color: '#94A3B8', marginBottom: 6, textTransform: 'capitalize' },
-  detailName: { fontSize: 24, fontWeight: '800', color: '#F8FAFC', marginBottom: 12 },
-  detailPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
-  detailPrice: { fontSize: 18, fontWeight: '700', color: '#F8FAFC' },
-  detailDesc: {
-    fontSize: 14,
-    color: '#94A3B8',
-    lineHeight: 22,
-  },
-  detailFooter: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    paddingBottom: 24,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: '#1e1b2e',
-  },
-  detailBuyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    backgroundColor: '#7C3AED',
-    paddingVertical: 16,
-    borderRadius: 14,
-  },
-  detailBuyText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
 });

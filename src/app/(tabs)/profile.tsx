@@ -60,6 +60,7 @@ export default function ProfileScreen() {
   const [isNotifModalVisible, setIsNotifModalVisible] = useState(false);
   const [selectedNotifForDetail, setSelectedNotifForDetail] = useState<Notification | null>(null);
   const [hotelRequest, setHotelRequest] = useState<any>(null);
+  const [equippedFrame, setEquippedFrame] = useState<string | null>(null);
 
   const handleTripPress = async (id: string) => {
     setLoadingTripDetail(true);
@@ -104,10 +105,11 @@ export default function ProfileScreen() {
       }
 
       console.log('📡 Profile: Fetching profile, trips & inventory for:', userId);
-      const [profileData, tripsData, localInv] = await Promise.all([
+      const [profileData, tripsData, localInv, frame] = await Promise.all([
         userService.getMyProfile(userId as string),
         tripService.getMyTrips(),
-        userService.getLocalInventory(userId as string)
+        userService.getLocalInventory(userId as string),
+        AsyncStorage.getItem('equipped_frame')
       ]);
 
       console.log('✨ Profile: Data fetch complete');
@@ -116,6 +118,7 @@ export default function ProfileScreen() {
         setProfile({ ...profileData, inventory: localInv });
       }
       setTrips(tripsData || []);
+      setEquippedFrame(frame);
 
       // Fetch notifications
       const notifs = await notificationService.getAll();
@@ -318,11 +321,20 @@ export default function ProfileScreen() {
           {/* Profile Card */}
           <View style={styles.profileCard}>
             <View style={styles.avatarContainer}>
-              <ExpoImage 
-                source={getImageSource(profile?.image || 'https://i.pravatar.cc/300')} 
-                style={styles.avatar} 
-                contentFit="cover"
-              />
+              <View style={styles.avatarWrapper}>
+                {equippedFrame && (
+                  <Image 
+                    source={{ uri: equippedFrame }} 
+                    style={styles.avatarFrame}
+                    resizeMode="contain"
+                  />
+                )}
+                <ExpoImage 
+                  source={getImageSource(profile?.image || 'https://i.pravatar.cc/300')} 
+                  style={styles.avatar} 
+                  contentFit="cover"
+                />
+              </View>
               {profile?.isVerified && (
                 <View style={styles.verifiedBadge}>
                   <MaterialIcons name="verified" size={20} color="#007AFF" />
@@ -410,7 +422,7 @@ export default function ProfileScreen() {
           {/* Inventory Section */}
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Kho vật phẩm của tôi</Text>
-            <TouchableOpacity onPress={() => router.push('/store')}>
+            <TouchableOpacity onPress={() => router.push('/decorations')}>
               <Text style={styles.viewAll}>Cửa hàng &gt;</Text>
             </TouchableOpacity>
           </View>
@@ -427,21 +439,35 @@ export default function ProfileScreen() {
               contentContainerStyle={styles.inventoryList}
               style={styles.inventoryScroll}
             >
-              {profile.inventory.map((item, index) => (
-                <View key={index} style={styles.inventoryItemCard}>
-                  <View style={styles.inventoryImageWrap}>
-                    <ExpoImage 
-                      source={getImageSource(item.image)} 
-                      style={styles.inventoryImage} 
-                      contentFit="cover"
-                    />
-                  </View>
-                  <Text style={styles.inventoryName} numberOfLines={1}>{item.name}</Text>
-                  <View style={styles.inventoryBadge}>
-                    <Text style={styles.inventoryBadgeText}>{item.type.toUpperCase()}</Text>
-                  </View>
-                </View>
-              ))}
+              {profile.inventory.map((item, index) => {
+                const isEquipped = item.type === 'frame' ? equippedFrame === item.image : false;
+                
+                return (
+                  <TouchableOpacity 
+                    key={index} 
+                    style={[styles.inventoryItemCard, isEquipped && styles.inventoryItemActive]}
+                    onPress={() => router.push('/decorations')}
+                  >
+                    <View style={styles.inventoryImageWrap}>
+                      <ExpoImage 
+                        source={getImageSource(item.image)} 
+                        style={styles.inventoryImage} 
+                        contentFit="contain"
+                      />
+                    </View>
+                    <Text style={styles.inventoryName} numberOfLines={1}>{item.name}</Text>
+                    {isEquipped ? (
+                      <View style={[styles.inventoryBadge, { backgroundColor: '#10B981' }]}>
+                        <Text style={styles.inventoryBadgeText}>ĐANG DÙNG</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.inventoryBadge}>
+                        <Text style={styles.inventoryBadgeText}>{item.type === 'frame' ? 'KHUNG' : 'AVATAR'}</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           )}
 
@@ -772,21 +798,36 @@ const styles = StyleSheet.create({
   avatarContainer: {
     position: 'relative',
     marginBottom: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarWrapper: {
+    width: 110,
+    height: 110,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 4,
-    borderColor: '#FFF',
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    zIndex: 2,
+    backgroundColor: '#FFF',
+  },
+  avatarFrame: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    zIndex: 1,
   },
   verifiedBadge: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
+    bottom: 5,
+    right: 5,
     backgroundColor: '#FFF',
     borderRadius: 12,
     padding: 2,
+    zIndex: 2,
   },
   userName: {
     fontSize: 22,
@@ -1009,16 +1050,19 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   inventoryItemCard: {
-    width: 130,
-    backgroundColor: '#FFF',
+    width: 100,
+    backgroundColor: '#F8FAFC',
     borderRadius: 20,
     padding: 12,
+    marginRight: 12,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  inventoryItemActive: {
+    borderColor: '#10B981',
+    backgroundColor: '#F0FDF4',
+    borderWidth: 2,
   },
   inventoryImageWrap: {
     width: 100,
