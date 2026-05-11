@@ -61,4 +61,8 @@ export const ENDPOINTS = {
     DETAIL: (id: string) => `/api/bookings/${id}`,
     CANCEL: (id: string) => `/api/bookings/${id}/cancel`,
   },
+  AVATAR_ITEMS: {
+    SHOP: '/api/avatar-items/shop',
+    LIST: '/api/avatar-items',
+  },
 };

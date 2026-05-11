@@ -13,29 +13,52 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { decorationsService, Decoration } from '@/services/decorationsService';
+import { avatarItemService, AvatarItem } from '@/services/avatarItemService';
+import { userService } from '@/services/userService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 const PADDING = 16;
 const GAP = 12;
-const COLS = 4;
-const CARD_SIZE = (width - PADDING * 2 - GAP * (COLS - 1)) / COLS;
-const ITEMS_PER_PAGE = 12;
-const FEATURED_COUNT = 6;
-const PROMO_CARD_WIDTH = (width - PADDING * 2 - GAP) / 2;
+const COLS = 2; // Change to 2 for better visibility
+const CARD_SIZE = (width - PADDING * 2 - GAP) / COLS;
+
+const RARITY_COLORS: Record<string, string> = {
+  common: '#94A3B8',
+  rare: '#3B82F6',
+  epic: '#A855F7',
+  legendary: '#F59E0B',
+};
 
 export default function DecorationsScreen() {
   const router = useRouter();
-  const [list, setList] = useState<Decoration[]>([]);
+  const [list, setList] = useState<AvatarItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
+  const [buyingId, setBuyingId] = useState<string | null>(null);
+  const [userPoints, setUserPoints] = useState(0);
+  const [inventory, setInventory] = useState<any[]>([]);
+  const [equippedFrame, setEquippedFrame] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'frame' | 'avatar'>('frame');
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await decorationsService.getList();
-      setList(data);
-    } catch {
+      const userId = await AsyncStorage.getItem('userId');
+      const [items, profileData, localInv, frame] = await Promise.all([
+        avatarItemService.getShopItems(),
+        userId ? userService.getMyProfile(userId) : null,
+        userId ? userService.getLocalInventory(userId) : [],
+        AsyncStorage.getItem('equipped_frame')
+      ]);
+      
+      setList(items);
+      setInventory(localInv || []);
+      setEquippedFrame(frame);
+      if (profileData) {
+        setUserPoints(profileData.points || 0);
+      }
+    } catch (error) {
+      console.error('Error loading shop data:', error);
       setList([]);
     } finally {
       setLoading(false);
@@ -46,10 +69,57 @@ export default function DecorationsScreen() {
     load();
   }, [load]);
 
-  const totalPages = Math.max(1, Math.ceil(list.length / ITEMS_PER_PAGE));
-  const start = (page - 1) * ITEMS_PER_PAGE;
-  const pageItems = list.slice(start, start + ITEMS_PER_PAGE);
-  const featuredItems = list.slice(0, FEATURED_COUNT);
+  const handleUse = async (item: AvatarItem) => {
+    if (item.type === 'frame') {
+      if (equippedFrame === item.imageUrl) {
+        // Tháo khung
+        await AsyncStorage.removeItem('equipped_frame');
+        setEquippedFrame(null);
+        alert('Đã tháo khung ảnh!');
+      } else {
+        // Đội khung
+        await AsyncStorage.setItem('equipped_frame', item.imageUrl);
+        setEquippedFrame(item.imageUrl);
+        alert('Đã áp dụng khung ảnh mới!');
+      }
+    } else if (item.type === 'avatar') {
+      const userId = await AsyncStorage.getItem('userId');
+      if (userId) {
+        await userService.updateProfile(userId, { image: item.imageUrl });
+        alert('Đã thay đổi ảnh đại diện!');
+      }
+    }
+  };
+
+  const handlePurchase = async (item: AvatarItem) => {
+    if (userPoints < item.price) {
+      alert(`Bạn không đủ điểm! Cần ${item.price} pts, bạn có ${userPoints} pts.`);
+      return;
+    }
+
+    setBuyingId(item.itemId);
+    const res = await avatarItemService.purchaseItem(item.itemId, item.price);
+    if (res.success) {
+      // Tự động sử dụng luôn sau khi mua
+      if (item.type === 'frame') {
+        await AsyncStorage.setItem('equipped_frame', item.imageUrl);
+      } else if (item.type === 'avatar') {
+        // Cập nhật avatar thật của user qua API
+        const userId = await AsyncStorage.getItem('userId');
+        if (userId) {
+          await userService.updateProfile(userId, { image: item.imageUrl });
+        }
+      }
+      
+      alert('Mua hàng thành công! Vật phẩm đã được áp dụng ngay lập tức.');
+      setUserPoints(prev => prev - item.price);
+      // Cập nhật inventory state để hiện nút "Sử dụng"
+      setInventory(prev => [...prev, { id: item.itemId, name: item.name, image: item.imageUrl, type: item.type }]);
+    } else {
+      alert(res.message);
+    }
+    setBuyingId(null);
+  };
 
   return (
     <View style={styles.container}>
@@ -76,103 +146,91 @@ export default function DecorationsScreen() {
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            {/* Promo: Limited Time + Gothica */}
-            <View style={styles.promoRow}>
-              <View style={styles.promoCard}>
-                <View style={styles.limitedBadge}>
-                  <Text style={styles.limitedBadgeText}>Thời gian có hạn</Text>
-                </View>
-                <Text style={styles.promoTitle}>CHECKPOINT CACHE</Text>
-                <View style={styles.emojiRow}>
-                  <View style={styles.emojiCircle}><Text style={styles.emojiText}>✨</Text></View>
-                  <View style={styles.emojiCircle}><Text style={styles.emojiText}>🍌</Text></View>
-                  <View style={styles.emojiCircle}><Text style={styles.emojiText}>🐻</Text></View>
-                </View>
-                <TouchableOpacity style={styles.takeMeBtn} activeOpacity={0.85}>
-                  <Text style={styles.takeMeBtnText}>Khám phá ngay</Text>
-                </TouchableOpacity>
+            {/* Header Points */}
+            <View style={styles.pointsBanner}>
+              <View>
+                <Text style={styles.pointsLabel}>Số dư của bạn</Text>
+                <Text style={styles.pointsValue}>{userPoints.toLocaleString()} pts</Text>
               </View>
-              <View style={styles.promoCard}>
-                <View style={styles.promoCardTopSpacer} />
-                <Text style={styles.promoTitle}>Gothica</Text>
-                <View style={styles.emojiRow}>
-                  <View style={styles.emojiCircle}><Text style={styles.emojiText}>🦇</Text></View>
-                  <View style={styles.emojiCircle}><Text style={styles.emojiText}>🌹</Text></View>
-                </View>
-                <TouchableOpacity style={styles.takeMeBtn} activeOpacity={0.85}>
-                  <Text style={styles.takeMeBtnText}>Khám phá ngay</Text>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity style={styles.topUpBtn} onPress={() => router.push('/(tabs)/profile')}>
+                <Text style={styles.topUpText}>Nạp thêm</Text>
+              </TouchableOpacity>
             </View>
 
-            {/* Featured */}
-            {featuredItems.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.sectionRow}>
-                  <Text style={styles.sectionTitle}>Nổi bật</Text>
-                  <TouchableOpacity style={styles.buyAllBtn}>
-                    <Text style={styles.buyAllText}>Mua tất cả</Text>
-                  </TouchableOpacity>
-                </View>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.featuredScroll}
-                >
-                  {featuredItems.map((item) => (
-                    <TouchableOpacity key={item.id} style={styles.featuredCard} activeOpacity={0.85}>
-                      <View style={styles.featuredImageWrap}>
-                        <Image source={{ uri: item.image }} style={styles.featuredImage} />
-                      </View>
-                      <Text style={styles.featuredName} numberOfLines={2}>{item.name}</Text>
-                      <View style={styles.coinsRow}>
-                        <Feather name="award" size={12} color="#C4B5FD" />
-                        <Text style={styles.coinsText}>{item.coins} xu</Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-
-            {/* All */}
+            {/* Shop Items Grid */}
             <View style={styles.section}>
-              <View style={styles.sectionRow}>
-                <Text style={styles.sectionTitle}>Tất cả</Text>
-                <Text style={styles.pageInfo}>Trang {page} / {totalPages}</Text>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Vật phẩm độc quyền</Text>
+                <Text style={styles.itemCount}>{list.filter(i => i.type === activeTab).length} item</Text>
               </View>
+
+              {/* Tabs */}
+              <View style={styles.tabContainer}>
+                <TouchableOpacity 
+                  style={[styles.tab, activeTab === 'frame' && styles.activeTab]}
+                  onPress={() => setActiveTab('frame')}
+                >
+                  <Text style={[styles.tabText, activeTab === 'frame' && styles.activeTabText]}>Khung ảnh</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.tab, activeTab === 'avatar' && styles.activeTab]}
+                  onPress={() => setActiveTab('avatar')}
+                >
+                  <Text style={[styles.tabText, activeTab === 'avatar' && styles.activeTabText]}>Ảnh đại diện</Text>
+                </TouchableOpacity>
+              </View>
+
               <View style={styles.grid}>
-                {pageItems.map((item) => (
-                  <TouchableOpacity key={item.id} style={styles.gridCard} activeOpacity={0.85}>
-                    <View style={styles.gridImageWrap}>
-                      <Image source={{ uri: item.image }} style={styles.gridImage} />
+                {list
+                  .filter(item => item.type === activeTab)
+                  .map((item) => {
+                  const isOwned = inventory.some(inv => inv.id === item.itemId);
+                  const isEquipped = item.type === 'frame' ? equippedFrame === item.imageUrl : false; // For avatar we check image URL
+
+                  return (
+                    <View key={item.itemId} style={styles.gridCard}>
+                      <View style={styles.gridImageWrap}>
+                        <Image source={{ uri: item.imageUrl }} style={styles.gridImage} />
+                        <View style={[styles.rarityBadge, { backgroundColor: RARITY_COLORS[item.rarity] }]}>
+                          <Text style={styles.rarityText}>{item.rarity.toUpperCase()}</Text>
+                        </View>
+                      </View>
+                      
+                      <View style={styles.cardInfo}>
+                        <Text style={styles.gridName} numberOfLines={1}>{item.name}</Text>
+                        <Text style={styles.gridType}>{item.type === 'frame' ? 'Khung ảnh' : 'Avatar'}</Text>
+                        
+                        <View style={styles.priceRow}>
+                          <Feather name="award" size={14} color="#F59E0B" />
+                          {isOwned ? (
+                             <Text style={[styles.priceText, { color: '#34D399' }]}>Đã sở hữu</Text>
+                          ) : (
+                             <Text style={styles.priceText}>{item.price.toLocaleString()} pts</Text>
+                          )}
+                        </View>
+
+                        <TouchableOpacity 
+                          style={[
+                            styles.buyBtn, 
+                            isEquipped && { backgroundColor: '#EF4444' }, // Red for remove
+                            buyingId === item.itemId && styles.buyBtnLoading
+                          ]}
+                          onPress={() => isOwned ? handleUse(item) : handlePurchase(item)}
+                          disabled={buyingId === item.itemId}
+                        >
+                          {buyingId === item.itemId ? (
+                            <ActivityIndicator size="small" color="#FFF" />
+                          ) : (
+                            <Text style={styles.buyBtnText}>
+                              {isEquipped ? 'Tháo ra' : (isOwned ? 'Sử dụng' : 'Mua ngay')}
+                            </Text>
+                          )}
+                        </TouchableOpacity>
+                      </View>
                     </View>
-                    <Text style={styles.gridName} numberOfLines={2}>{item.name}</Text>
-                    <View style={styles.coinsRow}>
-                      <Feather name="award" size={10} color="#C4B5FD" />
-                      <Text style={styles.gridCoins}>{item.coins} xu</Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
+                  );
+                })}
               </View>
-              {totalPages > 1 && (
-                <View style={styles.pagination}>
-                  <TouchableOpacity
-                    style={[styles.pageBtn, page <= 1 && styles.pageBtnDisabled]}
-                    onPress={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page <= 1}
-                  >
-                    <Text style={styles.pageBtnText}>&lt; Trước</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.pageBtn, page >= totalPages && styles.pageBtnDisabled]}
-                    onPress={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page >= totalPages}
-                  >
-                    <Text style={styles.pageBtnText}>Tiếp &gt;</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
             </View>
 
             <View style={{ height: 80 }} />
@@ -203,97 +261,103 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: PADDING, paddingTop: 16 },
 
-  promoRow: { flexDirection: 'row', gap: GAP, marginBottom: 24 },
-  promoCard: {
-    width: PROMO_CARD_WIDTH,
-    backgroundColor: '#4C1D95',
-    borderRadius: 16,
-    padding: 14,
-    minHeight: 140,
+  pointsBanner: {
+    backgroundColor: '#312E81', // Brighter indigo
+    borderRadius: 24,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(129, 140, 248, 0.5)',
+    elevation: 10,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
   },
-  limitedBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-    marginBottom: 8,
-  },
-  limitedBadgeText: { fontSize: 11, fontWeight: '600', color: '#E2E8F0' },
-  promoTitle: { fontSize: 14, fontWeight: '800', color: '#FFF', letterSpacing: 0.5 },
-  emojiRow: { flexDirection: 'row', gap: 8, marginVertical: 8 },
-  emojiCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(0,0,0,0.25)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emojiText: { fontSize: 14 },
-  takeMeBtn: {
-    backgroundColor: '#FFF',
-    paddingVertical: 8,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  takeMeBtnText: { fontSize: 12, fontWeight: '700', color: '#4C1D95' },
-  promoCardTopSpacer: { height: 28, marginBottom: 4 },
+  pointsLabel: { color: '#94A3B8', fontSize: 13, fontWeight: '500' },
+  pointsValue: { color: '#FFF', fontSize: 24, fontWeight: '800', marginTop: 4 },
+  topUpBtn: { backgroundColor: '#4F46E5', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12 },
+  topUpText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
 
   section: { marginBottom: 28 },
-  sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  sectionTitle: { fontSize: 17, fontWeight: '700', color: '#F8FAFC' },
-  buyAllBtn: { paddingVertical: 6, paddingHorizontal: 14, backgroundColor: '#7C3AED', borderRadius: 8 },
-  buyAllText: { fontSize: 13, fontWeight: '600', color: '#FFF' },
-  pageInfo: { fontSize: 13, color: '#A78BFA', fontWeight: '500' },
-
-  featuredScroll: { gap: 14, paddingBottom: 8 },
-  featuredCard: {
-    width: 100,
-    backgroundColor: 'rgba(76, 29, 149, 0.5)',
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(30, 27, 75, 0.8)',
     borderRadius: 14,
-    padding: 10,
+    padding: 4,
+    marginBottom: 20,
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.3)',
+    borderColor: 'rgba(99, 102, 241, 0.2)',
   },
-  featuredImageWrap: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    alignSelf: 'center',
-    backgroundColor: '#000',
-    overflow: 'hidden',
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 10,
   },
-  featuredImage: { width: '100%', height: '100%', resizeMode: 'cover' },
-  featuredName: { fontSize: 11, fontWeight: '600', color: '#E2E8F0', marginTop: 8, marginBottom: 4, textAlign: 'center' },
-  coinsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
-  coinsText: { fontSize: 11, color: '#C4B5FD', fontWeight: '600' },
+  activeTab: {
+    backgroundColor: '#6366F1',
+  },
+  tabText: {
+    color: '#94A3B8',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  activeTabText: {
+    color: '#FFF',
+  },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#F8FAFC' },
+  itemCount: { fontSize: 13, color: '#6366F1', fontWeight: '600' },
 
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
   gridCard: {
     width: CARD_SIZE,
-    backgroundColor: 'rgba(76, 29, 149, 0.5)',
-    borderRadius: 12,
-    padding: 8,
+    backgroundColor: 'rgba(30, 27, 75, 0.5)',
+    borderRadius: 24,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.25)',
+    borderColor: 'rgba(99, 102, 241, 0.15)',
   },
   gridImageWrap: {
-    width: CARD_SIZE - 16,
-    height: CARD_SIZE - 16,
-    borderRadius: (CARD_SIZE - 16) / 2,
-    alignSelf: 'center',
+    width: '100%',
+    height: CARD_SIZE,
     backgroundColor: '#000',
-    overflow: 'hidden',
+    position: 'relative',
   },
   gridImage: { width: '100%', height: '100%', resizeMode: 'cover' },
-  gridName: { fontSize: 10, fontWeight: '600', color: '#E2E8F0', marginTop: 6, marginBottom: 2, textAlign: 'center' },
-  gridCoins: { fontSize: 9, color: '#C4B5FD', fontWeight: '600', textAlign: 'center' },
+  rarityBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  rarityText: { color: '#FFF', fontSize: 10, fontWeight: '800' },
 
-  pagination: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 20 },
-  pageBtn: { paddingVertical: 10, paddingHorizontal: 20, backgroundColor: '#5B21B6', borderRadius: 10 },
-  pageBtnDisabled: { opacity: 0.5 },
-  pageBtnText: { fontSize: 13, fontWeight: '600', color: '#E2E8F0' },
+  cardInfo: { padding: 12 },
+  gridName: { fontSize: 15, fontWeight: '700', color: '#F8FAFC' },
+  gridType: { fontSize: 12, color: '#94A3B8', marginTop: 2 },
+  
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
+  priceText: { fontSize: 16, fontWeight: '800', color: '#F59E0B' },
+
+  buyBtn: { 
+    backgroundColor: '#6366F1', 
+    marginTop: 12, 
+    paddingVertical: 10, 
+    borderRadius: 12, 
+    alignItems: 'center',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  buyBtnDisabled: { backgroundColor: '#334155', shadowOpacity: 0 },
+  buyBtnLoading: { backgroundColor: '#4F46E5' },
+  buyBtnText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
 });
