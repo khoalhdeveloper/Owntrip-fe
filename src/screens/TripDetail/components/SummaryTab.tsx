@@ -135,12 +135,16 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
   useEffect(() => {
     if (trip?.accommodation && !bookedHotel) {
       const acc = trip.accommodation;
+      const checkIn = new Date(acc.checkIn);
+      const checkOut = new Date(acc.checkOut);
+      const nights = Math.round((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)) || 1;
+      
       setBookedHotel({
         id: acc.hotelId,
         hotelId: acc.hotelId,
         name: acc.hotelName,
         primaryImage: acc.hotelImage || '',
-        pricePerNight: acc.totalPrice,
+        pricePerNight: acc.totalPrice / nights, // Fix: divide by nights to get per-night price
         address: { fullAddress: '' },
         starRating: 4,
         rating: 0,
@@ -150,8 +154,8 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
         latitude: '0',
         longitude: '0'
       } as any);
-      setCheckInDate(new Date(acc.checkIn));
-      setCheckOutDate(new Date(acc.checkOut));
+      setCheckInDate(checkIn);
+      setCheckOutDate(checkOut);
       setBookedRoomTypeId(acc.roomTypeId || null);
     }
   }, [trip]);
@@ -303,22 +307,29 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
           paymentMethod: 'credit_card',
         });
 
-        if (bookingResult.success && bookingResult.data?.checkoutUrl) {
-          setPendingTripUpdate({
-            isEditing: false,
-            priceDifference: 0,
-            newTotalPrice,
-            checkIn,
-            checkOut,
-            currentRoomTypeId,
-            selectedHotel
-          });
-          setPayosCheckoutUrl(bookingResult.data.checkoutUrl);
-          setPayosBookingId(bookingResult.data.bookingId);
-          setPayosModalVisible(true);
-          setIsUpdating(false);
-          return;
-        } else if (!bookingResult.success) {
+        if (bookingResult.success) {
+          if (bookingResult.data?.checkoutUrl) {
+            setPendingTripUpdate({
+              isEditing: false,
+              priceDifference: 0,
+              newTotalPrice: bookingResult.data.totalPrice || newTotalPrice,
+              checkIn,
+              checkOut,
+              currentRoomTypeId,
+              selectedHotel
+            });
+            setPayosCheckoutUrl(bookingResult.data.checkoutUrl);
+            setPayosBookingId(bookingResult.data.bookingId);
+            setPayosModalVisible(true);
+            setIsUpdating(false);
+            return;
+          } else {
+            // Thanh toán bằng số dư thành công
+            const actualTotalPrice = bookingResult.data?.totalPrice || newTotalPrice;
+            await executeTripUpdate(checkIn, checkOut, actualTotalPrice, currentRoomTypeId, selectedHotel, false, 0, bookingResult.message);
+            return;
+          }
+        } else {
           await alert('Lỗi thanh toán', bookingResult.message || 'Không thể tạo đơn đặt phòng', 'error');
           setIsUpdating(false);
           return;
@@ -365,7 +376,7 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
     }
   };
 
-  const executeTripUpdate = async (checkIn: Date, checkOut: Date, newTotalPrice: number, currentRoomTypeId: string, sHotel: Accommodation, isEditing: boolean, priceDifference: number) => {
+  const executeTripUpdate = async (checkIn: Date, checkOut: Date, newTotalPrice: number, currentRoomTypeId: string, sHotel: Accommodation, isEditing: boolean, priceDifference: number, customMessage?: string) => {
     try {
       setIsUpdating(true);
       // 2. Lưu vào lịch trình chuyến đi (Update Trip)
@@ -385,7 +396,9 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         
         // Hiện Toast thông báo
-        if (isEditing && priceDifference > 0) {
+        if (customMessage) {
+          showToast(customMessage);
+        } else if (isEditing && priceDifference > 0) {
           showToast(`Thanh toán thành công ${formatCurrency(priceDifference)}!`);
         } else if (isEditing) {
           showToast('Cập nhật ngày ở thành công!');

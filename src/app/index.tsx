@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { Redirect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { decodeJWT } from '@/utils/jwtUtils';
+import CustomSplashScreen from '@/components/CustomSplashScreen';
 
 export default function Index() {
   const [isLoading, setIsLoading] = useState(true);
@@ -10,7 +11,13 @@ export default function Index() {
   const [userRole, setUserRole] = useState<string>('user');
 
   useEffect(() => {
-    checkAuth();
+
+    const minDelay = new Promise(resolve => setTimeout(resolve, 2500));
+    const authCheck = checkAuth();
+
+    Promise.all([minDelay, authCheck]).finally(() => {
+      setIsLoading(false);
+    });
   }, []);
 
   const checkAuth = async () => {
@@ -25,17 +32,11 @@ export default function Index() {
       }
     } catch {
       setIsLoggedIn(false);
-    } finally {
-      setIsLoading(false);
     }
   };
 
   if (isLoading) {
-    return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#4A7CFF" />
-      </View>
-    );
+    return <CustomSplashScreen />;
   }
 
   if (isLoggedIn) {
@@ -47,12 +48,3 @@ export default function Index() {
 
   return <Redirect href={'/(auth)/login' as any} />;
 }
-
-const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FAFBFC',
-  },
-});
