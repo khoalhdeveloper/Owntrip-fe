@@ -224,6 +224,7 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
         latitude: selectedPlace.latitude,
         longitude: selectedPlace.longitude,
         rating: selectedPlace.rating,
+        totalReviews: selectedPlace.totalReviews,
         photo: selectedPlace.photo || undefined,
         mapUrl: selectedPlace.mapUrl,
       };

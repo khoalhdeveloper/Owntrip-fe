@@ -41,6 +41,7 @@ export interface AddPlaceBody {
   latitude: number;
   longitude: number;
   rating?: number;
+  totalReviews?: number;
   photo?: string;
   mapUrl?: string;
 }
@@ -69,6 +70,8 @@ export interface DestinationPlace {
   latitude: number;
   longitude: number;
   rating?: number;
+  totalReviews?: number;
+  types?: string[];
   photo?: string;
   mapUrl?: string;
   order: number;

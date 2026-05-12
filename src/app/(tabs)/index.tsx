@@ -212,7 +212,7 @@ export default function HomeScreen() {
     
     setIsSearchingResults(true);
     try {
-      const results = await placesService.searchText({ q: text, limit: 10 });
+      const results = await placesService.search(text);
       const filtered = (results || []).filter(p => 
         p.photo && p.photo.trim() !== '' && 
         p.photos && p.photos.length > 0

@@ -201,6 +201,12 @@ export function DraggableTimelineItem({
                 <Text style={styles.timelineMetaText}>
                   {entry.mockTime} · {formatShortDate(entry.dayDate)}
                 </Text>
+                {entry.rating ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginLeft: 6 }}>
+                    <Feather name="star" size={10} color="#F59E0B" />
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#F59E0B' }}>{entry.rating.toFixed(1)}</Text>
+                  </View>
+                ) : null}
               </View>
               <Text style={styles.timelineMemory} numberOfLines={2}>
                 {entry.mockMemory}

@@ -39,16 +39,16 @@ export const placesService = {
    * GET /api/places/text?q=vui choi&q=phu quoc&limit=50&photoLimit=5
    */
   searchTrending: async (
-    queries: string[] = ['núi bà đen', 'hồ tuyền lâm', 'bãi sau', 'chùa bửu long', 'khu du lịch']
+    queries: string[] = [ 'biển', 'sài gòn', 'chùa bửu long', 'khu du lịch']
   ): Promise<Place[]> => {
     try {
       const qs = queries
         .map((item) => `q=${encodeURIComponent(item)}`)
         .join('&');
-      const url = `${ENDPOINTS.PLACES.TEXT_SEARCH}?${qs}`;
+      const url = `${ENDPOINTS.PLACES.SEARCH}?${qs}`;
 
       console.log('🔵 Trending API URL:', url);
-      const response = await axiosClient.get<any, PlacesResponse>(url);
+      const response = await axiosClient.get<any, SearchResponse>(url);
 
       return response?.places ?? [];
     } catch {

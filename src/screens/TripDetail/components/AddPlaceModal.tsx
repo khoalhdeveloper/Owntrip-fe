@@ -207,6 +207,7 @@ export default function AddPlaceModal({
         latitude: place.latitude,
         longitude: place.longitude,
         rating: place.rating,
+        totalReviews: place.totalReviews,
         photo: place.photo || undefined,
         mapUrl: place.mapUrl,
       };

@@ -24,8 +24,15 @@ export function generateMapHtml(timeline: TimelineEntry[], brand: string): strin
         html: '<div class="marker-pin"><span class="marker-num">${idx + 1}</span></div>',
         iconSize: [32, 44], iconAnchor: [16, 44], popupAnchor: [0, -44]
       });
+      var popupContent = '<div class="popup-content">' +
+        (m.photo ? '<img src="' + m.photo + '" class="popup-img" />' : '') +
+        '<strong>' + esc(m.name) + '</strong>' +
+        (m.rating ? '<div class="popup-rating"><span class="star">★</span> ' + m.rating.toFixed(1) + (m.totalReviews ? ' <span class="reviews">(' + m.totalReviews + ')</span>' : '') + '</div>' : '') +
+        (m.address ? '<div class="popup-address">' + esc(m.address) + '</div>' : '') +
+        '<p class="popup-memory">' + esc(m.mockMemory) + '</p>' +
+        '</div>';
       markers[${idx}] = L.marker([${m.latitude}, ${m.longitude}], {icon: icon${idx}}).addTo(map)
-        .bindPopup('<div class="popup-content"><strong>${esc(m.name)}</strong><p>${esc(m.mockMemory)}</p></div>', {className: 'branded-popup'});
+        .bindPopup(popupContent, {className: 'branded-popup'});
       markers[${idx}].on('click', function() {
         window.ReactNativeWebView.postMessage(JSON.stringify({type:'markerTap', index: ${idx}}));
         highlightMarker(${idx});
@@ -82,8 +89,13 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
 .branded-popup .leaflet-popup-content-wrapper{background:rgba(255,255,255,0.97);border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,0.12);border:1px solid rgba(0,0,0,0.04)}
 .branded-popup .leaflet-popup-tip{background:rgba(255,255,255,0.97)}
 .branded-popup .leaflet-popup-content{margin:10px 14px;font-size:13px;line-height:1.4}
-.popup-content strong{font-size:14px;color:#1A1A1A;display:block;margin-bottom:3px}
-.popup-content p{color:#6B7280;margin:0;font-size:12px}
+.popup-img{width:100%;height:80px;object-fit:cover;border-radius:10px;margin-bottom:8px}
+.popup-content strong{font-size:14px;color:#1A1A1A;display:block;margin-bottom:4px;font-weight:700}
+.popup-rating{font-size:12px;color:#F59E0B;margin-bottom:4px;display:flex;align-items:center;gap:3px;font-weight:600}
+.popup-rating .star{color:#F59E0B}
+.popup-rating .reviews{color:#9CA3AF;font-weight:400;margin-left:2px}
+.popup-address{color:#6B7280;font-size:11px;margin-bottom:6px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.popup-memory{color:#4B5563;margin:0;font-size:12px;font-style:italic;border-top:1px solid #F3F4F6;padding-top:6px}
 .distance-label{background:none!important;border:none!important}
 .dist-badge{background:rgba(255,255,255,0.92);border-radius:20px;padding:4px 10px;font-size:11px;font-weight:600;color:#374151;box-shadow:0 2px 8px rgba(0,0,0,0.1);white-space:nowrap;text-align:center;border:1px solid rgba(0,0,0,0.06)}
 .leaflet-control-attribution{background:rgba(255,255,255,0.7)!important;font-size:9px!important;border-radius:6px 0 0 0!important;padding:2px 6px!important}

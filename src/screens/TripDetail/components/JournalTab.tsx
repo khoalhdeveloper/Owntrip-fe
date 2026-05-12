@@ -74,6 +74,10 @@ export default function JournalTab({ trip, days, onScrollToMap }: JournalTabProp
           dayDate: day.date,
           mockTime: MOCK_TIMES[idx % MOCK_TIMES.length],
           mockMemory: MOCK_MEMORIES[globalIdx % MOCK_MEMORIES.length],
+          rating: place.rating,
+          totalReviews: place.totalReviews,
+          address: place.address,
+          types: place.types,
         });
         globalIdx++;
       });

@@ -32,4 +32,8 @@ export interface TimelineEntry {
   dayDate: string;
   mockTime: string;
   mockMemory: string;
+  rating?: number;
+  totalReviews?: number;
+  address?: string;
+  types?: string[];
 }
