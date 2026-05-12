@@ -221,6 +221,32 @@ export default function StoreScreen() {
             </View>
           </View>
 
+          {/* Avatar & Frame Shop Promo */}
+          <TouchableOpacity 
+            style={styles.avatarShopPromo}
+            activeOpacity={0.9}
+            onPress={() => router.push('/avatar-shop')}
+          >
+            <LinearGradient
+              colors={['#4F46E5', '#7C3AED']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.avatarShopPromoGradient}
+            >
+              <View style={styles.avatarShopPromoInfo}>
+                <Text style={styles.avatarShopPromoTitle}>Avatar & Khung hình</Text>
+                <Text style={styles.avatarShopPromoSub}>Làm mới diện mạo của bạn ngay</Text>
+                <View style={styles.avatarShopPromoBadge}>
+                  <Text style={styles.avatarShopPromoBadgeText}>MỚI</Text>
+                </View>
+              </View>
+              <View style={styles.avatarShopPromoIcon}>
+                <Feather name="user" size={32} color="#FFF" />
+
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+
           {/* Souvenir collections - từ MockAPI */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -662,4 +688,53 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   detailBuyText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
+  avatarShopPromo: {
+    marginBottom: 24,
+    borderRadius: 20,
+    overflow: 'hidden',
+    elevation: 8,
+    shadowColor: '#4F46E5',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+  },
+  avatarShopPromoGradient: {
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  avatarShopPromoInfo: {
+    flex: 1,
+  },
+  avatarShopPromoTitle: {
+    color: '#FFF',
+    fontSize: 20,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  avatarShopPromoSub: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 13,
+    marginBottom: 12,
+  },
+  avatarShopPromoBadge: {
+    backgroundColor: '#FACC15',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  avatarShopPromoBadgeText: {
+    color: '#1E293B',
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  avatarShopPromoIcon: {
+    width: 80,
+    height: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  }
 });
