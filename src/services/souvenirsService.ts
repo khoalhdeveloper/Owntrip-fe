@@ -1,4 +1,4 @@
-const MOCK_API_SOUVENIRS = 'https://69b52752be587338e7152945.mockapi.io/souvenirs';
+import axiosClient from './axiosClient';
 
 export interface Souvenir {
   id: string;
@@ -12,10 +12,11 @@ export interface Souvenir {
 export const souvenirsService = {
   getList: async (): Promise<Souvenir[]> => {
     try {
-      const res = await fetch(MOCK_API_SOUVENIRS);
-      if (!res.ok) return [];
-      const data = await res.json();
-      return Array.isArray(data) ? data : [];
+      // Replace with real API endpoint
+      // const res = await axiosClient.get('/api/souvenirs');
+      // return res.data;
+      
+      return []; // Removed fake data
     } catch (e) {
       console.warn('souvenirsService.getList error:', e);
       return [];
