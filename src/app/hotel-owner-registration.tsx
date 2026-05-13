@@ -56,6 +56,7 @@ export default function HotelOwnerRegistrationScreen() {
       coordinates: { lat: 0, lng: 0 },
       type: 'hotel',
     },
+    phone: '',
     images: [],
     amenities: [],
     businessPolicies: {
@@ -143,8 +144,8 @@ export default function HotelOwnerRegistrationScreen() {
       showAlert("Thiếu hồ sơ", "Vui lòng tải lên đầy đủ giấy phép kinh doanh và CCCD.", "warning");
       return;
     }
-    if (!registrationData.propertyInfo.name || !registrationData.propertyInfo.address) {
-      showAlert("Thiếu thông tin", "Vui lòng nhập tên và địa chỉ cơ sở.", "warning");
+    if (!registrationData.propertyInfo.name || !registrationData.propertyInfo.address || !registrationData.phone) {
+      showAlert("Thiếu thông tin", "Vui lòng nhập tên, địa chỉ và số điện thoại liên hệ.", "warning");
       return;
     }
 
@@ -297,6 +298,20 @@ export default function HotelOwnerRegistrationScreen() {
             placeholder="Ví dụ: Đà Nẵng"
             value={registrationData.propertyInfo.city}
             onChangeText={(t) => setRegistrationData(prev => ({ ...prev, propertyInfo: { ...prev.propertyInfo, city: t } }))}
+          />
+        </View>
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>Số điện thoại liên hệ</Text>
+        <View style={styles.inputWrapper}>
+          <Feather name="phone" size={18} color="#A0AEC0" style={styles.inputIcon} />
+          <TextInput
+            style={styles.input}
+            placeholder="Số điện thoại dùng để hỗ trợ..."
+            keyboardType="phone-pad"
+            value={registrationData.phone}
+            onChangeText={(t) => setRegistrationData(prev => ({ ...prev, phone: t }))}
           />
         </View>
       </View>
