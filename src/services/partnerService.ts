@@ -31,6 +31,7 @@ export interface IBusinessPolicy {
 export interface IOwnerRegistration {
   legalDocuments: ILegalDocuments;
   propertyInfo: IPropertyInfo;
+  phone: string;
   images: string[];
   amenities: string[];
   businessPolicies: IBusinessPolicy;
@@ -43,7 +44,20 @@ export const partnerService = {
    */
   registerHotelOwner: async (data: IOwnerRegistration): Promise<any> => {
     try {
-      const response = await axiosClient.post(ENDPOINTS.USERS.REGISTER_OWNER, data);
+      // Flatten the data for the backend
+      const payload = {
+        hotelName: data.propertyInfo.name,
+        address: data.propertyInfo.address,
+        city: data.propertyInfo.city,
+        phone: data.phone,
+        description: data.description,
+        images: data.images,
+        legalDocuments: data.legalDocuments,
+        amenities: data.amenities,
+        businessPolicies: data.businessPolicies,
+      };
+      
+      const response = await axiosClient.post(ENDPOINTS.USERS.REGISTER_OWNER, payload);
       return response.data || response;
     } catch (error) {
       console.error('Error registering hotel owner:', error);

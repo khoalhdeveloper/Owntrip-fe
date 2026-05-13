@@ -20,7 +20,7 @@ export const ENDPOINTS = {
     VNPAY_CREATE: '/api/users/vnpay/create',
     TOP_UP: '/api/users/top-up',
     TEST_TOP_UP: '/api/users/test-topup',
-    REGISTER_OWNER: '/api/users/register-owner',
+    REGISTER_OWNER: '/api/hotel-requests',
   },
   TRIPS: {
     LIST: '/api/trips',
