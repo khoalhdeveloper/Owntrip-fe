@@ -539,18 +539,31 @@ export default function ProfileScreen() {
           {/* Settings Section */}
           <View style={styles.settingsGroup}>
            
-             {(profile?.role === 'hotel_owner' || profile?.role === 'admin') && (
-               <TouchableOpacity 
-                 style={styles.settingItem}
-                 onPress={() => router.push('/hotel-management')}
-               >
-                 <View style={[styles.settingIcon, { backgroundColor: '#FFF5EE' }]}>
-                   <FontAwesome5 name="hotel" size={16} color="#FF6B35" />
-                 </View>
-                 <Text style={styles.settingLabel}>Quản lý khách sạn</Text>
-                 <Feather name="chevron-right" size={20} color="#CBD5E0" />
-               </TouchableOpacity>
-             )}
+              {(profile?.role === 'hotel_owner' || profile?.role === 'admin') && (
+                <TouchableOpacity 
+                  style={styles.settingItem}
+                  onPress={() => router.push('/hotel-management')}
+                >
+                  <View style={[styles.settingIcon, { backgroundColor: '#FFF5EE' }]}>
+                    <FontAwesome5 name="hotel" size={16} color="#FF6B35" />
+                  </View>
+                  <Text style={styles.settingLabel}>Quản lý khách sạn</Text>
+                  <Feather name="chevron-right" size={20} color="#CBD5E0" />
+                </TouchableOpacity>
+              )}
+
+              {profile?.role === 'user' && (
+                <TouchableOpacity 
+                  style={styles.settingItem}
+                  onPress={() => router.push('/hotel-owner-registration')}
+                >
+                  <View style={[styles.settingIcon, { backgroundColor: '#EBF4FF' }]}>
+                    <FontAwesome5 name="handshake" size={16} color="#007AFF" />
+                  </View>
+                  <Text style={styles.settingLabel}>Đăng ký làm đối tác</Text>
+                  <Feather name="chevron-right" size={20} color="#CBD5E0" />
+                </TouchableOpacity>
+              )}
 
              <TouchableOpacity 
                 style={styles.settingItem}
