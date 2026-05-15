@@ -119,6 +119,32 @@ export default function AvatarShopScreen() {
     }
   };
 
+  const handleEquip = async (item: AvatarItem) => {
+    if (!profile?.userId) return;
+    
+    setBuyingId(item.id);
+    try {
+      if (item.type === 'avatar') {
+        const success = await userService.updateProfile(profile.userId, {
+          image: item.image
+        });
+        if (success) {
+          showAlert('Thành công', 'Đã thay đổi ảnh đại diện!', 'success');
+          loadData();
+        } else {
+          showAlert('Lỗi', 'Không thể cập nhật ảnh đại diện', 'error');
+        }
+      } else {
+        // Xử lý frame nếu cần (hiện tại backend chưa hỗ trợ field frame)
+        showAlert('Thông báo', 'Tính năng dùng khung sẽ sớm ra mắt!', 'info');
+      }
+    } catch (error) {
+      showAlert('Lỗi', 'Đã có lỗi xảy ra', 'error');
+    } finally {
+      setBuyingId(null);
+    }
+  };
+
   const isOwned = (itemId: string) => {
     if (!profile?.inventory) return false;
     return profile.inventory.some(item => item.id === itemId);
@@ -213,8 +239,8 @@ export default function AvatarShopScreen() {
                         </View>
                         <TouchableOpacity 
                           style={[styles.buyBtn, owned && styles.ownedBtn]}
-                          onPress={() => !owned && handleBuy(item)}
-                          disabled={buyingId === item.id || owned}
+                          onPress={() => owned ? handleEquip(item) : handleBuy(item)}
+                          disabled={buyingId === item.id}
                         >
                           {buyingId === item.id ? (
                             <ActivityIndicator size="small" color="#FFF" />

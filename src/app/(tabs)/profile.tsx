@@ -358,6 +358,41 @@ export default function ProfileScreen() {
     setEditModalVisible(true);
   };
 
+  const handleEquip = async (item: any) => {
+    if (!profile?.userId) return;
+    
+    try {
+      if (item.type === 'avatar') {
+        const confirmed = await showConfirm(
+          'Đổi ảnh đại diện',
+          `Bạn có muốn sử dụng "${item.name}" làm ảnh đại diện không?`,
+          'Đồng ý'
+        );
+        
+        if (confirmed) {
+          setIsUpdating(true);
+          const success = await userService.updateProfile(profile.userId, {
+            image: item.image
+          });
+          
+          if (success) {
+            showToast("Đã thay đổi ảnh đại diện");
+            loadData();
+          } else {
+            showAlert("Lỗi", "Không thể cập nhật ảnh đại diện", "error");
+          }
+        }
+      } else {
+        showAlert("Thông báo", "Tính năng dùng khung sẽ sớm ra mắt!", "info");
+      }
+    } catch (error) {
+      console.error(error);
+      showAlert("Lỗi", "Đã có lỗi xảy ra", "error");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -519,7 +554,12 @@ export default function ProfileScreen() {
               style={styles.inventoryScroll}
             >
               {profile.inventory.map((item, index) => (
-                <View key={index} style={styles.inventoryItemCard}>
+                <TouchableOpacity 
+                  key={index} 
+                  style={styles.inventoryItemCard}
+                  onPress={() => handleEquip(item)}
+                  activeOpacity={0.7}
+                >
                   <View style={styles.inventoryImageWrap}>
                     <ExpoImage 
                       source={getImageSource(item.image)} 
@@ -531,7 +571,7 @@ export default function ProfileScreen() {
                   <View style={styles.inventoryBadge}>
                     <Text style={styles.inventoryBadgeText}>{item.type.toUpperCase()}</Text>
                   </View>
-                </View>
+                </TouchableOpacity>
               ))}
             </ScrollView>
           )}

@@ -104,6 +104,12 @@ export const userService = {
       localInventory.push(newInventoryItem);
       await AsyncStorage.setItem(INVENTORY_KEY, JSON.stringify(localInventory));
 
+      // 3. Nếu là avatar, tự động cập nhật profile image luôn cho người dùng
+      if (item.type === 'avatar') {
+        console.log('🖼️ Auto-equipping avatar:', item.image);
+        await userService.updateProfile(userId, { image: item.image });
+      }
+
       return { success: true, message: 'Purchase successful' };
     } catch (error: any) {
       console.error('❌ Purchase Error:', error?.response?.data || error.message);
