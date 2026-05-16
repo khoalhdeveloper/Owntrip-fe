@@ -382,8 +382,29 @@ export default function ProfileScreen() {
             showAlert("Lỗi", "Không thể cập nhật ảnh đại diện", "error");
           }
         }
+      } else if (item.type === 'frame') {
+        const isCurrentFrame = profile.avatarFrame === item.image;
+        const confirmed = await showConfirm(
+          isCurrentFrame ? 'Gỡ khung ảnh' : 'Sử dụng khung ảnh',
+          isCurrentFrame ? `Bạn có muốn gỡ khung "${item.name}" không?` : `Bạn có muốn sử dụng khung "${item.name}" cho ảnh đại diện không?`,
+          'Đồng ý'
+        );
+        
+        if (confirmed) {
+          setIsUpdating(true);
+          const success = await userService.updateProfile(profile.userId, {
+            avatarFrame: isCurrentFrame ? '' : item.image
+          });
+          
+          if (success) {
+            showToast(isCurrentFrame ? "Đã gỡ khung ảnh" : "Đã áp dụng khung ảnh");
+            loadData();
+          } else {
+            showAlert("Lỗi", "Không thể cập nhật khung ảnh", "error");
+          }
+        }
       } else {
-        showAlert("Thông báo", "Tính năng dùng khung sẽ sớm ra mắt!", "info");
+        showAlert("Thông báo", "Tính năng này sẽ sớm ra mắt!", "info");
       }
     } catch (error) {
       console.error(error);
@@ -430,6 +451,13 @@ export default function ProfileScreen() {
           {/* Profile Card */}
           <View style={styles.profileCard}>
             <View style={styles.avatarContainer}>
+              {profile?.avatarFrame ? (
+                <ExpoImage
+                  source={getImageSource(profile.avatarFrame)}
+                  style={styles.avatarFrame}
+                  contentFit="contain"
+                />
+              ) : null}
               <ExpoImage 
                 source={getImageSource(profile?.image || 'https://i.pravatar.cc/300')} 
                 style={styles.avatar} 
@@ -652,6 +680,13 @@ export default function ProfileScreen() {
               <Text style={styles.modalTitle}>Chỉnh sửa hồ sơ</Text>
               
               <View style={styles.modalAvatarContainer}>
+                {profile?.avatarFrame ? (
+                  <ExpoImage
+                    source={getImageSource(profile.avatarFrame)}
+                    style={styles.modalAvatarFrame}
+                    contentFit="contain"
+                  />
+                ) : null}
                 <Image 
                   source={getImageSource(newImage || 'https://i.pravatar.cc/300')} 
                   style={styles.modalAvatar} 
@@ -958,14 +993,25 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     position: 'relative',
+    width: 120,
+    height: 120,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 16,
   },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 4,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    borderWidth: 3,
     borderColor: '#FFF',
+    zIndex: 2,
+  },
+  avatarFrame: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    zIndex: 1,
   },
   verifiedBadge: {
     position: 'absolute',
@@ -1281,15 +1327,27 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   modalAvatarContainer: {
+    width: 100,
+    height: 100,
+    justifyContent: 'center',
     alignItems: 'center',
+    alignSelf: 'center',
     marginBottom: 20,
+    position: 'relative',
   },
   modalAvatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 3,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    borderWidth: 2,
     borderColor: '#F1F5F9',
+    zIndex: 2,
+  },
+  modalAvatarFrame: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    zIndex: 1,
   },
   editInputGroup: {
     marginBottom: 24,

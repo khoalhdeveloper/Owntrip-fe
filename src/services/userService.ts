@@ -17,6 +17,7 @@ export interface UserProfile {
   email: string;
   displayName: string;
   image?: string;
+  avatarFrame?: string;
   phone?: string;
   balance: number;
   points: number;
@@ -43,6 +44,7 @@ export const userService = {
         email: data.email || '',
         displayName: data.displayName || data.name || 'User',
         image: data.image || '',
+        avatarFrame: data.avatarFrame || '',
         phone: data.phone || '',
         balance: data.balance ?? 0,
         points: data.points ?? 0,
@@ -65,7 +67,8 @@ export const userService = {
       
       const payload = {
         displayName: data.displayName,
-        image: freshImage
+        image: freshImage,
+        avatarFrame: data.avatarFrame
       };
       
       console.log('📡 [PUT] Sending strictly:', url, JSON.stringify(payload));

@@ -56,6 +56,7 @@ export default function AvatarShopScreen() {
           setProfile({ ...p, inventory: localInv });
           // Set initial preview from profile if not set
           if (!previewAvatar) setPreviewAvatar(p.image || 'https://i.pravatar.cc/300');
+          if (!previewFrame && p.avatarFrame) setPreviewFrame(p.avatarFrame);
         }
       }
     } catch (error) {
@@ -134,9 +135,17 @@ export default function AvatarShopScreen() {
         } else {
           showAlert('Lỗi', 'Không thể cập nhật ảnh đại diện', 'error');
         }
-      } else {
-        // Xử lý frame nếu cần (hiện tại backend chưa hỗ trợ field frame)
-        showAlert('Thông báo', 'Tính năng dùng khung sẽ sớm ra mắt!', 'info');
+      } else if (item.type === 'frame') {
+        const isCurrentFrame = profile.avatarFrame === item.image;
+        const success = await userService.updateProfile(profile.userId, {
+          avatarFrame: isCurrentFrame ? '' : item.image
+        });
+        if (success) {
+          showAlert('Thành công', isCurrentFrame ? 'Đã gỡ khung ảnh!' : 'Đã áp dụng khung ảnh mới!', 'success');
+          loadData();
+        } else {
+          showAlert('Lỗi', 'Không thể cập nhật khung ảnh', 'error');
+        }
       }
     } catch (error) {
       showAlert('Lỗi', 'Đã có lỗi xảy ra', 'error');
