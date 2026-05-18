@@ -1,11 +1,5 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -56,7 +50,11 @@ export default function AchievementScreen() {
           </View>
 
           {/* Missions card */}
-          <TouchableOpacity style={styles.missionsCard} activeOpacity={0.7} onPress={() => router.push('/missions')}>
+          <TouchableOpacity
+            style={styles.missionsCard}
+            activeOpacity={0.7}
+            onPress={() => router.push('/missions')}
+          >
             <View style={styles.missionsIconWrap}>
               <Feather name="crosshair" size={24} color="#1E293B" />
             </View>
@@ -76,7 +74,9 @@ export default function AchievementScreen() {
                 <Feather name="package" size={56} color="#CBD5E0" />
               </View>
               <Text style={styles.emptyTitle}>Chưa có quà lưu niệm</Text>
-              <Text style={styles.emptyMessage}>Mua quà lưu niệm tại Cửa hàng để thấy chúng ở đây</Text>
+              <Text style={styles.emptyMessage}>
+                Mua quà lưu niệm tại Cửa hàng để thấy chúng ở đây
+              </Text>
             </View>
           </View>
 

@@ -1,0 +1,2 @@
+src/screens/TripDetail/TripDetailScreen.tsx(153,35): error TS2322: Type 'TripDay[]' is not assignable to type '{ id: string; date: string; title: string; locations: string[]; }[]'.
+  Type 'TripDay' is missing the following properties from type '{ id: string; date: string; title: string; locations: string[]; }': id, title, locations

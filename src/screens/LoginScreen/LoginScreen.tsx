@@ -59,7 +59,11 @@ export default function LoginScreen() {
         loginWithBackend(idToken);
       } else {
         loginCalled.current = false;
-        Toast.show({ type: 'error', text1: 'Đăng nhập Google thất bại', text2: 'Không nhận được mã xác thực từ Google.' });
+        Toast.show({
+          type: 'error',
+          text1: 'Đăng nhập Google thất bại',
+          text2: 'Không nhận được mã xác thực từ Google.',
+        });
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -87,7 +91,11 @@ export default function LoginScreen() {
     } catch (error) {
       console.log('Google login error:', error);
       loginCalled.current = false;
-      Toast.show({ type: 'error', text1: 'Google Login Failed', text2: 'Không thể đăng nhập bằng Google.' });
+      Toast.show({
+        type: 'error',
+        text1: 'Google Login Failed',
+        text2: 'Không thể đăng nhập bằng Google.',
+      });
     }
   };
 

@@ -1,16 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  Modal, 
-  TouchableOpacity, 
-  TextInput, 
-  ScrollView, 
-  KeyboardAvoidingView, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  Modal,
+  TouchableOpacity,
+  TextInput,
+  ScrollView,
+  KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Animated
+  Animated,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
@@ -47,7 +47,7 @@ const TypingIndicator = () => {
             duration: 300,
             useNativeDriver: true,
           }),
-        ])
+        ]),
       ).start();
     };
 
@@ -67,7 +67,11 @@ const TypingIndicator = () => {
 
 export default function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
   const [messages, setMessages] = useState<Message[]>([
-    { id: Date.now().toString(), sender: 'bot', text: 'Chào bạn! Tôi là chatbot tư vấn du lịch Việt Nam, rất vui được hỗ trợ bạn.\n\nBạn đang quan tâm đến địa điểm nào hay cần lịch trình, món ăn ra sao? Hãy cho tôi biết nhé!' }
+    {
+      id: Date.now().toString(),
+      sender: 'bot',
+      text: 'Chào bạn! Tôi là chatbot tư vấn du lịch Việt Nam, rất vui được hỗ trợ bạn.\n\nBạn đang quan tâm đến địa điểm nào hay cần lịch trình, món ăn ra sao? Hãy cho tôi biết nhé!',
+    },
   ]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -76,9 +80,9 @@ export default function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
   useEffect(() => {
     // Tự động cuộn xuống khi có tin nhắn mới
     if (visible) {
-        setTimeout(() => {
-            scrollViewRef.current?.scrollToEnd({ animated: true });
-        }, 100);
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
     }
   }, [messages, visible]);
 
@@ -88,50 +92,52 @@ export default function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
     const userMessage: Message = {
       id: Date.now().toString(),
       sender: 'user',
-      text: inputText.trim()
+      text: inputText.trim(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInputText('');
     setIsTyping(true);
 
     try {
       const respText = await chatbotService.sendMessage(userMessage.text);
-      
+
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
         sender: 'bot',
-        text: respText
+        text: respText,
       };
-      setMessages(prev => [...prev, botMessage]);
+      setMessages((prev) => [...prev, botMessage]);
     } catch (e) {
       console.error(e);
-      setMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(),
-        sender: 'bot',
-        text: 'Lỗi rồi, bạn thử lại sau nhen!'
-      }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          sender: 'bot',
+          text: 'Lỗi rồi, bạn thử lại sau nhen!',
+        },
+      ]);
     } finally {
       setIsTyping(false);
     }
   };
 
   const clearChat = () => {
-      setMessages([{
-          id: Date.now().toString(), sender: 'bot', text: 'Chào bạn! Tôi là chatbot tư vấn du lịch Việt Nam, rất vui được hỗ trợ bạn.\n\nBạn đang quan tâm đến địa điểm nào hay cần lịch trình, món ăn ra sao? Hãy cho tôi biết nhé!'
-      }]);
-  }
+    setMessages([
+      {
+        id: Date.now().toString(),
+        sender: 'bot',
+        text: 'Chào bạn! Tôi là chatbot tư vấn du lịch Việt Nam, rất vui được hỗ trợ bạn.\n\nBạn đang quan tâm đến địa điểm nào hay cần lịch trình, món ăn ra sao? Hãy cho tôi biết nhé!',
+      },
+    ]);
+  };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
       <BlurView intensity={20} style={styles.overlay}>
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.modalContent}
         >
           {/* Header */}
@@ -153,29 +159,31 @@ export default function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
           </View>
 
           {/* Chat Messages */}
-          <ScrollView 
+          <ScrollView
             ref={scrollViewRef}
             style={styles.chatArea}
             contentContainerStyle={styles.chatContent}
             showsVerticalScrollIndicator={false}
           >
             {messages.map((item) => (
-              <View 
-                key={item.id} 
+              <View
+                key={item.id}
                 style={[
-                  styles.messageBubble, 
-                  item.sender === 'user' ? styles.userBubble : styles.botBubble
+                  styles.messageBubble,
+                  item.sender === 'user' ? styles.userBubble : styles.botBubble,
                 ]}
               >
-                <Text style={[
-                  styles.messageText, 
-                  item.sender === 'user' ? styles.userMessageText : styles.botMessageText
-                ]}>
+                <Text
+                  style={[
+                    styles.messageText,
+                    item.sender === 'user' ? styles.userMessageText : styles.botMessageText,
+                  ]}
+                >
                   {item.text}
                 </Text>
               </View>
             ))}
-            
+
             {isTyping && (
               <View style={[styles.messageBubble, styles.botBubble, styles.typingBubble]}>
                 <TypingIndicator />
@@ -194,11 +202,8 @@ export default function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
               multiline
               maxLength={500}
             />
-            <TouchableOpacity 
-              style={[
-                styles.sendButton,
-                !inputText.trim() && styles.sendButtonDisabled
-              ]} 
+            <TouchableOpacity
+              style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
               onPress={handleSend}
               disabled={!inputText.trim() || isTyping}
             >

@@ -60,7 +60,7 @@ export default function StoreScreen() {
     try {
       let userId = await AsyncStorage.getItem('userId');
       const token = await AsyncStorage.getItem('token');
-      
+
       if (!userId && token) {
         const decoded = decodeJWT(token);
         if (decoded && decoded.userId) {
@@ -72,9 +72,9 @@ export default function StoreScreen() {
       if (userId) {
         const [p, localInv] = await Promise.all([
           userService.getMyProfile(userId as string),
-          userService.getLocalInventory(userId as string)
+          userService.getLocalInventory(userId as string),
         ]);
-        
+
         if (p) {
           setProfile({ ...p, inventory: localInv });
         }
@@ -113,10 +113,16 @@ export default function StoreScreen() {
       loadProfile();
       loadSouvenirs();
       loadDecorations();
-    }, [loadProfile, loadSouvenirs, loadDecorations])
+    }, [loadProfile, loadSouvenirs, loadDecorations]),
   );
 
-  const handleBuyItem = async (item: { id: string, name: string, image: string, type: string, price: number }) => {
+  const handleBuyItem = async (item: {
+    id: string;
+    name: string;
+    image: string;
+    type: string;
+    price: number;
+  }) => {
     if (!profile?.userId) {
       showAlert('Thông báo', 'Vui lòng đăng nhập để mua hàng', 'warning');
       return;
@@ -125,7 +131,7 @@ export default function StoreScreen() {
     const isConfirmed = await showConfirm(
       'Xác nhận mua hàng',
       `Bạn có muốn mua "${item.name}" với giá ${item.price} xu không?`,
-      'Mua ngay'
+      'Mua ngay',
     );
 
     if (isConfirmed) {
@@ -165,24 +171,28 @@ export default function StoreScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-            {/* Coin Balance Card */}
-            <View style={styles.coinCard}>
-              <View style={styles.coinRow}>
-                <View style={styles.coinIconWrap}>
-                  <MaterialIcons name="stars" size={28} color="#FFB300" />
-                </View>
-                <View style={styles.coinTextWrap}>
-                  <Text style={styles.coinLabel}>Xu của tôi (Điểm)</Text>
+          {/* Coin Balance Card */}
+          <View style={styles.coinCard}>
+            <View style={styles.coinRow}>
+              <View style={styles.coinIconWrap}>
+                <MaterialIcons name="stars" size={28} color="#FFB300" />
+              </View>
+              <View style={styles.coinTextWrap}>
+                <Text style={styles.coinLabel}>Xu của tôi (Điểm)</Text>
                 {profile ? (
                   <Text style={styles.coinValue}>{coinBalance.toLocaleString()}</Text>
                 ) : (
-                  <ActivityIndicator size="small" color="#0D9488" style={{ alignSelf: 'flex-start', marginTop: 4 }} />
+                  <ActivityIndicator
+                    size="small"
+                    color="#0D9488"
+                    style={{ alignSelf: 'flex-start', marginTop: 4 }}
+                  />
                 )}
               </View>
             </View>
             <View style={styles.coinButtons}>
-              <TouchableOpacity 
-                style={styles.topUpBtnWrap} 
+              <TouchableOpacity
+                style={styles.topUpBtnWrap}
                 activeOpacity={0.85}
                 onPress={async () => {
                   const methodIdx = await customShow({
@@ -192,10 +202,11 @@ export default function StoreScreen() {
                     buttons: [
                       { text: 'Huỷ', style: 'cancel' },
                       { text: 'Simulate (50k)', style: 'default' },
-                    ]
+                    ],
                   });
-                  
-                  if (methodIdx === 1) { // Simulate
+
+                  if (methodIdx === 1) {
+                    // Simulate
                     const res = await userService.topUpPoints(50000);
                     if (res.success) {
                       showAlert('Thành công', `Đã nhận được ${res.pointsEarned} điểm!`, 'success');
@@ -215,7 +226,11 @@ export default function StoreScreen() {
                   <Text style={styles.topUpBtnText}>Nạp điểm</Text>
                 </LinearGradient>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.historyBtn} activeOpacity={0.7} onPress={() => router.push('/achievement')}>
+              <TouchableOpacity
+                style={styles.historyBtn}
+                activeOpacity={0.7}
+                onPress={() => router.push('/achievement')}
+              >
                 <Text style={styles.historyBtnText}>Thành tựu</Text>
               </TouchableOpacity>
             </View>
@@ -262,10 +277,19 @@ export default function StoreScreen() {
             ) : (
               <View style={styles.grid}>
                 {souvenirs.slice(0, 4).map((item) => (
-                  <TouchableOpacity key={item.id} style={styles.productCard} activeOpacity={0.85} onPress={() => setSelectedSouvenir(item)}>
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.productCard}
+                    activeOpacity={0.85}
+                    onPress={() => setSelectedSouvenir(item)}
+                  >
                     <Image source={{ uri: item.image }} style={styles.productImage} />
-                    <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
-                    <Text style={styles.productArtist}>{item.type.charAt(0).toUpperCase() + item.type.slice(1)}</Text>
+                    <Text style={styles.productName} numberOfLines={2}>
+                      {item.name}
+                    </Text>
+                    <Text style={styles.productArtist}>
+                      {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
+                    </Text>
                     <LinearGradient
                       colors={['#3B82F6', '#10B981']}
                       start={{ x: 0, y: 0 }}
@@ -297,14 +321,27 @@ export default function StoreScreen() {
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={[styles.decorationScroll, { paddingRight: Math.max(GRID_PADDING, DECORATION_SCROLL_PADDING_RIGHT), paddingBottom: 16 }]}
+                  contentContainerStyle={[
+                    styles.decorationScroll,
+                    {
+                      paddingRight: Math.max(GRID_PADDING, DECORATION_SCROLL_PADDING_RIGHT),
+                      paddingBottom: 16,
+                    },
+                  ]}
                 >
                   {decorations.map((item) => (
-                    <TouchableOpacity key={item.id} style={styles.decorationCard} activeOpacity={0.85} onPress={() => setSelectedDecoration(item)}>
+                    <TouchableOpacity
+                      key={item.id}
+                      style={styles.decorationCard}
+                      activeOpacity={0.85}
+                      onPress={() => setSelectedDecoration(item)}
+                    >
                       <View style={styles.decorationImageWrap}>
                         <Image source={{ uri: item.image }} style={styles.decorationImage} />
                       </View>
-                      <Text style={styles.decorationName} numberOfLines={2}>{item.name}</Text>
+                      <Text style={styles.decorationName} numberOfLines={2}>
+                        {item.name}
+                      </Text>
                       <View style={styles.coinsRow}>
                         <Feather name="award" size={14} color="#D97706" />
                         <Text style={styles.coinsText}>{item.coins} xu</Text>
@@ -321,10 +358,12 @@ export default function StoreScreen() {
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Hoạt động gần đây</Text>
             </View>
-            
+
             {!profile?.inventory || profile.inventory.length === 0 ? (
               <View style={styles.activityCard}>
-                <View style={[styles.activityIconWrap, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                <View
+                  style={[styles.activityIconWrap, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}
+                >
                   <Feather name="info" size={20} color="#3B82F6" />
                 </View>
                 <View style={styles.activityContent}>
@@ -333,18 +372,28 @@ export default function StoreScreen() {
                 </View>
               </View>
             ) : (
-              profile.inventory.slice(-3).reverse().map((item, idx) => (
-                <View key={idx} style={[styles.activityCard, { marginBottom: 8 }]}>
-                  <View style={[styles.activityIconWrap, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
-                    <Feather name="shopping-bag" size={20} color="#EF4444" />
+              profile.inventory
+                .slice(-3)
+                .reverse()
+                .map((item, idx) => (
+                  <View key={idx} style={[styles.activityCard, { marginBottom: 8 }]}>
+                    <View
+                      style={[
+                        styles.activityIconWrap,
+                        { backgroundColor: 'rgba(239, 68, 68, 0.1)' },
+                      ]}
+                    >
+                      <Feather name="shopping-bag" size={20} color="#EF4444" />
+                    </View>
+                    <View style={styles.activityContent}>
+                      <Text style={styles.activityTitle}>Đã mua {item.name}</Text>
+                      <Text style={styles.activitySubtitle}>
+                        {new Date(item.purchasedAt).toLocaleDateString('vi-VN')}
+                      </Text>
+                    </View>
+                    <Text style={[styles.activityAmount, { color: '#EF4444' }]}>-{item.price}</Text>
                   </View>
-                  <View style={styles.activityContent}>
-                    <Text style={styles.activityTitle}>Đã mua {item.name}</Text>
-                    <Text style={styles.activitySubtitle}>{new Date(item.purchasedAt).toLocaleDateString('vi-VN')}</Text>
-                  </View>
-                  <Text style={[styles.activityAmount, { color: '#EF4444' }]}>-{item.price}</Text>
-                </View>
-              ))
+                ))
             )}
           </View>
 
@@ -363,10 +412,15 @@ export default function StoreScreen() {
               <SafeAreaView style={styles.detailSafe} edges={['top']}>
                 {/* Header: back + title */}
                 <View style={styles.detailHeader}>
-                  <TouchableOpacity onPress={() => setSelectedDecoration(null)} style={styles.detailBackBtn}>
+                  <TouchableOpacity
+                    onPress={() => setSelectedDecoration(null)}
+                    style={styles.detailBackBtn}
+                  >
                     <Feather name="arrow-left" size={24} color="#F8FAFC" />
                   </TouchableOpacity>
-                  <Text style={styles.detailHeaderTitle} numberOfLines={1}>{selectedDecoration.name}</Text>
+                  <Text style={styles.detailHeaderTitle} numberOfLines={1}>
+                    {selectedDecoration.name}
+                  </Text>
                   <View style={styles.detailHeaderRight} />
                 </View>
 
@@ -381,7 +435,9 @@ export default function StoreScreen() {
                   </View>
 
                   {/* Category */}
-                  <Text style={styles.detailCategory}>{getDecorationCategory(selectedDecoration.type)}</Text>
+                  <Text style={styles.detailCategory}>
+                    {getDecorationCategory(selectedDecoration.type)}
+                  </Text>
                   {/* Tên */}
                   <Text style={styles.detailName}>{selectedDecoration.name}</Text>
                   {/* Giá */}
@@ -391,7 +447,8 @@ export default function StoreScreen() {
                   </View>
                   {/* Mô tả */}
                   <Text style={styles.detailDesc}>
-                    Trang trí hồ sơ của bạn với những vật phẩm độc đáo. Các vật phẩm sẽ được áp dụng cho hồ sơ của bạn sau khi mua. Thanh toán bằng số dư xu.
+                    Trang trí hồ sơ của bạn với những vật phẩm độc đáo. Các vật phẩm sẽ được áp dụng
+                    cho hồ sơ của bạn sau khi mua. Thanh toán bằng số dư xu.
                   </Text>
                 </ScrollView>
 
@@ -400,13 +457,15 @@ export default function StoreScreen() {
                   <TouchableOpacity
                     style={[styles.detailBuyBtn, buying && { opacity: 0.7 }]}
                     activeOpacity={0.85}
-                    onPress={() => handleBuyItem({
-                      id: selectedDecoration.id,
-                      name: selectedDecoration.name,
-                      image: selectedDecoration.image,
-                      type: selectedDecoration.type || 'decoration',
-                      price: selectedDecoration.coins
-                    })}
+                    onPress={() =>
+                      handleBuyItem({
+                        id: selectedDecoration.id,
+                        name: selectedDecoration.name,
+                        image: selectedDecoration.image,
+                        type: selectedDecoration.type || 'decoration',
+                        price: selectedDecoration.coins,
+                      })
+                    }
                     disabled={buying}
                   >
                     {buying ? (
@@ -414,7 +473,9 @@ export default function StoreScreen() {
                     ) : (
                       <>
                         <Feather name="award" size={20} color="#FFF" />
-                        <Text style={styles.detailBuyText}>Mua với {selectedDecoration.coins} xu</Text>
+                        <Text style={styles.detailBuyText}>
+                          Mua với {selectedDecoration.coins} xu
+                        </Text>
                       </>
                     )}
                   </TouchableOpacity>
@@ -435,10 +496,15 @@ export default function StoreScreen() {
               <StatusBar barStyle="light-content" />
               <SafeAreaView style={styles.detailSafe} edges={['top']}>
                 <View style={styles.detailHeader}>
-                  <TouchableOpacity onPress={() => setSelectedSouvenir(null)} style={styles.detailBackBtn}>
+                  <TouchableOpacity
+                    onPress={() => setSelectedSouvenir(null)}
+                    style={styles.detailBackBtn}
+                  >
                     <Feather name="arrow-left" size={24} color="#F8FAFC" />
                   </TouchableOpacity>
-                  <Text style={styles.detailHeaderTitle} numberOfLines={1}>{selectedSouvenir.name}</Text>
+                  <Text style={styles.detailHeaderTitle} numberOfLines={1}>
+                    {selectedSouvenir.name}
+                  </Text>
                   <View style={styles.detailHeaderRight} />
                 </View>
 
@@ -460,7 +526,8 @@ export default function StoreScreen() {
                     <Text style={styles.detailPrice}>{selectedSouvenir.amount} xu</Text>
                   </View>
                   <Text style={styles.detailDesc}>
-                    {selectedSouvenir.description || 'Quà lưu niệm từ những chuyến đi của bạn. Thanh toán bằng số dư xu để thêm vào bộ sưu tập.'}
+                    {selectedSouvenir.description ||
+                      'Quà lưu niệm từ những chuyến đi của bạn. Thanh toán bằng số dư xu để thêm vào bộ sưu tập.'}
                   </Text>
                 </ScrollView>
 
@@ -468,13 +535,15 @@ export default function StoreScreen() {
                   <TouchableOpacity
                     style={[styles.detailBuyBtn, buying && { opacity: 0.7 }]}
                     activeOpacity={0.85}
-                    onPress={() => handleBuyItem({
-                      id: selectedSouvenir.id,
-                      name: selectedSouvenir.name,
-                      image: selectedSouvenir.image,
-                      type: 'souvenir',
-                      price: selectedSouvenir.amount
-                    })}
+                    onPress={() =>
+                      handleBuyItem({
+                        id: selectedSouvenir.id,
+                        name: selectedSouvenir.name,
+                        image: selectedSouvenir.image,
+                        type: 'souvenir',
+                        price: selectedSouvenir.amount,
+                      })
+                    }
                     disabled={buying}
                   >
                     {buying ? (
@@ -482,7 +551,9 @@ export default function StoreScreen() {
                     ) : (
                       <>
                         <Feather name="award" size={20} color="#FFF" />
-                        <Text style={styles.detailBuyText}>Mua với {selectedSouvenir.amount} xu</Text>
+                        <Text style={styles.detailBuyText}>
+                          Mua với {selectedSouvenir.amount} xu
+                        </Text>
                       </>
                     )}
                   </TouchableOpacity>
@@ -508,7 +579,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
   },
   headerTitle: { fontSize: 20, fontWeight: '800', color: '#1E293B' },
-  settingsBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F1F5F9' },
+  settingsBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+  },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: GRID_PADDING, paddingBottom: 16 },
 
@@ -554,7 +632,13 @@ const styles = StyleSheet.create({
 
   section: { marginBottom: 28 },
   loadingRow: { paddingVertical: 32, alignItems: 'center', justifyContent: 'center' },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, paddingHorizontal: 0 },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+    paddingHorizontal: 0,
+  },
   sectionTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B' },
   viewAll: { fontSize: 14, color: '#3B82F6', fontWeight: '600' },
 
@@ -575,7 +659,13 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   productImage: { width: '100%', aspectRatio: 1, borderRadius: 12, backgroundColor: '#F1F5F9' },
-  productName: { fontSize: 14, fontWeight: '700', color: '#1E293B', marginTop: 10, marginBottom: 2 },
+  productName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginTop: 10,
+    marginBottom: 2,
+  },
   productArtist: { fontSize: 12, color: '#64748B', marginBottom: 10 },
   priceBtn: { borderRadius: 10, paddingVertical: 8, alignItems: 'center' },
   priceBtnText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
@@ -603,7 +693,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   decorationImage: { width: '100%', height: '100%', resizeMode: 'cover' },
-  decorationName: { fontSize: 13, fontWeight: '700', color: '#1E293B', marginTop: 12, marginBottom: 6, textAlign: 'center' },
+  decorationName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginTop: 12,
+    marginBottom: 6,
+    textAlign: 'center',
+  },
   coinsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
   coinsText: { fontSize: 12, color: '#64748B', fontWeight: '600' },
 
@@ -646,7 +743,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.08)',
   },
-  detailBackBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center', marginRight: 8 },
+  detailBackBtn: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
   detailHeaderTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: '#F8FAFC' },
   detailHeaderRight: { width: 40 },
   detailScroll: { flex: 1 },

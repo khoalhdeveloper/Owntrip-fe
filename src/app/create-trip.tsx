@@ -25,19 +25,74 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 const { width, height } = Dimensions.get('window');
 
 const VN_PROVINCES = [
-  "An Giang", "Ba Ria - Vung Tau", "Bac Giang", "Bac Kan", "Bac Lieu", "Bac Ninh", "Ben Tre", 
-  "Binh Dinh", "Binh Duong", "Binh Phuoc", "Binh Thuan", "Ca Mau", "Can Tho", "Cao Bang", 
-  "Da Nang", "Dak Lak", "Dak Nong", "Dien Bien", "Dong Nai", "Dong Thap", "Gia Lai", 
-  "Ha Giang", "Ha Nam", "Ha Noi", "Ha Tinh", "Hai Duong", "Hai Phong", "Hau Giang", 
-  "Hoa Binh", "Hung Yen", "Khanh Hoa", "Kien Giang", "Kon Tum", "Lai Chau", "Lam Dong", 
-  "Lang Son", "Lao Cai", "Long An", "Nam Dinh", "Nghe An", "Ninh Binh", "Ninh Thuan", 
-  "Phu Tho", "Phu Yen", "Quang Bình", "Quang Nam", "Quang Ngai", "Quang Ninh", "Quang Tri", 
-  "Soc Trang", "Son La", "Tay Ninh", "Thai Binh", "Thai Nguyen", "Thanh Hoa", "Thua Thien Hue", 
-  "Tien Giang", "TP. Ho Chi Minh", "Tra Vinh", "Tuyen Quang", "Vinh Long", "Vinh Phuc", "Yen Bai"
+  'An Giang',
+  'Ba Ria - Vung Tau',
+  'Bac Giang',
+  'Bac Kan',
+  'Bac Lieu',
+  'Bac Ninh',
+  'Ben Tre',
+  'Binh Dinh',
+  'Binh Duong',
+  'Binh Phuoc',
+  'Binh Thuan',
+  'Ca Mau',
+  'Can Tho',
+  'Cao Bang',
+  'Da Nang',
+  'Dak Lak',
+  'Dak Nong',
+  'Dien Bien',
+  'Dong Nai',
+  'Dong Thap',
+  'Gia Lai',
+  'Ha Giang',
+  'Ha Nam',
+  'Ha Noi',
+  'Ha Tinh',
+  'Hai Duong',
+  'Hai Phong',
+  'Hau Giang',
+  'Hoa Binh',
+  'Hung Yen',
+  'Khanh Hoa',
+  'Kien Giang',
+  'Kon Tum',
+  'Lai Chau',
+  'Lam Dong',
+  'Lang Son',
+  'Lao Cai',
+  'Long An',
+  'Nam Dinh',
+  'Nghe An',
+  'Ninh Binh',
+  'Ninh Thuan',
+  'Phu Tho',
+  'Phu Yen',
+  'Quang Bình',
+  'Quang Nam',
+  'Quang Ngai',
+  'Quang Ninh',
+  'Quang Tri',
+  'Soc Trang',
+  'Son La',
+  'Tay Ninh',
+  'Thai Binh',
+  'Thai Nguyen',
+  'Thanh Hoa',
+  'Thua Thien Hue',
+  'Tien Giang',
+  'TP. Ho Chi Minh',
+  'Tra Vinh',
+  'Tuyen Quang',
+  'Vinh Long',
+  'Vinh Phuc',
+  'Yen Bai',
 ];
 
 const removeAccents = (str: string) => {
-  return str.normalize('NFD')
+  return str
+    .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/đ/g, 'd')
     .replace(/Đ/g, 'D');
@@ -47,7 +102,7 @@ export default function CreateTripScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const { alert: showAlert } = useConfirm();
-  
+
   const [formData, setFormData] = useState({
     title: '',
     destination: '',
@@ -65,25 +120,25 @@ export default function CreateTripScreen() {
     setFormData({ ...formData, destination: text });
     if (text.length > 0) {
       const normalizedText = removeAccents(text.toLowerCase());
-      
-      const filtered = VN_PROVINCES.filter(p => {
+
+      const filtered = VN_PROVINCES.filter((p) => {
         const normalizedP = removeAccents(p.toLowerCase());
         return normalizedP.includes(normalizedText);
       }).sort((a, b) => {
         const normA = removeAccents(a.toLowerCase());
         const normB = removeAccents(b.toLowerCase());
-        
+
         // Ưu tiên bắt đầu bằng chữ đó
         const aStarts = normA.startsWith(normalizedText);
         const bStarts = normB.startsWith(normalizedText);
-        
+
         if (aStarts && !bStarts) return -1;
         if (!aStarts && bStarts) return 1;
-        
+
         // Ưu tiên bắt đầu của một từ trong tên (VD: gõ "T" thì "Vũng Tàu" lên trước "Hà Tĩnh")
-        const aWordStarts = normA.includes(" " + normalizedText);
-        const bWordStarts = normB.includes(" " + normalizedText);
-        
+        const aWordStarts = normA.includes(' ' + normalizedText);
+        const bWordStarts = normB.includes(' ' + normalizedText);
+
         if (aWordStarts && !bWordStarts) return -1;
         if (!aWordStarts && bWordStarts) return 1;
 
@@ -104,7 +159,7 @@ export default function CreateTripScreen() {
 
   const handleCreate = async () => {
     if (!formData.title || !formData.destination) {
-      showAlert("Thiếu thông tin", "Vui lòng nhập tiêu đề và điểm đến.", "warning");
+      showAlert('Thiếu thông tin', 'Vui lòng nhập tiêu đề và điểm đến.', 'warning');
       return;
     }
 
@@ -115,18 +170,18 @@ export default function CreateTripScreen() {
         startDate: formData.startDate.toISOString().split('T')[0],
         endDate: formData.endDate.toISOString().split('T')[0],
       };
-      
+
       const result = await tripService.createTrip(payload);
       if (result) {
         await showAlert(
-          "Tuyệt vời! ✈️",
-          "Kế hoạch hành trình của bạn đã được tạo thành công.",
-          "success"
+          'Tuyệt vời! ✈️',
+          'Kế hoạch hành trình của bạn đã được tạo thành công.',
+          'success',
         );
         router.replace('/(tabs)/trips');
       }
     } catch (error) {
-      showAlert("Lỗi", "Không thể tạo chuyến đi. Vui lòng kiểm tra lại kết nối.", "error");
+      showAlert('Lỗi', 'Không thể tạo chuyến đi. Vui lòng kiểm tra lại kết nối.', 'error');
     } finally {
       setLoading(false);
     }
@@ -147,12 +202,12 @@ export default function CreateTripScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
       <StatusBar barStyle="light-content" />
-      
+
       {/* Decorative Background Elements */}
       <View style={styles.bgCircle1} />
       <View style={styles.bgCircle2} />
@@ -164,33 +219,30 @@ export default function CreateTripScreen() {
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
-        
+
         <View style={styles.headerTop}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Feather name="chevron-left" size={24} color="#FFF" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.settingsButton}>
             <Feather name="settings" size={20} color="#FFF" />
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.headerTextContainer}>
           <Text style={styles.headerTitle}>Hành trình mới</Text>
           <Text style={styles.headerSubTitle}>Lên kế hoạch cho hành trình tiếp theo của bạn</Text>
         </View>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.content}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.formCard}>
           <Text style={styles.sectionLabel}>Chi tiết chuyến đi</Text>
-          
+
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Tên chuyến đi</Text>
             <View style={styles.inputWrapper}>
@@ -200,7 +252,7 @@ export default function CreateTripScreen() {
                 placeholder="Ví dụ: Khám phá Hà Nội"
                 placeholderTextColor="#A0AEC0"
                 value={formData.title}
-                onChangeText={(text) => setFormData({...formData, title: text})}
+                onChangeText={(text) => setFormData({ ...formData, title: text })}
               />
             </View>
           </View>
@@ -218,17 +270,22 @@ export default function CreateTripScreen() {
                   onChangeText={handleDestinationChange}
                 />
               </View>
-              
+
               {showSuggestions && (
                 <View style={styles.suggestionsContainer}>
                   <ScrollView nestedScrollEnabled style={{ maxHeight: 200 }}>
                     {suggestions.map((province, index) => (
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         key={index}
                         style={styles.suggestionItem}
                         onPress={() => selectSuggestion(province)}
                       >
-                        <Feather name="map-pin" size={14} color="#007AFF" style={{ marginRight: 10 }} />
+                        <Feather
+                          name="map-pin"
+                          size={14}
+                          color="#007AFF"
+                          style={{ marginRight: 10 }}
+                        />
                         <Text style={styles.suggestionText}>{province}</Text>
                       </TouchableOpacity>
                     ))}
@@ -241,10 +298,7 @@ export default function CreateTripScreen() {
           <View style={styles.dateRow}>
             <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
               <Text style={styles.inputLabel}>Ngày đi</Text>
-              <TouchableOpacity 
-                style={styles.inputWrapper} 
-                onPress={() => setShowStart(true)}
-              >
+              <TouchableOpacity style={styles.inputWrapper} onPress={() => setShowStart(true)}>
                 <Feather name="calendar" size={18} color="#005CB8" style={styles.inputIcon} />
                 <Text style={styles.dateText}>
                   {formData.startDate.toLocaleDateString('vi-VN')}
@@ -262,14 +316,9 @@ export default function CreateTripScreen() {
 
             <View style={[styles.inputGroup, { flex: 1 }]}>
               <Text style={styles.inputLabel}>Ngày về</Text>
-              <TouchableOpacity 
-                style={styles.inputWrapper} 
-                onPress={() => setShowEnd(true)}
-              >
+              <TouchableOpacity style={styles.inputWrapper} onPress={() => setShowEnd(true)}>
                 <Feather name="calendar" size={18} color="#005CB8" style={styles.inputIcon} />
-                <Text style={styles.dateText}>
-                  {formData.endDate.toLocaleDateString('vi-VN')}
-                </Text>
+                <Text style={styles.dateText}>{formData.endDate.toLocaleDateString('vi-VN')}</Text>
               </TouchableOpacity>
               {showEnd && (
                 <DateTimePicker
@@ -285,25 +334,31 @@ export default function CreateTripScreen() {
 
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Mô tả (Tùy chọn)</Text>
-            <View style={[styles.inputWrapper, { alignItems: 'flex-start', paddingTop: 12, height: 100 }]}>
-              <Feather name="align-left" size={18} color="#A0AEC0" style={[styles.inputIcon, { marginTop: 2 }]} />
+            <View
+              style={[
+                styles.inputWrapper,
+                { alignItems: 'flex-start', paddingTop: 12, height: 100 },
+              ]}
+            >
+              <Feather
+                name="align-left"
+                size={18}
+                color="#A0AEC0"
+                style={[styles.inputIcon, { marginTop: 2 }]}
+              />
               <TextInput
                 style={[styles.input, { height: '100%', textAlignVertical: 'top' }]}
                 placeholder="Ghi chú cho chuyến đi này..."
                 placeholderTextColor="#A0AEC0"
                 multiline
                 value={formData.description}
-                onChangeText={(text) => setFormData({...formData, description: text})}
+                onChangeText={(text) => setFormData({ ...formData, description: text })}
               />
             </View>
           </View>
         </View>
 
-        <TouchableOpacity 
-          style={styles.submitButton}
-          onPress={handleCreate}
-          disabled={loading}
-        >
+        <TouchableOpacity style={styles.submitButton} onPress={handleCreate} disabled={loading}>
           <LinearGradient
             colors={['#005CB8', '#0084FF']}
             start={{ x: 0, y: 0 }}

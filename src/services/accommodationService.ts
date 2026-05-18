@@ -10,7 +10,7 @@ export interface IRoomType {
   images?: string[];
   capacity: number;
   basePrice: number;
-  price?: number;       
+  price?: number;
   totalRooms?: number;
   availableRooms?: number;
   amenities?: string[];
@@ -78,32 +78,33 @@ export interface AccommodationReview {
  */
 function transformHotel(raw: any): Accommodation {
   // Nếu dữ liệu trả về từ Backend là cấu trúc mới (có cụm data.header)
-  const data = raw.header ? raw : (raw.data || raw);
-  
+  const data = raw.header ? raw : raw.data || raw;
+
   const header = data.header || {};
   const pricing = data.pricing || {};
   const location = data.location || {};
-  
+
   const name = header.name || data.name || '';
   const images = header.images || data.images || [];
   const starRating = header.stars || data.starRating || 5;
   const address = header.address || data.address || { fullAddress: '' };
-  
+
   const rooms: IRoomType[] = data.rooms || [];
-  const cheapest = rooms.length > 0
-    ? rooms.reduce((min, r) => {
-        const rPrice = r.basePrice || r.price || 0;
-        const minPrice = min.basePrice || min.price || 0;
-        if (rPrice === 0) return min;
-        if (minPrice === 0) return r;
-        return rPrice < minPrice ? r : min;
-      }, rooms[0])
-    : null;
+  const cheapest =
+    rooms.length > 0
+      ? rooms.reduce((min, r) => {
+          const rPrice = r.basePrice || r.price || 0;
+          const minPrice = min.basePrice || min.price || 0;
+          if (rPrice === 0) return min;
+          if (minPrice === 0) return r;
+          return rPrice < minPrice ? r : min;
+        }, rooms[0])
+      : null;
 
   // Merge unique amenities from all rooms
   const allAmenities: string[] = [];
-  rooms.forEach(r => {
-    (r.amenities || []).forEach(a => {
+  rooms.forEach((r) => {
+    (r.amenities || []).forEach((a) => {
       if (!allAmenities.includes(a)) allAmenities.push(a);
     });
   });
@@ -115,8 +116,11 @@ function transformHotel(raw: any): Accommodation {
     images,
     starRating,
     address,
-    primaryImage: images[0] || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=1000',
-    pricePerNight: pricing.fromPrice || (cheapest ? (cheapest.basePrice || cheapest.price || 0) : (data.minPrice || 0)),
+    primaryImage:
+      images[0] || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=1000',
+    pricePerNight:
+      pricing.fromPrice ||
+      (cheapest ? cheapest.basePrice || cheapest.price || 0 : data.minPrice || 0),
     rating: data.reviewSummary?.score || data.reviewDashboard?.score || 0,
     reviewsCount: data.reviewSummary?.count || data.reviewDashboard?.count || 0,
     amenities: allAmenities,
@@ -187,7 +191,7 @@ export const accommodationService = {
    */
   submitReview: async (
     hotelId: string,
-    review: { rating: number; comment: string; images?: string[] }
+    review: { rating: number; comment: string; images?: string[] },
   ): Promise<boolean> => {
     try {
       const response = await axiosClient.post<any, any>(ENDPOINTS.HOTELS.REVIEW, {

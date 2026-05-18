@@ -33,7 +33,7 @@ export const userService = {
       const baseUrl = userId ? ENDPOINTS.USERS.MY_PROFILE(userId) : ENDPOINTS.USERS.PROFILE;
       // Thêm nocache để ép server trả về dữ liệu mới nhất từ DB
       const url = `${baseUrl}?nocache=${Date.now()}`;
-      
+
       const response = await axiosClient.get<any, any>(url);
       const data = response.data || response.user || response;
       if (!data) return null;
@@ -63,17 +63,20 @@ export const userService = {
     try {
       // Đảm bảo Payload sạch tuyệt đối như Postman
       // Thêm t= vào link ảnh để ép Server nhận diện có sự thay đổi dữ liệu
-      const freshImage = data.image ? `${data.image}${data.image.includes('?') ? '&' : '?'}v=${Date.now()}` : data.image;
-      
+      const freshImage = data.image
+        ? `${data.image}${data.image.includes('?') ? '&' : '?'}v=${Date.now()}`
+        : data.image;
+
       const payload = {
         displayName: data.displayName,
         image: freshImage,
-        avatarFrame: data.avatarFrame
+        avatarFrame: data.avatarFrame,
       };
-      
+
+
       console.log('📡 [PUT] Sending strictly:', url, JSON.stringify(payload));
       const response: any = await axiosClient.put(url, payload);
-      
+
       // Nếu server trả về success: true hoặc status success
       return response?.success === true || response?.status === 'success' || !!response;
     } catch (error: any) {
@@ -82,12 +85,15 @@ export const userService = {
     }
   },
 
-  purchaseItem: async (userId: string, item: { id: string, name: string, image: string, type: string, price: number }): Promise<{ success: boolean; message: string }> => {
+  purchaseItem: async (
+    userId: string,
+    item: { id: string; name: string; image: string; type: string; price: number },
+  ): Promise<{ success: boolean; message: string }> => {
     try {
       // 1. Gọi API thanh toán bằng point từ backend
       console.log('📡 [POST] Paying with points:', item.price);
       const response: any = await axiosClient.post(ENDPOINTS.USERS.PAY_WITH_POINTS, {
-        pointsToUse: item.price
+        pointsToUse: item.price,
       });
 
       if (!response.success) {
@@ -101,9 +107,9 @@ export const userService = {
 
       const newInventoryItem: InventoryItem = {
         ...item,
-        purchasedAt: new Date().toISOString()
+        purchasedAt: new Date().toISOString(),
       };
-      
+
       localInventory.push(newInventoryItem);
       await AsyncStorage.setItem(INVENTORY_KEY, JSON.stringify(localInventory));
 
@@ -121,7 +127,9 @@ export const userService = {
     }
   },
 
-  createVNPayPayment: async (amount: number): Promise<{ success: boolean; paymentUrl?: string; message?: string }> => {
+  createVNPayPayment: async (
+    amount: number,
+  ): Promise<{ success: boolean; paymentUrl?: string; message?: string }> => {
     try {
       const response: any = await axiosClient.post(ENDPOINTS.USERS.VNPAY_CREATE, { amount });
       if (response.success && response.data?.paymentUrl) {
@@ -133,7 +141,9 @@ export const userService = {
     }
   },
 
-  topUpPoints: async (amountVND: number): Promise<{ success: boolean; pointsEarned?: number; message?: string }> => {
+  topUpPoints: async (
+    amountVND: number,
+  ): Promise<{ success: boolean; pointsEarned?: number; message?: string }> => {
     try {
       const response: any = await axiosClient.post(ENDPOINTS.USERS.TOP_UP, { amount: amountVND });
       if (response.success) {
@@ -144,8 +154,12 @@ export const userService = {
       return { success: false, message: error?.response?.data?.message || 'System error' };
     }
   },
-  
-  testTopUpBalance: async (): Promise<{ success: boolean; newBalance?: number; message?: string }> => {
+
+  testTopUpBalance: async (): Promise<{
+    success: boolean;
+    newBalance?: number;
+    message?: string;
+  }> => {
     try {
       const response: any = await axiosClient.post(ENDPOINTS.USERS.TEST_TOP_UP);
       if (response.success) {
@@ -165,5 +179,5 @@ export const userService = {
     } catch {
       return [];
     }
-  }
+  },
 };

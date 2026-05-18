@@ -34,7 +34,7 @@ const MOCK_TRIP_REVIEWS = [
     rating: 5,
     content: 'Lịch trình rất hợp lý, các điểm đến đều đẹp và dịch vụ tốt. Rất đáng tiền!',
     date: '3 ngày trước',
-    userAvatar: 'https://i.pravatar.cc/150?u=4'
+    userAvatar: 'https://i.pravatar.cc/150?u=4',
   },
   {
     id: '2',
@@ -42,19 +42,18 @@ const MOCK_TRIP_REVIEWS = [
     rating: 5,
     content: 'Gia đình tôi đã có một chuyến đi tuyệt vời nhờ lịch trình này. Cảm ơn OwnTrip!',
     date: '1 tuần trước',
-    userAvatar: 'https://i.pravatar.cc/150?u=5'
-  }
+    userAvatar: 'https://i.pravatar.cc/150?u=5',
+  },
 ];
 
 const MOCK_REVIEWS = [
-
   {
     id: '1',
     userName: 'Nguyễn Văn An',
     rating: 5,
     content: 'Địa điểm tuyệt vời, không khí rất trong lành và mát mẻ. Rất xứng đáng để ghé thăm!',
     date: '2 ngày trước',
-    userAvatar: 'https://i.pravatar.cc/150?u=1'
+    userAvatar: 'https://i.pravatar.cc/150?u=1',
   },
   {
     id: '2',
@@ -62,20 +61,20 @@ const MOCK_REVIEWS = [
     rating: 4,
     content: 'Cảnh quan đẹp tuyệt vời, tuy nhiên đường đi hơi đông đúc vào cuối tuần.',
     date: '1 tuần trước',
-    userAvatar: 'https://i.pravatar.cc/150?u=2'
+    userAvatar: 'https://i.pravatar.cc/150?u=2',
   },
   {
     id: '3',
     userName: 'Phạm Minh Đức',
     rating: 5,
-    content: 'Hành trình chinh phục đỉnh núi rất thú vị. Tượng Phật Bà Tây Bổ Đà Sơn thật sự hùng vĩ.',
+    content:
+      'Hành trình chinh phục đỉnh núi rất thú vị. Tượng Phật Bà Tây Bổ Đà Sơn thật sự hùng vĩ.',
     date: '2 tuần trước',
-    userAvatar: 'https://i.pravatar.cc/150?u=3'
-  }
+    userAvatar: 'https://i.pravatar.cc/150?u=3',
+  },
 ];
 
 export default function HomeScreen() {
-
   const router = useRouter();
   const [trendingPlaces, setTrendingPlaces] = useState<Place[]>([]);
   const [recommendedTrips, setRecommendedTrips] = useState<Trip[]>([]);
@@ -92,7 +91,7 @@ export default function HomeScreen() {
   const [selectedNotifForDetail, setSelectedNotifForDetail] = useState<Notification | null>(null);
 
   const { width } = Dimensions.get('window');
-  
+
   const scrollX = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef<any>(null);
   const [isLooping, setIsLooping] = useState(false);
@@ -109,68 +108,69 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       const fetchTrending = async () => {
-      try {
-        setLoading(true);
-        const places = await placesService.searchTrending();
-        
-        // Strictly filter: Must have BOTH 'photo' AND 'photos' array populated
-        const placesWithPhotos = (places || []).filter(p => 
-          p.photo && p.photo.trim() !== '' && 
-          p.photos && p.photos.length > 0
-        );
+        try {
+          setLoading(true);
+          const places = await placesService.searchTrending();
 
-        // Để làm loop vô tận ảo, ta nhân 3 mảng dữ liệu (Triple buffer)
-        if (placesWithPhotos.length > 0) {
-          setTrendingPlaces([...placesWithPhotos, ...placesWithPhotos, ...placesWithPhotos]);
-          setIsLooping(true);
-        } else {
-          setTrendingPlaces([]);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    const fetchTrips = async () => {
-      try {
-        setLoadingTrips(true);
-        const trips = await tripService.getPublishedTrips(1, 10);
-        // Strictly filter: Only keep trips with images
-        const tripsWithImages = (trips || []).filter(t => getImageSource(t.provinceImage) !== null);
-        setRecommendedTrips(tripsWithImages);
-      } finally {
-        setLoadingTrips(false);
-      }
-    };
+          // Strictly filter: Must have BOTH 'photo' AND 'photos' array populated
+          const placesWithPhotos = (places || []).filter(
+            (p) => p.photo && p.photo.trim() !== '' && p.photos && p.photos.length > 0,
+          );
 
-    const fetchUserInfo = async () => {
-      try {
-        const userId = await AsyncStorage.getItem('userId');
-        if (userId) {
-          const profile = await userService.getMyProfile(userId);
-          if (profile) {
-            setUserProfile(profile);
+          // Để làm loop vô tận ảo, ta nhân 3 mảng dữ liệu (Triple buffer)
+          if (placesWithPhotos.length > 0) {
+            setTrendingPlaces([...placesWithPhotos, ...placesWithPhotos, ...placesWithPhotos]);
+            setIsLooping(true);
+          } else {
+            setTrendingPlaces([]);
           }
+        } finally {
+          setLoading(false);
         }
-      } catch (error) {
-        console.error('Error fetching user info in Home:', error);
-      }
-    };
+      };
 
-    const fetchNotifications = async () => {
-      try {
-        const data = await notificationService.getAll();
-        setNotifications(data || []);
-      } catch (error) {
-        console.error('Error fetching notifications:', error);
-      }
-    };
+      const fetchTrips = async () => {
+        try {
+          setLoadingTrips(true);
+          const trips = await tripService.getPublishedTrips(1, 10);
+          // Strictly filter: Only keep trips with images
+          const tripsWithImages = (trips || []).filter(
+            (t) => getImageSource(t.provinceImage) !== null,
+          );
+          setRecommendedTrips(tripsWithImages);
+        } finally {
+          setLoadingTrips(false);
+        }
+      };
 
-    fetchTrending();
-    fetchTrips();
-    fetchUserInfo();
-    fetchNotifications();
-  }, [])
+      const fetchUserInfo = async () => {
+        try {
+          const userId = await AsyncStorage.getItem('userId');
+          if (userId) {
+            const profile = await userService.getMyProfile(userId);
+            if (profile) {
+              setUserProfile(profile);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching user info in Home:', error);
+        }
+      };
+
+      const fetchNotifications = async () => {
+        try {
+          const data = await notificationService.getAll();
+          setNotifications(data || []);
+        } catch (error) {
+          console.error('Error fetching notifications:', error);
+        }
+      };
+
+      fetchTrending();
+      fetchTrips();
+      fetchUserInfo();
+      fetchNotifications();
+    }, []),
   );
 
   const handleTripPress = async (id: string) => {
@@ -188,8 +188,8 @@ export default function HomeScreen() {
   const handleMarkAsRead = async (id: string) => {
     const success = await notificationService.markAsRead(id);
     if (success) {
-      setNotifications(prev => 
-        prev.map(notif => notif._id === id ? { ...notif, isRead: true } : notif)
+      setNotifications((prev) =>
+        prev.map((notif) => (notif._id === id ? { ...notif, isRead: true } : notif)),
       );
     }
   };
@@ -201,7 +201,7 @@ export default function HomeScreen() {
     }
   };
 
-  const hasUnread = notifications.some(n => !n.isRead);
+  const hasUnread = notifications.some((n) => !n.isRead);
 
   const handleSearch = async (text: string) => {
     setSearchQuery(text);
@@ -209,13 +209,12 @@ export default function HomeScreen() {
       setSearchResults([]);
       return;
     }
-    
+
     setIsSearchingResults(true);
     try {
-      const results = await placesService.searchText({ q: text, limit: 10 });
-      const filtered = (results || []).filter(p => 
-        p.photo && p.photo.trim() !== '' && 
-        p.photos && p.photos.length > 0
+      const results = await placesService.search(text);
+      const filtered = (results || []).filter(
+        (p) => p.photo && p.photo.trim() !== '' && p.photos && p.photos.length > 0,
       );
       setSearchResults(filtered);
     } catch (error) {
@@ -244,8 +243,8 @@ export default function HomeScreen() {
               <Feather name="award" size={16} color="#48BB78" />
               <Text style={styles.pointsText}>{userProfile?.points?.toLocaleString() || '0'}</Text>
             </View>
-            <TouchableOpacity 
-              style={styles.notifButton} 
+            <TouchableOpacity
+              style={styles.notifButton}
               onPress={() => setIsNotifModalVisible(true)}
             >
               <Feather name="bell" size={24} color="#1A2B4A" />
@@ -255,8 +254,8 @@ export default function HomeScreen() {
         </View>
 
         {/* Search */}
-        <TouchableOpacity 
-          style={styles.searchBar} 
+        <TouchableOpacity
+          style={styles.searchBar}
           activeOpacity={0.8}
           onPress={() => setIsSearchModalVisible(true)}
         >
@@ -265,15 +264,19 @@ export default function HomeScreen() {
         </TouchableOpacity>
 
         {/* Banner */}
-        <ImageBackground 
-          source={getImageSource('https://logico.com.vn/upload_images/images/2022/11/30/hinh-nen-dep-7.jpg')}
+        <ImageBackground
+          source={getImageSource(
+            'https://logico.com.vn/upload_images/images/2022/11/30/hinh-nen-dep-7.jpg',
+          )}
           style={styles.banner}
           imageStyle={styles.bannerImage}
         >
           <View style={styles.bannerOverlay}>
             <Text style={styles.bannerTitle}>Đi đâu{'\n'}tiếp theo?</Text>
-            <Text style={styles.bannerSubtitle}>Tạo ngay lịch trình du lịch dành riêng cho bạn.</Text>
-            <TouchableOpacity 
+            <Text style={styles.bannerSubtitle}>
+              Tạo ngay lịch trình du lịch dành riêng cho bạn.
+            </Text>
+            <TouchableOpacity
               style={styles.bannerButton}
               onPress={() => router.push('/instant-plan')}
             >
@@ -309,7 +312,10 @@ export default function HomeScreen() {
                   const originalLength = trendingPlaces.length / 3;
                   // Nhảy tới bản sao ở giữa khi vừa load, thêm delay nhỏ để đảm bảo Layout hoàn tất
                   setTimeout(() => {
-                    scrollViewRef.current?.scrollTo({ x: originalLength * ITEM_SIZE, animated: false });
+                    scrollViewRef.current?.scrollTo({
+                      x: originalLength * ITEM_SIZE,
+                      animated: false,
+                    });
                   }, 100);
                 }
               }}
@@ -317,95 +323,98 @@ export default function HomeScreen() {
                 const offsetX = e.nativeEvent.contentOffset.x;
                 const originalLength = trendingPlaces.length / 3;
                 const totalWidth = originalLength * ITEM_SIZE;
-                
+
                 // Nếu lướt quá bản sao ở giữa (về trước hoặc sau), nhảy về bản sao ở giữa ngay lập tức
                 if (offsetX < (originalLength - 1) * ITEM_SIZE) {
-                   scrollViewRef.current?.scrollTo({ x: offsetX + totalWidth, animated: false });
+                  scrollViewRef.current?.scrollTo({ x: offsetX + totalWidth, animated: false });
                 } else if (offsetX >= 2 * originalLength * ITEM_SIZE) {
-                   scrollViewRef.current?.scrollTo({ x: offsetX - totalWidth, animated: false });
+                  scrollViewRef.current?.scrollTo({ x: offsetX - totalWidth, animated: false });
                 }
               }}
               bounces={false}
-              onScroll={Animated.event(
-                [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-                { useNativeDriver: true }
-              )}
+              onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], {
+                useNativeDriver: true,
+              })}
               scrollEventThrottle={16}
             >
-            {trendingPlaces.map((place, index) => {
-              const inputRange = [
-                (index - 1) * ITEM_SIZE,
-                index * ITEM_SIZE,
-                (index + 1) * ITEM_SIZE,
-              ];
-              const scale = scrollX.interpolate({
-                inputRange,
-                outputRange: [0.8, 1, 0.8], 
-                extrapolate: 'clamp',
-              });
-              const opacity = scrollX.interpolate({
-                inputRange,
-                outputRange: [0.3, 1, 0.3], 
-                extrapolate: 'clamp',
-              });
+              {trendingPlaces.map((place, index) => {
+                const inputRange = [
+                  (index - 1) * ITEM_SIZE,
+                  index * ITEM_SIZE,
+                  (index + 1) * ITEM_SIZE,
+                ];
+                const scale = scrollX.interpolate({
+                  inputRange,
+                  outputRange: [0.8, 1, 0.8],
+                  extrapolate: 'clamp',
+                });
+                const opacity = scrollX.interpolate({
+                  inputRange,
+                  outputRange: [0.3, 1, 0.3],
+                  extrapolate: 'clamp',
+                });
 
-              return (
-                <Animated.View
-                  key={`${place.placeId}-${index}`}
-                  style={{
-                    width: ITEM_WIDTH,
-                    marginRight: index === trendingPlaces.length - 1 ? 0 : ITEM_SPACING,
-                    transform: [
-                      { scale },
-                    ],
-                    opacity,
-                  }}
-                >
-                  <TouchableOpacity
-                    style={[styles.trendingCard, { width: ITEM_WIDTH }]}
-                    activeOpacity={0.8}
-                    onPress={() => {
-                      setSelectedPlace(place);
-                      setCurrentPhotoIndex(0);
+                return (
+                  <Animated.View
+                    key={`${place.placeId}-${index}`}
+                    style={{
+                      width: ITEM_WIDTH,
+                      marginRight: index === trendingPlaces.length - 1 ? 0 : ITEM_SPACING,
+                      transform: [{ scale }],
+                      opacity,
                     }}
                   >
-                    <View style={styles.trendingImageWrapper}>
-                      {place.photo ? (
-                        <ExpoImage
-                          source={getImageSource(place.photo)}
-                          style={styles.trendingImage}
-                          contentFit="cover"
-                          transition={300}
-                        />
-                      ) : (
-                        <View style={styles.trendingImagePlaceholder}>
-                          <Feather name="image" size={32} color="#CBD5E0" />
-                        </View>
-                      )}
-                    </View>
-                    <View style={styles.trendingInfo}>
-                      <Text style={styles.trendingTitle} numberOfLines={1}>{place.name}</Text>
-                      <View style={styles.trendingLocation}>
-                        <Feather name="map-pin" size={12} color="#A0AEC0" />
-                        <Text style={styles.trendingAddress} numberOfLines={1}>{place.address}</Text>
-                      </View>
-                      {place.rating != null && (
-                        <View style={styles.trendingFooter}>
-                          <View style={styles.trendingRatingContainer}>
-                            <Feather name="star" size={14} color="#ECC94B" />
-                            <Text style={styles.trendingRating}>{place.rating}</Text>
-                            {place.totalReviews != null && (
-                              <Text style={styles.trendingReviews}>({place.totalReviews.toLocaleString()})</Text>
-                            )}
+                    <TouchableOpacity
+                      style={[styles.trendingCard, { width: ITEM_WIDTH }]}
+                      activeOpacity={0.8}
+                      onPress={() => {
+                        setSelectedPlace(place);
+                        setCurrentPhotoIndex(0);
+                      }}
+                    >
+                      <View style={styles.trendingImageWrapper}>
+                        {place.photo ? (
+                          <ExpoImage
+                            source={getImageSource(place.photo)}
+                            style={styles.trendingImage}
+                            contentFit="cover"
+                            transition={300}
+                          />
+                        ) : (
+                          <View style={styles.trendingImagePlaceholder}>
+                            <Feather name="image" size={32} color="#CBD5E0" />
                           </View>
+                        )}
+                      </View>
+                      <View style={styles.trendingInfo}>
+                        <Text style={styles.trendingTitle} numberOfLines={1}>
+                          {place.name}
+                        </Text>
+                        <View style={styles.trendingLocation}>
+                          <Feather name="map-pin" size={12} color="#A0AEC0" />
+                          <Text style={styles.trendingAddress} numberOfLines={1}>
+                            {place.address}
+                          </Text>
                         </View>
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                </Animated.View>
-              );
-            })}
-          </Animated.ScrollView>
+                        {place.rating != null && (
+                          <View style={styles.trendingFooter}>
+                            <View style={styles.trendingRatingContainer}>
+                              <Feather name="star" size={14} color="#ECC94B" />
+                              <Text style={styles.trendingRating}>{place.rating}</Text>
+                              {place.totalReviews != null && (
+                                <Text style={styles.trendingReviews}>
+                                  ({place.totalReviews.toLocaleString()})
+                                </Text>
+                              )}
+                            </View>
+                          </View>
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  </Animated.View>
+                );
+              })}
+            </Animated.ScrollView>
           </View>
         )}
 
@@ -422,30 +431,37 @@ export default function HomeScreen() {
         ) : (
           <View style={styles.tripsList}>
             {recommendedTrips.map((trip) => (
-              <TouchableOpacity 
-                key={trip._id} 
-                style={styles.tripCard} 
-                activeOpacity={0.9} 
+              <TouchableOpacity
+                key={trip._id}
+                style={styles.tripCard}
+                activeOpacity={0.9}
                 onPress={() => handleTripPress(trip._id)}
               >
                 <ExpoImage
-                  source={getImageSource(trip.provinceImage || 'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?auto=format&fit=crop&q=80&w=800')}
+                  source={getImageSource(
+                    trip.provinceImage ||
+                      'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?auto=format&fit=crop&q=80&w=800',
+                  )}
                   style={styles.tripImage}
                   contentFit="cover"
                   transition={300}
                 />
-                
+
                 {/* Gradient-like Overlay for text legibility */}
                 <View style={styles.tripOverlay}>
                   <View style={styles.tripBadge}>
                     <Text style={styles.tripBadgeText}>{trip.totalDays} Ngày</Text>
                   </View>
-                  
+
                   <View style={styles.tripInfo}>
-                    <Text style={styles.tripTitle} numberOfLines={1}>{trip.title}</Text>
+                    <Text style={styles.tripTitle} numberOfLines={1}>
+                      {trip.title}
+                    </Text>
                     <View style={styles.tripLocationRow}>
                       <Feather name="map-pin" size={10} color="#E2E8F0" />
-                      <Text style={styles.tripLocationText} numberOfLines={1}>{trip.destination}</Text>
+                      <Text style={styles.tripLocationText} numberOfLines={1}>
+                        {trip.destination}
+                      </Text>
                     </View>
                   </View>
                 </View>
@@ -456,46 +472,75 @@ export default function HomeScreen() {
       </ScrollView>
 
       {/* Detail Modal */}
-      <Modal visible={!!selectedPlace} animationType="slide" transparent={true} onRequestClose={() => setSelectedPlace(null)}>
+      <Modal
+        visible={!!selectedPlace}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setSelectedPlace(null)}
+      >
         <View style={styles.modalOverlay}>
-          <TouchableOpacity style={styles.modalCloseArea} activeOpacity={1} onPress={() => setSelectedPlace(null)} />
+          <TouchableOpacity
+            style={styles.modalCloseArea}
+            activeOpacity={1}
+            onPress={() => setSelectedPlace(null)}
+          />
           <View style={styles.modalContent}>
             {selectedPlace && (
-              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 40 }}
+              >
                 {/* Image Gallery */}
                 <View style={styles.modalGallery}>
                   {selectedPlace.photos && selectedPlace.photos.length > 0 ? (
-                    <ScrollView 
-                      horizontal 
-                      pagingEnabled 
+                    <ScrollView
+                      horizontal
+                      pagingEnabled
                       showsHorizontalScrollIndicator={false}
                       scrollEventThrottle={16}
                       onScroll={(e) => {
                         const contentOffsetX = e.nativeEvent.contentOffset.x;
-                        const currentIndex = Math.max(0, Math.floor((contentOffsetX + width / 2) / width));
-                        if(currentPhotoIndex !== currentIndex) {
+                        const currentIndex = Math.max(
+                          0,
+                          Math.floor((contentOffsetX + width / 2) / width),
+                        );
+                        if (currentPhotoIndex !== currentIndex) {
                           setCurrentPhotoIndex(currentIndex);
                         }
                       }}
                     >
                       {selectedPlace.photos.map((photoUrl, index) => (
-                        <ExpoImage key={index} source={getImageSource(photoUrl)} style={[styles.modalImage, { width }]} contentFit="cover" />
+                        <ExpoImage
+                          key={index}
+                          source={getImageSource(photoUrl)}
+                          style={[styles.modalImage, { width }]}
+                          contentFit="cover"
+                        />
                       ))}
                     </ScrollView>
                   ) : selectedPlace.photo ? (
-                    <ExpoImage source={getImageSource(selectedPlace.photo)} style={[styles.modalImage, { width }]} contentFit="cover" />
+                    <ExpoImage
+                      source={getImageSource(selectedPlace.photo)}
+                      style={[styles.modalImage, { width }]}
+                      contentFit="cover"
+                    />
                   ) : (
                     <View style={[styles.modalImage, styles.modalImagePlaceholder, { width }]}>
                       <Feather name="image" size={48} color="#CBD5E0" />
                     </View>
                   )}
                   {/* Close button overlay */}
-                  <TouchableOpacity style={styles.modalCloseButton} onPress={() => setSelectedPlace(null)}>
+                  <TouchableOpacity
+                    style={styles.modalCloseButton}
+                    onPress={() => setSelectedPlace(null)}
+                  >
                     <Feather name="x" size={24} color="#FFF" />
                   </TouchableOpacity>
                   {selectedPlace.photos && selectedPlace.photos.length > 1 && (
                     <View style={styles.galleryBadge}>
-                      <Text style={styles.galleryBadgeText}>{currentPhotoIndex + 1}/{selectedPlace.photos.length}</Text>
+                      <Text style={styles.galleryBadgeText}>
+                        {currentPhotoIndex + 1}/{selectedPlace.photos.length}
+                      </Text>
                     </View>
                   )}
                 </View>
@@ -522,7 +567,9 @@ export default function HomeScreen() {
                         <Feather name="star" size={16} color="#FFD700" fill="#FFD700" />
                         <Text style={styles.statValue}>{selectedPlace.rating}</Text>
                         {selectedPlace.totalReviews != null && (
-                           <Text style={styles.statLabel}>({selectedPlace.totalReviews.toLocaleString()})</Text>
+                          <Text style={styles.statLabel}>
+                            ({selectedPlace.totalReviews.toLocaleString()})
+                          </Text>
                         )}
                       </View>
                     )}
@@ -536,11 +583,11 @@ export default function HomeScreen() {
 
                   {selectedPlace.types && selectedPlace.types.length > 0 && (
                     <View style={styles.modalTypesContainer}>
-                       {selectedPlace.types.slice(0, 4).map((type, idx) => (
-                         <View key={idx} style={styles.modalTypeBadge}>
-                           <Text style={styles.modalTypeText}>{type.replace(/_/g, ' ')}</Text>
-                         </View>
-                       ))}
+                      {selectedPlace.types.slice(0, 4).map((type, idx) => (
+                        <View key={idx} style={styles.modalTypeBadge}>
+                          <Text style={styles.modalTypeText}>{type.replace(/_/g, ' ')}</Text>
+                        </View>
+                      ))}
                     </View>
                   )}
 
@@ -559,7 +606,7 @@ export default function HomeScreen() {
                   )}
 
                   <View style={styles.modalDivider} />
-                  
+
                   {/* Reviews Section */}
                   <View style={styles.reviewsSection}>
                     <View style={styles.reviewsHeader}>
@@ -568,11 +615,15 @@ export default function HomeScreen() {
                         <Text style={styles.writeReviewText}>Viết đánh giá</Text>
                       </TouchableOpacity>
                     </View>
-                    
+
                     {MOCK_REVIEWS.map((review) => (
                       <View key={review.id} style={styles.reviewItem}>
                         <View style={styles.reviewUserRow}>
-                          <ExpoImage source={getImageSource(review.userAvatar)} style={styles.reviewAvatar} contentFit="cover" />
+                          <ExpoImage
+                            source={getImageSource(review.userAvatar)}
+                            style={styles.reviewAvatar}
+                            contentFit="cover"
+                          />
                           <View style={styles.reviewUserInfo}>
                             <Text style={styles.reviewUserName}>{review.userName}</Text>
                             <Text style={styles.reviewDate}>{review.date}</Text>
@@ -585,9 +636,11 @@ export default function HomeScreen() {
                         <Text style={styles.reviewContent}>{review.content}</Text>
                       </View>
                     ))}
-                    
+
                     <TouchableOpacity style={styles.viewAllReviewsButton}>
-                      <Text style={styles.viewAllReviewsText}>Xem tất cả {selectedPlace.totalReviews?.toLocaleString() || ''} đánh giá</Text>
+                      <Text style={styles.viewAllReviewsText}>
+                        Xem tất cả {selectedPlace.totalReviews?.toLocaleString() || ''} đánh giá
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -598,157 +651,203 @@ export default function HomeScreen() {
       </Modal>
 
       {/* Detail Trip Modal */}
-      <Modal visible={!!selectedTripDetail || loadingTripDetail} animationType="slide" transparent={true} onRequestClose={() => setSelectedTripDetail(null)}>
+      <Modal
+        visible={!!selectedTripDetail || loadingTripDetail}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setSelectedTripDetail(null)}
+      >
         <View style={styles.modalOverlay}>
-          <TouchableOpacity style={styles.modalCloseArea} activeOpacity={1} onPress={() => {
-            if (!loadingTripDetail) setSelectedTripDetail(null);
-          }} />
+          <TouchableOpacity
+            style={styles.modalCloseArea}
+            activeOpacity={1}
+            onPress={() => {
+              if (!loadingTripDetail) setSelectedTripDetail(null);
+            }}
+          />
           <View style={styles.modalContent}>
             {loadingTripDetail ? (
               <View style={{ padding: 40, alignItems: 'center' }}>
                 <ActivityIndicator size="large" color="#4A7CFF" />
-                <Text style={{ marginTop: 16, color: '#718096', fontWeight: '500' }}>Đang tải lịch trình...</Text>
+                <Text style={{ marginTop: 16, color: '#718096', fontWeight: '500' }}>
+                  Đang tải lịch trình...
+                </Text>
               </View>
-            ) : selectedTripDetail && (
-              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-                {/* Header Image */}
-                <View style={[styles.modalGallery, { height: 260 }]}>
-                  <ExpoImage source={getImageSource(selectedTripDetail.trip.provinceImage || 'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?auto=format&fit=crop&q=80&w=800')} style={[styles.modalImage, { width, height: 260 }]} contentFit="cover" />
-                  <TouchableOpacity style={styles.modalCloseButton} onPress={() => setSelectedTripDetail(null)}>
-                    <Feather name="x" size={24} color="#FFF" />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Body Details */}
-                <View style={[styles.modalInfoContent, { paddingTop: 28 }]}>
-                  <View style={styles.tripDetailHeader}>
-                    <Text style={styles.tripDetailTitle}>{selectedTripDetail.trip.title}</Text>
-                    <View style={styles.tripDetailMeta}>
-                      <View style={styles.metaBadge}>
-                        <Feather name="map-pin" size={12} color="#4A7CFF" />
-                        <Text style={styles.metaBadgeText}>{selectedTripDetail.trip.destination}</Text>
-                      </View>
-                      <View style={[styles.metaBadge, { backgroundColor: '#FFF5F5' }]}>
-                        <Feather name="clock" size={12} color="#FF4D4D" />
-                        <Text style={[styles.metaBadgeText, { color: '#FF4D4D' }]}>{selectedTripDetail.trip.totalDays} Ngày</Text>
-                      </View>
-                    </View>
-                  </View>
-                  
-                  <View style={styles.modalSection}>
-                    <View style={styles.sectionHeaderRow}>
-                      <View style={styles.sectionIconBox}>
-                        <Feather name="align-left" size={16} color="#4A7CFF" />
-                      </View>
-                      <Text style={styles.modalSectionTitle}>Giới thiệu</Text>
-                    </View>
-                    <Text style={styles.modalSectionText}>
-                      {selectedTripDetail.trip.description || 'Khám phá hành trình tuyệt vời này với những trải nghiệm thú vị và điểm đến độc đáo.'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.modalDivider} />
-
-                  {/* Plan Itinerary */}
-                  <View style={styles.modalSection}>
-                    <View style={styles.sectionHeaderRow}>
-                      <View style={styles.sectionIconBox}>
-                        <Feather name="calendar" size={16} color="#4A7CFF" />
-                      </View>
-                      <Text style={styles.modalSectionTitle}>Lịch trình chi tiết</Text>
-                    </View>
-                    
-                    {selectedTripDetail.days.length === 0 ? (
-                      <View style={styles.emptyStateContainer}>
-                        <Feather name="info" size={24} color="#A0AEC0" />
-                        <Text style={styles.emptyStateText}>Chưa có lịch trình cụ thể.</Text>
-                      </View>
-                    ) : (
-                      <View style={styles.timelineContainer}>
-                        {selectedTripDetail.days.map((dayPlan, index) => (
-                          <View key={index} style={styles.timelineItem}>
-                            <View style={styles.timelineLeft}>
-                              <View style={styles.timelineDot} />
-                              {index < selectedTripDetail.days.length - 1 && <View style={styles.timelineLine} />}
-                            </View>
-                            <View style={styles.timelineRight}>
-                              <View style={styles.dayCard}>
-                                <View style={styles.dayCardHeader}>
-                                  <Text style={styles.dayNumberText}>NGÀY {dayPlan.day}</Text>
-                                  <Text style={styles.dayStatusText}>
-                                    {dayPlan.places && dayPlan.places.length > 0 ? `${dayPlan.places.length} địa điểm` : 'Ngày tự do'}
-                                  </Text>
-                                </View>
-                                {dayPlan.places && dayPlan.places.length > 0 && (
-                                  <View style={styles.dayPlacesList}>
-                                    {dayPlan.places.map((p, pIdx) => (
-                                      <View key={pIdx} style={pIdx === 0 ? styles.firstPlaceItem : styles.placeItem}>
-                                        <View style={styles.placeDot} />
-                                        <Text style={styles.placeNameText}>{p.name || 'Địa điểm tham quan'}</Text>
-                                      </View>
-                                    ))}
-                                  </View>
-                                )}
-                              </View>
-                            </View>
-                          </View>
-                        ))}
-                      </View>
-                    )}
-                  </View>
-
-                  <View style={styles.modalDivider} />
-
-                  {/* Trip Reviews Section */}
-                  <View style={styles.reviewsSection}>
-                    <View style={styles.reviewsHeader}>
-                      <Text style={styles.reviewsTitle}>Đánh giá lịch trình</Text>
-                      <View style={styles.tripRatingSummary}>
-                        <Feather name="star" size={14} color="#ECC94B" fill="#ECC94B" />
-                        <Text style={styles.tripRatingScore}>5.0</Text>
-                        <Text style={styles.tripRatingCount}>(24)</Text>
-                      </View>
-                    </View>
-                    
-                    {MOCK_TRIP_REVIEWS.map((review) => (
-                      <View key={review.id} style={styles.reviewItem}>
-                        <View style={styles.reviewUserRow}>
-                          <ExpoImage source={getImageSource(review.userAvatar)} style={styles.reviewAvatar} contentFit="cover" />
-                          <View style={styles.reviewUserInfo}>
-                            <Text style={styles.reviewUserName}>{review.userName}</Text>
-                            <Text style={styles.reviewDate}>{review.date}</Text>
-                          </View>
-                          <View style={styles.reviewRatingBadge}>
-                            <Feather name="star" size={10} color="#FFF" fill="#FFF" />
-                            <Text style={styles.reviewRatingText}>{review.rating}</Text>
-                          </View>
-                        </View>
-                        <Text style={styles.reviewContent}>{review.content}</Text>
-                      </View>
-                    ))}
-                    
-                    <TouchableOpacity style={styles.viewAllReviewsButton}>
-                      <Text style={styles.viewAllReviewsText}>Xem tất cả đánh giá</Text>
+            ) : (
+              selectedTripDetail && (
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={{ paddingBottom: 40 }}
+                >
+                  {/* Header Image */}
+                  <View style={[styles.modalGallery, { height: 260 }]}>
+                    <ExpoImage
+                      source={getImageSource(
+                        selectedTripDetail.trip.provinceImage ||
+                          'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?auto=format&fit=crop&q=80&w=800',
+                      )}
+                      style={[styles.modalImage, { width, height: 260 }]}
+                      contentFit="cover"
+                    />
+                    <TouchableOpacity
+                      style={styles.modalCloseButton}
+                      onPress={() => setSelectedTripDetail(null)}
+                    >
+                      <Feather name="x" size={24} color="#FFF" />
                     </TouchableOpacity>
                   </View>
-                </View>
-              </ScrollView>
+
+                  {/* Body Details */}
+                  <View style={[styles.modalInfoContent, { paddingTop: 28 }]}>
+                    <View style={styles.tripDetailHeader}>
+                      <Text style={styles.tripDetailTitle}>{selectedTripDetail.trip.title}</Text>
+                      <View style={styles.tripDetailMeta}>
+                        <View style={styles.metaBadge}>
+                          <Feather name="map-pin" size={12} color="#4A7CFF" />
+                          <Text style={styles.metaBadgeText}>
+                            {selectedTripDetail.trip.destination}
+                          </Text>
+                        </View>
+                        <View style={[styles.metaBadge, { backgroundColor: '#FFF5F5' }]}>
+                          <Feather name="clock" size={12} color="#FF4D4D" />
+                          <Text style={[styles.metaBadgeText, { color: '#FF4D4D' }]}>
+                            {selectedTripDetail.trip.totalDays} Ngày
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    <View style={styles.modalSection}>
+                      <View style={styles.sectionHeaderRow}>
+                        <View style={styles.sectionIconBox}>
+                          <Feather name="align-left" size={16} color="#4A7CFF" />
+                        </View>
+                        <Text style={styles.modalSectionTitle}>Giới thiệu</Text>
+                      </View>
+                      <Text style={styles.modalSectionText}>
+                        {selectedTripDetail.trip.description ||
+                          'Khám phá hành trình tuyệt vời này với những trải nghiệm thú vị và điểm đến độc đáo.'}
+                      </Text>
+                    </View>
+
+                    <View style={styles.modalDivider} />
+
+                    {/* Plan Itinerary */}
+                    <View style={styles.modalSection}>
+                      <View style={styles.sectionHeaderRow}>
+                        <View style={styles.sectionIconBox}>
+                          <Feather name="calendar" size={16} color="#4A7CFF" />
+                        </View>
+                        <Text style={styles.modalSectionTitle}>Lịch trình chi tiết</Text>
+                      </View>
+
+                      {selectedTripDetail.days.length === 0 ? (
+                        <View style={styles.emptyStateContainer}>
+                          <Feather name="info" size={24} color="#A0AEC0" />
+                          <Text style={styles.emptyStateText}>Chưa có lịch trình cụ thể.</Text>
+                        </View>
+                      ) : (
+                        <View style={styles.timelineContainer}>
+                          {selectedTripDetail.days.map((dayPlan, index) => (
+                            <View key={index} style={styles.timelineItem}>
+                              <View style={styles.timelineLeft}>
+                                <View style={styles.timelineDot} />
+                                {index < selectedTripDetail.days.length - 1 && (
+                                  <View style={styles.timelineLine} />
+                                )}
+                              </View>
+                              <View style={styles.timelineRight}>
+                                <View style={styles.dayCard}>
+                                  <View style={styles.dayCardHeader}>
+                                    <Text style={styles.dayNumberText}>NGÀY {dayPlan.day}</Text>
+                                    <Text style={styles.dayStatusText}>
+                                      {dayPlan.places && dayPlan.places.length > 0
+                                        ? `${dayPlan.places.length} địa điểm`
+                                        : 'Ngày tự do'}
+                                    </Text>
+                                  </View>
+                                  {dayPlan.places && dayPlan.places.length > 0 && (
+                                    <View style={styles.dayPlacesList}>
+                                      {dayPlan.places.map((p, pIdx) => (
+                                        <View
+                                          key={pIdx}
+                                          style={
+                                            pIdx === 0 ? styles.firstPlaceItem : styles.placeItem
+                                          }
+                                        >
+                                          <View style={styles.placeDot} />
+                                          <Text style={styles.placeNameText}>
+                                            {p.name || 'Địa điểm tham quan'}
+                                          </Text>
+                                        </View>
+                                      ))}
+                                    </View>
+                                  )}
+                                </View>
+                              </View>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+
+                    <View style={styles.modalDivider} />
+
+                    {/* Trip Reviews Section */}
+                    <View style={styles.reviewsSection}>
+                      <View style={styles.reviewsHeader}>
+                        <Text style={styles.reviewsTitle}>Đánh giá lịch trình</Text>
+                        <View style={styles.tripRatingSummary}>
+                          <Feather name="star" size={14} color="#ECC94B" fill="#ECC94B" />
+                          <Text style={styles.tripRatingScore}>5.0</Text>
+                          <Text style={styles.tripRatingCount}>(24)</Text>
+                        </View>
+                      </View>
+
+                      {MOCK_TRIP_REVIEWS.map((review) => (
+                        <View key={review.id} style={styles.reviewItem}>
+                          <View style={styles.reviewUserRow}>
+                            <ExpoImage
+                              source={getImageSource(review.userAvatar)}
+                              style={styles.reviewAvatar}
+                              contentFit="cover"
+                            />
+                            <View style={styles.reviewUserInfo}>
+                              <Text style={styles.reviewUserName}>{review.userName}</Text>
+                              <Text style={styles.reviewDate}>{review.date}</Text>
+                            </View>
+                            <View style={styles.reviewRatingBadge}>
+                              <Feather name="star" size={10} color="#FFF" fill="#FFF" />
+                              <Text style={styles.reviewRatingText}>{review.rating}</Text>
+                            </View>
+                          </View>
+                          <Text style={styles.reviewContent}>{review.content}</Text>
+                        </View>
+                      ))}
+
+                      <TouchableOpacity style={styles.viewAllReviewsButton}>
+                        <Text style={styles.viewAllReviewsText}>Xem tất cả đánh giá</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </ScrollView>
+              )
             )}
           </View>
         </View>
       </Modal>
 
       {/* Search Modal */}
-      <Modal 
-        visible={isSearchModalVisible} 
-        animationType="fade" 
+      <Modal
+        visible={isSearchModalVisible}
+        animationType="fade"
         transparent={false}
         onRequestClose={() => setIsSearchModalVisible(false)}
       >
         <SafeAreaView style={{ flex: 1, backgroundColor: '#FAFBFC' }}>
           <View style={styles.searchModalHeader}>
-            <TouchableOpacity 
-              style={styles.searchModalBack} 
+            <TouchableOpacity
+              style={styles.searchModalBack}
               onPress={() => {
                 setIsSearchModalVisible(false);
                 setSearchQuery('');
@@ -786,7 +885,7 @@ export default function HomeScreen() {
               keyExtractor={(item) => item.placeId}
               contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
               renderItem={({ item }) => (
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.searchResultCard}
                   activeOpacity={0.8}
                   onPress={() => {
@@ -794,16 +893,20 @@ export default function HomeScreen() {
                     setSelectedPlace(item);
                   }}
                 >
-                  <ExpoImage 
-                    source={getImageSource(item.photo)} 
-                    style={styles.searchResultImage} 
+                  <ExpoImage
+                    source={getImageSource(item.photo)}
+                    style={styles.searchResultImage}
                     contentFit="cover"
                   />
                   <View style={styles.searchResultInfo}>
-                    <Text style={styles.searchResultName} numberOfLines={1}>{item.name}</Text>
+                    <Text style={styles.searchResultName} numberOfLines={1}>
+                      {item.name}
+                    </Text>
                     <View style={styles.searchResultLocation}>
                       <Feather name="map-pin" size={12} color="#A0AEC0" />
-                      <Text style={styles.searchResultAddress} numberOfLines={1}>{item.address}</Text>
+                      <Text style={styles.searchResultAddress} numberOfLines={1}>
+                        {item.address}
+                      </Text>
                     </View>
                     <View style={styles.searchResultFooter}>
                       <View style={styles.searchResultRating}>
@@ -870,7 +973,12 @@ export default function HomeScreen() {
                     style={[styles.notifItem, !item.isRead && styles.notifItemUnread]}
                     onPress={() => handleNotifPress(item)}
                   >
-                    <View style={[styles.notifIcon, { backgroundColor: item.isRead ? '#F7FAFC' : '#EBF8FF' }]}>
+                    <View
+                      style={[
+                        styles.notifIcon,
+                        { backgroundColor: item.isRead ? '#F7FAFC' : '#EBF8FF' },
+                      ]}
+                    >
                       <Feather
                         name={item.type === 'promotion' ? 'tag' : 'bell'}
                         size={18}
@@ -908,29 +1016,30 @@ export default function HomeScreen() {
           <View style={styles.detailNotifContent}>
             <View style={styles.detailNotifHeader}>
               <View style={[styles.notifIcon, { backgroundColor: '#EBF8FF', marginBottom: 0 }]}>
-                 <Feather 
-                  name={selectedNotifForDetail?.type === 'promotion' ? 'tag' : 'bell'} 
-                  size={24} 
-                  color="#4299E1" 
+                <Feather
+                  name={selectedNotifForDetail?.type === 'promotion' ? 'tag' : 'bell'}
+                  size={24}
+                  color="#4299E1"
                 />
               </View>
               <TouchableOpacity onPress={() => setSelectedNotifForDetail(null)}>
                 <Feather name="x" size={20} color="#CBD5E0" />
               </TouchableOpacity>
             </View>
-            
+
             <Text style={styles.detailNotifTitle}>{selectedNotifForDetail?.title}</Text>
             <Text style={styles.detailNotifTime}>
-              {selectedNotifForDetail && new Date(selectedNotifForDetail.createdAt).toLocaleString('vi-VN')}
+              {selectedNotifForDetail &&
+                new Date(selectedNotifForDetail.createdAt).toLocaleString('vi-VN')}
             </Text>
-            
+
             <View style={styles.detailNotifDivider} />
-            
+
             <ScrollView style={{ maxHeight: 200 }}>
               <Text style={styles.detailNotifMessage}>{selectedNotifForDetail?.message}</Text>
             </ScrollView>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.detailNotifButton}
               onPress={() => setSelectedNotifForDetail(null)}
             >
@@ -939,7 +1048,6 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
-
     </SafeAreaView>
   );
 }
@@ -1010,7 +1118,13 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   bannerTitle: { fontSize: 24, fontWeight: '800', color: '#FFFFFF', marginBottom: 8 },
-  bannerSubtitle: { fontSize: 14, color: '#FFFFFF', marginBottom: 16, lineHeight: 20, fontWeight: '500' },
+  bannerSubtitle: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    marginBottom: 16,
+    lineHeight: 20,
+    fontWeight: '500',
+  },
   bannerButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1048,7 +1162,7 @@ const styles = StyleSheet.create({
     elevation: 8,
     marginVertical: 10,
   },
-  
+
   // Recommended Plans
   tripsList: {
     flexDirection: 'row',
@@ -1523,7 +1637,7 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: 90, 
+    bottom: 90,
     right: 20,
     width: 60,
     height: 60,
@@ -1635,18 +1749,18 @@ const styles = StyleSheet.create({
 
   // Reviews Styles
   reviewsSection: { marginTop: 8 },
-  reviewsHeader: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    marginBottom: 20 
+  reviewsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   reviewsTitle: { fontSize: 18, fontWeight: '700', color: '#1A2B4A' },
   writeReviewText: { fontSize: 14, color: '#4A7CFF', fontWeight: '600' },
-  reviewItem: { 
-    backgroundColor: '#F8FAFC', 
-    borderRadius: 16, 
-    padding: 16, 
+  reviewItem: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 16,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: '#EDF2F7',
@@ -1656,20 +1770,20 @@ const styles = StyleSheet.create({
   reviewUserInfo: { flex: 1 },
   reviewUserName: { fontSize: 14, fontWeight: '600', color: '#1A2B4A' },
   reviewDate: { fontSize: 12, color: '#A0AEC0' },
-  reviewRatingBadge: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: 4, 
-    backgroundColor: '#ECC94B', 
-    paddingHorizontal: 8, 
-    paddingVertical: 4, 
-    borderRadius: 8 
+  reviewRatingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#ECC94B',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   reviewRatingText: { fontSize: 12, fontWeight: '700', color: '#FFF' },
   reviewContent: { fontSize: 14, color: '#4A5568', lineHeight: 20 },
   viewAllReviewsButton: { alignItems: 'center', paddingVertical: 12, marginTop: 8 },
   viewAllReviewsText: { fontSize: 14, color: '#718096', fontWeight: '600' },
-  
+
   tripRatingSummary: {
     flexDirection: 'row',
     alignItems: 'center',

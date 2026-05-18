@@ -39,16 +39,14 @@ export const placesService = {
    * GET /api/places/text?q=vui choi&q=phu quoc&limit=50&photoLimit=5
    */
   searchTrending: async (
-    queries: string[] = ['núi bà đen', 'hồ tuyền lâm', 'bãi sau', 'chùa bửu long', 'khu du lịch']
+    queries: string[] = ['biển', 'sài gòn', 'chùa bửu long', 'khu du lịch'],
   ): Promise<Place[]> => {
     try {
-      const qs = queries
-        .map((item) => `q=${encodeURIComponent(item)}`)
-        .join('&');
-      const url = `${ENDPOINTS.PLACES.TEXT_SEARCH}?${qs}`;
+      const qs = queries.map((item) => `q=${encodeURIComponent(item)}`).join('&');
+      const url = `${ENDPOINTS.PLACES.SEARCH}?${qs}`;
 
       console.log('🔵 Trending API URL:', url);
-      const response = await axiosClient.get<any, PlacesResponse>(url);
+      const response = await axiosClient.get<any, SearchResponse>(url);
 
       return response?.places ?? [];
     } catch {
@@ -56,53 +54,56 @@ export const placesService = {
       // Fallback data
       return [
         {
-          placeId: "mock_phuquoc",
-          name: "Phú Quốc (Mock Data)",
-          address: "Phú Quốc, Kiên Giang, Việt Nam",
+          placeId: 'mock_phuquoc',
+          name: 'Phú Quốc (Mock Data)',
+          address: 'Phú Quốc, Kiên Giang, Việt Nam',
           latitude: 10.289879,
           longitude: 103.98402,
           rating: 4.8,
           totalReviews: 6028,
-          types: ["island", "natural_feature"],
-          mapUrl: "https://maps.google.com/?cid=624445620472982747",
-          photo: "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?auto=format&fit=crop&q=80&w=800",
+          types: ['island', 'natural_feature'],
+          mapUrl: 'https://maps.google.com/?cid=624445620472982747',
+          photo:
+            'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?auto=format&fit=crop&q=80&w=800',
           photos: [
-            "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?auto=format&fit=crop&q=80&w=800",
-            "https://images.unsplash.com/photo-1596422846543-74c6e27a01d8?auto=format&fit=crop&q=80&w=800"
-          ]
+            'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?auto=format&fit=crop&q=80&w=800',
+            'https://images.unsplash.com/photo-1596422846543-74c6e27a01d8?auto=format&fit=crop&q=80&w=800',
+          ],
         },
         {
-          placeId: "mock_nhatrang",
-          name: "Nha Trang (Mock Data)",
-          address: "Nha Trang, Khánh Hòa, Việt Nam",
+          placeId: 'mock_nhatrang',
+          name: 'Nha Trang (Mock Data)',
+          address: 'Nha Trang, Khánh Hòa, Việt Nam',
           latitude: 12.238791,
           longitude: 109.196749,
           rating: 4.6,
           totalReviews: 4520,
-          types: ["city", "point_of_interest"],
-          mapUrl: "https://maps.google.com/?cid=12345",
-          photo: "https://images.unsplash.com/photo-1583417319070-4a69db38a482?auto=format&fit=crop&q=80&w=800",
+          types: ['city', 'point_of_interest'],
+          mapUrl: 'https://maps.google.com/?cid=12345',
+          photo:
+            'https://images.unsplash.com/photo-1583417319070-4a69db38a482?auto=format&fit=crop&q=80&w=800',
           photos: [
-            "https://images.unsplash.com/photo-1583417319070-4a69db38a482?auto=format&fit=crop&q=80&w=800",
-            "https://images.unsplash.com/photo-1583417319070-4a69db38a482?auto=format&fit=crop&q=80&w=800"
-          ]
+            'https://images.unsplash.com/photo-1583417319070-4a69db38a482?auto=format&fit=crop&q=80&w=800',
+            'https://images.unsplash.com/photo-1583417319070-4a69db38a482?auto=format&fit=crop&q=80&w=800',
+          ],
         },
         {
-          placeId: "mock_vungtau",
-          name: "Vũng Tàu (Mock Data)",
-          address: "Vũng Tàu, Bà Rịa - Vũng Tàu, Việt Nam",
+          placeId: 'mock_vungtau',
+          name: 'Vũng Tàu (Mock Data)',
+          address: 'Vũng Tàu, Bà Rịa - Vũng Tàu, Việt Nam',
           latitude: 10.34599,
           longitude: 107.08426,
           rating: 4.5,
           totalReviews: 8320,
-          types: ["city", "point_of_interest"],
-          mapUrl: "https://maps.google.com/?cid=123456",
-          photo: "https://images.unsplash.com/photo-1583417319070-4a69db38a482?auto=format&fit=crop&q=80&w=800",
+          types: ['city', 'point_of_interest'],
+          mapUrl: 'https://maps.google.com/?cid=123456',
+          photo:
+            'https://images.unsplash.com/photo-1583417319070-4a69db38a482?auto=format&fit=crop&q=80&w=800',
           photos: [
-            "https://images.unsplash.com/photo-1583417319070-4a69db38a482?auto=format&fit=crop&q=80&w=800",
-            "https://images.unsplash.com/photo-1583417319070-4a69db38a482?auto=format&fit=crop&q=80&w=800"
-          ]
-        }
+            'https://images.unsplash.com/photo-1583417319070-4a69db38a482?auto=format&fit=crop&q=80&w=800',
+            'https://images.unsplash.com/photo-1583417319070-4a69db38a482?auto=format&fit=crop&q=80&w=800',
+          ],
+        },
       ];
     }
   },
@@ -112,10 +113,9 @@ export const placesService = {
    * GET /api/places/search?q=cafe dalat
    */
   search: async (query: string): Promise<Place[]> => {
-    const response = await axiosClient.get<any, SearchResponse>(
-      ENDPOINTS.PLACES.SEARCH,
-      { params: { q: query } }
-    );
+    const response = await axiosClient.get<any, SearchResponse>(ENDPOINTS.PLACES.SEARCH, {
+      params: { q: query },
+    });
     return response?.places ?? [];
   },
 
@@ -130,10 +130,9 @@ export const placesService = {
     type?: string;
   }): Promise<Place[]> => {
     try {
-      const response = await axiosClient.get<any, NearbyResponse>(
-        ENDPOINTS.PLACES.NEARBY,
-        { params }
-      );
+      const response = await axiosClient.get<any, NearbyResponse>(ENDPOINTS.PLACES.NEARBY, {
+        params,
+      });
       return response?.places ?? [];
     } catch (error) {
       console.error('Error searching nearby places:', error);
@@ -155,10 +154,9 @@ export const placesService = {
     photoLimit?: number;
   }): Promise<Place[]> => {
     try {
-      const response = await axiosClient.get<any, PlacesResponse>(
-        ENDPOINTS.PLACES.TEXT_SEARCH,
-        { params }
-      );
+      const response = await axiosClient.get<any, PlacesResponse>(ENDPOINTS.PLACES.TEXT_SEARCH, {
+        params,
+      });
       return response?.places ?? [];
     } catch (error) {
       console.error('Error searching text places:', error);

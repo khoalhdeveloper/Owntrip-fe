@@ -1,11 +1,5 @@
 import React, { useState, useRef } from 'react';
-import {
-  View,
-  StyleSheet,
-  Animated,
-  PanResponder,
-  Dimensions,
-} from 'react-native';
+import { View, StyleSheet, Animated, PanResponder, Dimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import ChatbotModal from './ChatbotModal';
 import { useChatbotSetting } from '../context/ChatbotSettingContext';
@@ -17,10 +11,12 @@ export default function DraggableChatbot() {
   const { aiButtonEnabled } = useChatbotSetting();
   const [modalVisible, setModalVisible] = useState(false);
 
-  const pos = useRef(new Animated.ValueXY({
-    x: SCREEN_WIDTH - BTN_SIZE - 20,
-    y: SCREEN_HEIGHT - BTN_SIZE - 100,
-  })).current;
+  const pos = useRef(
+    new Animated.ValueXY({
+      x: SCREEN_WIDTH - BTN_SIZE - 20,
+      y: SCREEN_HEIGHT - BTN_SIZE - 100,
+    }),
+  ).current;
 
   const currentPos = useRef({
     x: SCREEN_WIDTH - BTN_SIZE - 20,
@@ -46,13 +42,19 @@ export default function DraggableChatbot() {
         }
 
         const newX = Math.max(0, Math.min(SCREEN_WIDTH - BTN_SIZE, currentPos.current.x + g.dx));
-        const newY = Math.max(60, Math.min(SCREEN_HEIGHT - BTN_SIZE - 80, currentPos.current.y + g.dy));
+        const newY = Math.max(
+          60,
+          Math.min(SCREEN_HEIGHT - BTN_SIZE - 80, currentPos.current.y + g.dy),
+        );
         pos.setValue({ x: newX, y: newY });
       },
 
       onPanResponderRelease: (_, g) => {
         const finalX = Math.max(0, Math.min(SCREEN_WIDTH - BTN_SIZE, currentPos.current.x + g.dx));
-        const finalY = Math.max(60, Math.min(SCREEN_HEIGHT - BTN_SIZE - 80, currentPos.current.y + g.dy));
+        const finalY = Math.max(
+          60,
+          Math.min(SCREEN_HEIGHT - BTN_SIZE - 80, currentPos.current.y + g.dy),
+        );
         currentPos.current = { x: finalX, y: finalY };
 
         // Nếu không kéo → coi là tap → mở modal
@@ -60,7 +62,7 @@ export default function DraggableChatbot() {
           setModalVisible(true);
         }
       },
-    })
+    }),
   ).current;
 
   if (!aiButtonEnabled) return null;
@@ -68,19 +70,13 @@ export default function DraggableChatbot() {
   return (
     <>
       <Animated.View
-        style={[
-          styles.fab,
-          { transform: pos.getTranslateTransform() },
-        ]}
+        style={[styles.fab, { transform: pos.getTranslateTransform() }]}
         {...panResponder.panHandlers}
       >
         <Feather name="message-square" size={24} color="#FFF" />
       </Animated.View>
 
-      <ChatbotModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-      />
+      <ChatbotModal visible={modalVisible} onClose={() => setModalVisible(false)} />
     </>
   );
 }

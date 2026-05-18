@@ -15,10 +15,10 @@ export const chatbotService = {
       if (response && response.success) {
         return response.reply;
       }
-      return "Xin lỗi, tôi không thể trả lời lúc này.";
+      return 'Xin lỗi, tôi không thể trả lời lúc này.';
     } catch (error) {
       console.error('Error in chatbot:', error);
-      return "Xin lỗi, có lỗi xảy ra kết nối với máy chủ.";
+      return 'Xin lỗi, có lỗi xảy ra kết nối với máy chủ.';
     }
   },
 };

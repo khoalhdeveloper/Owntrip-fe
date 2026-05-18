@@ -38,32 +38,52 @@ function getSuggestedPlaces(destination: string): Place[] {
   if (lower.includes('vung tau') || lower.includes('vũng tàu') || lower.includes('ba ria')) {
     return [
       {
-        placeId: 'suggest_vt_1', name: 'Bãi Sau - Long Beach',
+        placeId: 'suggest_vt_1',
+        name: 'Bãi Sau - Long Beach',
         address: 'Thùy Vân, Phường 2, Vũng Tàu',
-        latitude: 10.3365, longitude: 107.0903, rating: 4.5,
-        types: ['beach'], mapUrl: 'https://maps.google.com/?cid=1',
-        photo: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=200&h=200&fit=crop', photos: [],
+        latitude: 10.3365,
+        longitude: 107.0903,
+        rating: 4.5,
+        types: ['beach'],
+        mapUrl: 'https://maps.google.com/?cid=1',
+        photo: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=200&h=200&fit=crop',
+        photos: [],
       },
       {
-        placeId: 'suggest_vt_2', name: 'Tượng Chúa Kitô Vũng Tàu',
+        placeId: 'suggest_vt_2',
+        name: 'Tượng Chúa Kitô Vũng Tàu',
         address: '01 Hạ Long, Phường 1, Vũng Tàu',
-        latitude: 10.3271, longitude: 107.0952, rating: 4.7,
-        types: ['landmark'], mapUrl: 'https://maps.google.com/?cid=2',
-        photo: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=200&h=200&fit=crop', photos: [],
+        latitude: 10.3271,
+        longitude: 107.0952,
+        rating: 4.7,
+        types: ['landmark'],
+        mapUrl: 'https://maps.google.com/?cid=2',
+        photo: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=200&h=200&fit=crop',
+        photos: [],
       },
       {
-        placeId: 'suggest_vt_3', name: 'Hải Đăng Vũng Tàu',
+        placeId: 'suggest_vt_3',
+        name: 'Hải Đăng Vũng Tàu',
         address: 'Hải Đăng, Phường 2, Vũng Tàu',
-        latitude: 10.3288, longitude: 107.0844, rating: 4.4,
-        types: ['lighthouse'], mapUrl: 'https://maps.google.com/?cid=3',
-        photo: 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=200&h=200&fit=crop', photos: [],
+        latitude: 10.3288,
+        longitude: 107.0844,
+        rating: 4.4,
+        types: ['lighthouse'],
+        mapUrl: 'https://maps.google.com/?cid=3',
+        photo: 'https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=200&h=200&fit=crop',
+        photos: [],
       },
       {
-        placeId: 'suggest_vt_4', name: 'Bạch Dinh - White Palace',
+        placeId: 'suggest_vt_4',
+        name: 'Bạch Dinh - White Palace',
         address: 'Trần Phú, Phường 1, Vũng Tàu',
-        latitude: 10.3310, longitude: 107.0780, rating: 4.3,
-        types: ['museum'], mapUrl: 'https://maps.google.com/?cid=4',
-        photo: 'https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=200&h=200&fit=crop', photos: [],
+        latitude: 10.331,
+        longitude: 107.078,
+        rating: 4.3,
+        types: ['museum'],
+        mapUrl: 'https://maps.google.com/?cid=4',
+        photo: 'https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=200&h=200&fit=crop',
+        photos: [],
       },
     ];
   }
@@ -71,32 +91,52 @@ function getSuggestedPlaces(destination: string): Place[] {
   if (lower.includes('ha noi') || lower.includes('hà nội')) {
     return [
       {
-        placeId: 'suggest_hn_1', name: 'Hồ Hoàn Kiếm',
+        placeId: 'suggest_hn_1',
+        name: 'Hồ Hoàn Kiếm',
         address: 'Phố Đinh Tiên Hoàng, Hoàn Kiếm, Hà Nội',
-        latitude: 21.0285, longitude: 105.8542, rating: 4.7,
-        types: ['lake'], mapUrl: 'https://maps.google.com/?cid=10',
-        photo: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=200&h=200&fit=crop', photos: [],
+        latitude: 21.0285,
+        longitude: 105.8542,
+        rating: 4.7,
+        types: ['lake'],
+        mapUrl: 'https://maps.google.com/?cid=10',
+        photo: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=200&h=200&fit=crop',
+        photos: [],
       },
       {
-        placeId: 'suggest_hn_2', name: 'Phố Cổ Hà Nội',
+        placeId: 'suggest_hn_2',
+        name: 'Phố Cổ Hà Nội',
         address: 'Hoàn Kiếm, Hà Nội',
-        latitude: 21.0340, longitude: 105.8500, rating: 4.6,
-        types: ['neighborhood'], mapUrl: 'https://maps.google.com/?cid=11',
-        photo: 'https://images.unsplash.com/photo-1509030450996-dd1a26dda07a?w=200&h=200&fit=crop', photos: [],
+        latitude: 21.034,
+        longitude: 105.85,
+        rating: 4.6,
+        types: ['neighborhood'],
+        mapUrl: 'https://maps.google.com/?cid=11',
+        photo: 'https://images.unsplash.com/photo-1509030450996-dd1a26dda07a?w=200&h=200&fit=crop',
+        photos: [],
       },
       {
-        placeId: 'suggest_hn_3', name: 'Văn Miếu - Quốc Tử Giám',
+        placeId: 'suggest_hn_3',
+        name: 'Văn Miếu - Quốc Tử Giám',
         address: '58 Quốc Tử Giám, Đống Đa, Hà Nội',
-        latitude: 21.0277, longitude: 105.8355, rating: 4.5,
-        types: ['temple'], mapUrl: 'https://maps.google.com/?cid=12',
-        photo: 'https://images.unsplash.com/photo-1555921015-5532091f6026?w=200&h=200&fit=crop', photos: [],
+        latitude: 21.0277,
+        longitude: 105.8355,
+        rating: 4.5,
+        types: ['temple'],
+        mapUrl: 'https://maps.google.com/?cid=12',
+        photo: 'https://images.unsplash.com/photo-1555921015-5532091f6026?w=200&h=200&fit=crop',
+        photos: [],
       },
       {
-        placeId: 'suggest_hn_4', name: 'Lăng Chủ tịch Hồ Chí Minh',
+        placeId: 'suggest_hn_4',
+        name: 'Lăng Chủ tịch Hồ Chí Minh',
         address: '2 Hùng Vương, Ba Đình, Hà Nội',
-        latitude: 21.0368, longitude: 105.8344, rating: 4.8,
-        types: ['landmark'], mapUrl: 'https://maps.google.com/?cid=13',
-        photo: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=200&h=200&fit=crop', photos: [],
+        latitude: 21.0368,
+        longitude: 105.8344,
+        rating: 4.8,
+        types: ['landmark'],
+        mapUrl: 'https://maps.google.com/?cid=13',
+        photo: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=200&h=200&fit=crop',
+        photos: [],
       },
     ];
   }
@@ -104,25 +144,40 @@ function getSuggestedPlaces(destination: string): Place[] {
   // Default
   return [
     {
-      placeId: 'suggest_default_1', name: 'Chợ Bến Thành',
+      placeId: 'suggest_default_1',
+      name: 'Chợ Bến Thành',
       address: 'Lê Lợi, Quận 1, TP. Hồ Chí Minh',
-      latitude: 10.7721, longitude: 106.6980, rating: 4.4,
-      types: ['market'], mapUrl: 'https://maps.google.com/?cid=20',
-      photo: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=200&h=200&fit=crop', photos: [],
+      latitude: 10.7721,
+      longitude: 106.698,
+      rating: 4.4,
+      types: ['market'],
+      mapUrl: 'https://maps.google.com/?cid=20',
+      photo: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=200&h=200&fit=crop',
+      photos: [],
     },
     {
-      placeId: 'suggest_default_2', name: 'Nhà thờ Đức Bà',
+      placeId: 'suggest_default_2',
+      name: 'Nhà thờ Đức Bà',
       address: '01 Công xã Paris, Quận 1, TP. Hồ Chí Minh',
-      latitude: 10.7797, longitude: 106.6990, rating: 4.6,
-      types: ['church'], mapUrl: 'https://maps.google.com/?cid=21',
-      photo: 'https://images.unsplash.com/photo-1555921015-5532091f6026?w=200&h=200&fit=crop', photos: [],
+      latitude: 10.7797,
+      longitude: 106.699,
+      rating: 4.6,
+      types: ['church'],
+      mapUrl: 'https://maps.google.com/?cid=21',
+      photo: 'https://images.unsplash.com/photo-1555921015-5532091f6026?w=200&h=200&fit=crop',
+      photos: [],
     },
     {
-      placeId: 'suggest_default_3', name: 'Bưu điện Trung tâm',
+      placeId: 'suggest_default_3',
+      name: 'Bưu điện Trung tâm',
       address: '2 Công xã Paris, Quận 1, TP. Hồ Chí Minh',
-      latitude: 10.7799, longitude: 106.7000, rating: 4.5,
-      types: ['landmark'], mapUrl: 'https://maps.google.com/?cid=22',
-      photo: 'https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=200&h=200&fit=crop', photos: [],
+      latitude: 10.7799,
+      longitude: 106.7,
+      rating: 4.5,
+      types: ['landmark'],
+      mapUrl: 'https://maps.google.com/?cid=22',
+      photo: 'https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=200&h=200&fit=crop',
+      photos: [],
     },
   ];
 }
@@ -210,6 +265,7 @@ export default function AddPlaceModal({
         latitude: place.latitude,
         longitude: place.longitude,
         rating: place.rating,
+        totalReviews: place.totalReviews,
         photo: place.photo || undefined,
         mapUrl: place.mapUrl,
         timeOfDay: (timeOfDay as any) || 'morning',
@@ -265,8 +321,12 @@ export default function AddPlaceModal({
 
           {/* Text */}
           <View style={styles.rowText}>
-            <Text style={styles.rowName} numberOfLines={1}>{item.name}</Text>
-            <Text style={styles.rowAddr} numberOfLines={1}>{item.address}</Text>
+            <Text style={styles.rowName} numberOfLines={1}>
+              {item.name}
+            </Text>
+            <Text style={styles.rowAddr} numberOfLines={1}>
+              {item.address}
+            </Text>
             {item.rating ? (
               <View style={styles.rowRating}>
                 <Feather name="star" size={10} color="#F59E0B" />
@@ -290,10 +350,9 @@ export default function AddPlaceModal({
   };
 
   // Build display list
-  const displayList = results.length > 0 ? results : (query.length < 2 ? suggested : []);
-  const sectionTitle = results.length > 0
-    ? `${results.length} kết quả`
-    : `Phổ biến tại ${tripDestination}`;
+  const displayList = results.length > 0 ? results : query.length < 2 ? suggested : [];
+  const sectionTitle =
+    results.length > 0 ? `${results.length} kết quả` : `Phổ biến tại ${tripDestination}`;
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
@@ -309,7 +368,10 @@ export default function AddPlaceModal({
         {/* ===== HEADER ===== */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Thêm vào Ngày {dayNumber}</Text>
-          <TouchableOpacity onPress={handleClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <TouchableOpacity
+            onPress={handleClose}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
             <Feather name="x" size={22} color="#6B7280" />
           </TouchableOpacity>
         </View>
@@ -362,7 +424,9 @@ export default function AddPlaceModal({
         {searchError && (
           <View style={styles.errorBanner}>
             <Feather name="wifi-off" size={13} color="#92400E" />
-            <Text style={styles.errorText}>Tìm kiếm không khả dụng. Hãy thử các gợi ý dưới đây.</Text>
+            <Text style={styles.errorText}>
+              Tìm kiếm không khả dụng. Hãy thử các gợi ý dưới đây.
+            </Text>
           </View>
         )}
 
@@ -409,21 +473,30 @@ const styles = StyleSheet.create({
 
   // Header
   header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 20, paddingBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
   },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
 
   // Search bar
   searchBar: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    marginHorizontal: 20, marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 20,
+    marginBottom: 12,
     backgroundColor: '#F3F4F6',
-    borderRadius: 10, paddingHorizontal: 12,
+    borderRadius: 10,
+    paddingHorizontal: 12,
     height: 40,
   },
   searchInput: {
-    flex: 1, fontSize: 15, color: '#1A1A1A',
+    flex: 1,
+    fontSize: 15,
+    color: '#1A1A1A',
     paddingVertical: 0,
   },
 
@@ -433,7 +506,9 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E5E7EB',
   },
   pills: {
-    paddingHorizontal: 20, paddingBottom: 10, gap: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+    gap: 20,
   },
   pill: {
     alignItems: 'center',
@@ -441,16 +516,24 @@ const styles = StyleSheet.create({
   pillText: { fontSize: 14, fontWeight: '500', color: '#9CA3AF' },
   pillTextActive: { color: '#1A1A1A', fontWeight: '600' },
   pillUnderline: {
-    marginTop: 6, width: '100%', height: 2,
-    borderRadius: 1, backgroundColor: '#1A1A1A',
+    marginTop: 6,
+    width: '100%',
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: '#1A1A1A',
   },
 
   // Error
   errorBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    marginHorizontal: 20, marginTop: 12,
-    paddingVertical: 8, paddingHorizontal: 12,
-    backgroundColor: '#FFFBEB', borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginHorizontal: 20,
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#FFFBEB',
+    borderRadius: 8,
   },
   errorText: { fontSize: 13, color: '#92400E', flex: 1 },
 
@@ -458,23 +541,31 @@ const styles = StyleSheet.create({
   listScroll: { flex: 1 },
   listContainer: { paddingHorizontal: 20, paddingBottom: 40 },
   sectionTitle: {
-    fontSize: 13, fontWeight: '600', color: '#9CA3AF',
-    textTransform: 'uppercase', letterSpacing: 0.5,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#9CA3AF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     paddingVertical: 12,
   },
 
   // Place row — clean, no card, divider-separated
   row: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     paddingVertical: 12,
   },
   rowDisabled: { opacity: 0.45 },
   thumb: {
-    width: 48, height: 48, borderRadius: 10,
+    width: 48,
+    height: 48,
+    borderRadius: 10,
     backgroundColor: '#F3F4F6',
   },
   thumbEmpty: {
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   rowText: { flex: 1, gap: 1 },
   rowName: { fontSize: 15, fontWeight: '600', color: '#1A1A1A' },

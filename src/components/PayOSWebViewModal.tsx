@@ -26,7 +26,7 @@ interface PayOSWebViewModalProps {
 }
 
 const POLL_INTERVAL_MS = 3000; // 3 giây poll 1 lần
-const MAX_POLL_COUNT = 60;     // Tối đa 3 phút
+const MAX_POLL_COUNT = 60; // Tối đa 3 phút
 
 export default function PayOSWebViewModal({
   visible,
@@ -37,7 +37,9 @@ export default function PayOSWebViewModal({
   title = 'Thanh toán PayOS',
 }: PayOSWebViewModalProps) {
   const [loading, setLoading] = useState(true);
-  const [pollingStatus, setPollingStatus] = useState<'idle' | 'polling' | 'success' | 'timeout'>('idle');
+  const [pollingStatus, setPollingStatus] = useState<'idle' | 'polling' | 'success' | 'timeout'>(
+    'idle',
+  );
   const pollCountRef = useRef(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const hasSucceededRef = useRef(false);
@@ -65,7 +67,7 @@ export default function PayOSWebViewModal({
         Alert.alert(
           'Hết thời gian',
           'Không nhận được xác nhận thanh toán. Nếu đã thanh toán thành công, vui lòng kiểm tra lại trong lịch sử đặt phòng.',
-          [{ text: 'Đóng', onPress: onPaymentCancel }]
+          [{ text: 'Đóng', onPress: onPaymentCancel }],
         );
         return;
       }
@@ -107,8 +109,8 @@ export default function PayOSWebViewModal({
 
       // Nếu redirect về trang success (returnUrl) hoặc có dấu hiệu thanh toán thành công từ PayOS
       if (
-        url.includes('/payment/success') || 
-        url.includes('success=true') || 
+        url.includes('/payment/success') ||
+        url.includes('success=true') ||
         (url.includes('cancel=false') && url.includes('code=00'))
       ) {
         stopPolling();
@@ -122,7 +124,7 @@ export default function PayOSWebViewModal({
         onPaymentCancel();
       }
     },
-    [stopPolling, onPaymentCancel]
+    [stopPolling, onPaymentCancel],
   );
 
   const handleClose = () => {
@@ -137,7 +139,7 @@ export default function PayOSWebViewModal({
           style: 'destructive',
           onPress: onPaymentCancel,
         },
-      ]
+      ],
     );
   };
 
@@ -153,7 +155,11 @@ export default function PayOSWebViewModal({
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleClose} style={styles.closeBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <TouchableOpacity
+            onPress={handleClose}
+            style={styles.closeBtn}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
             <Feather name="x" size={22} color="#1A1A1A" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{title}</Text>
@@ -173,9 +179,11 @@ export default function PayOSWebViewModal({
             <View style={styles.successView}>
               <Feather name="check-circle" size={80} color="#38A169" />
               <Text style={styles.successTitle}>Giao dịch thành công!</Text>
-              <Text style={styles.successDesc}>Thanh toán của bạn đã được ghi nhận vào hệ thống.</Text>
-              <TouchableOpacity 
-                style={styles.successBtn} 
+              <Text style={styles.successDesc}>
+                Thanh toán của bạn đã được ghi nhận vào hệ thống.
+              </Text>
+              <TouchableOpacity
+                style={styles.successBtn}
                 onPress={() => onPaymentSuccess(bookingId!)}
               >
                 <Text style={styles.successBtnText}>Hoàn tất</Text>

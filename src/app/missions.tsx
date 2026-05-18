@@ -77,8 +77,12 @@ export default function MissionsScreen() {
                       <Feather name="lock" size={12} color="#FFF" />
                     </View>
                   </View>
-                  <Text style={styles.cardName} numberOfLines={2}>{item.name}</Text>
-                  <Text style={styles.cardType}>{item.type.charAt(0).toUpperCase() + item.type.slice(1)}</Text>
+                  <Text style={styles.cardName} numberOfLines={2}>
+                    {item.name}
+                  </Text>
+                  <Text style={styles.cardType}>
+                    {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
+                  </Text>
                   <View style={styles.coinsRow}>
                     <Feather name="award" size={12} color="#64748B" />
                     <Text style={styles.coinsText}>{item.amount} xu</Text>

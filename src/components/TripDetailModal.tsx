@@ -1,5 +1,15 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, ActivityIndicator, Modal, Dimensions } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Image,
+  TouchableOpacity,
+  ActivityIndicator,
+  Modal,
+  Dimensions,
+} from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import { TripDetailResponse, tripService } from '../services/tripService';
@@ -15,7 +25,13 @@ interface TripDetailModalProps {
 
 const { width } = Dimensions.get('window');
 
-export default function TripDetailModal({ visible, loading, selectedTripDetail, onClose, onRefresh }: TripDetailModalProps) {
+export default function TripDetailModal({
+  visible,
+  loading,
+  selectedTripDetail,
+  onClose,
+  onRefresh,
+}: TripDetailModalProps) {
   const [publishing, setPublishing] = React.useState(false);
 
   const handlePublish = async () => {
@@ -23,9 +39,9 @@ export default function TripDetailModal({ visible, loading, selectedTripDetail, 
     setPublishing(true);
     const success = await tripService.publishTrip(selectedTripDetail.trip._id);
     if (success) {
-        // Optionally show success toast/alert here
-        if (onRefresh) onRefresh();
-        onClose();
+      // Optionally show success toast/alert here
+      if (onRefresh) onRefresh();
+      onClose();
     }
     setPublishing(false);
   };
@@ -38,111 +54,141 @@ export default function TripDetailModal({ visible, loading, selectedTripDetail, 
           {loading ? (
             <View style={{ padding: 40, alignItems: 'center' }}>
               <ActivityIndicator size="large" color="#4A7CFF" />
-              <Text style={{ marginTop: 16, color: '#718096', fontWeight: '500' }}>Loading plan...</Text>
+              <Text style={{ marginTop: 16, color: '#718096', fontWeight: '500' }}>
+                Loading plan...
+              </Text>
             </View>
-          ) : selectedTripDetail && (
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-              <View style={[styles.modalGallery, { height: 260 }]}>
-                <ExpoImage source={getImageSource(selectedTripDetail.trip.provinceImage || 'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?auto=format&fit=crop&q=80&w=800')} style={[styles.modalImage, { width, height: 260 }]} contentFit="cover" />
-                <TouchableOpacity style={styles.modalCloseButton} onPress={onClose}>
-                  <Feather name="x" size={24} color="#FFF" />
-                </TouchableOpacity>
-              </View>
-
-              <View style={[styles.modalInfoContent, { paddingTop: 28 }]}>
-                <View style={styles.tripDetailHeader}>
-                  <Text style={styles.tripDetailTitle}>{selectedTripDetail.trip.title}</Text>
-                  <View style={styles.tripDetailMeta}>
-                    <View style={styles.metaBadge}>
-                      <Feather name="map-pin" size={12} color="#4A7CFF" />
-                      <Text style={styles.metaBadgeText}>{selectedTripDetail.trip.destination}</Text>
-                    </View>
-                    <View style={[styles.metaBadge, { backgroundColor: '#FFF5F5' }]}>
-                      <Feather name="clock" size={12} color="#FF4D4D" />
-                      <Text style={[styles.metaBadgeText, { color: '#FF4D4D' }]}>{selectedTripDetail.trip.totalDays} Ngày</Text>
-                    </View>
-                  </View>
-                </View>
-                
-                <View style={styles.modalSection}>
-                  <View style={styles.sectionHeaderRow}>
-                    <View style={styles.sectionIconBox}>
-                      <Feather name="align-left" size={16} color="#4A7CFF" />
-                    </View>
-                    <Text style={styles.modalSectionTitle}>Giới thiệu</Text>
-                  </View>
-                  <Text style={styles.modalSectionText}>
-                    {selectedTripDetail.trip.description || 'Khám phá hành trình tuyệt vời này với những trải nghiệm thú vị và điểm đến độc đáo.'}
-                  </Text>
-                </View>
-
-                {!selectedTripDetail.trip.isPublished && (
-                  <TouchableOpacity 
-                    style={[styles.publishButton, publishing && styles.publishButtonDisabled]} 
-                    onPress={handlePublish}
-                    disabled={publishing}
-                  >
-                    {publishing ? (
-                      <ActivityIndicator color="#FFF" />
-                    ) : (
-                      <>
-                        <Feather name="globe" size={18} color="#FFF" />
-                        <Text style={styles.publishButtonText}>Publish Plan</Text>
-                      </>
+          ) : (
+            selectedTripDetail && (
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 40 }}
+              >
+                <View style={[styles.modalGallery, { height: 260 }]}>
+                  <ExpoImage
+                    source={getImageSource(
+                      selectedTripDetail.trip.provinceImage ||
+                        'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?auto=format&fit=crop&q=80&w=800',
                     )}
+                    style={[styles.modalImage, { width, height: 260 }]}
+                    contentFit="cover"
+                  />
+                  <TouchableOpacity style={styles.modalCloseButton} onPress={onClose}>
+                    <Feather name="x" size={24} color="#FFF" />
                   </TouchableOpacity>
-                )}
+                </View>
 
-                <View style={styles.modalDivider} />
-
-                <View style={styles.modalSection}>
-                  <View style={styles.sectionHeaderRow}>
-                    <View style={styles.sectionIconBox}>
-                      <Feather name="calendar" size={16} color="#4A7CFF" />
+                <View style={[styles.modalInfoContent, { paddingTop: 28 }]}>
+                  <View style={styles.tripDetailHeader}>
+                    <Text style={styles.tripDetailTitle}>{selectedTripDetail.trip.title}</Text>
+                    <View style={styles.tripDetailMeta}>
+                      <View style={styles.metaBadge}>
+                        <Feather name="map-pin" size={12} color="#4A7CFF" />
+                        <Text style={styles.metaBadgeText}>
+                          {selectedTripDetail.trip.destination}
+                        </Text>
+                      </View>
+                      <View style={[styles.metaBadge, { backgroundColor: '#FFF5F5' }]}>
+                        <Feather name="clock" size={12} color="#FF4D4D" />
+                        <Text style={[styles.metaBadgeText, { color: '#FF4D4D' }]}>
+                          {selectedTripDetail.trip.totalDays} Ngày
+                        </Text>
+                      </View>
                     </View>
-                    <Text style={styles.modalSectionTitle}>Lịch trình chi tiết</Text>
                   </View>
-                  
-                  {selectedTripDetail.days.length === 0 ? (
-                    <View style={styles.emptyStateContainer}>
-                      <Feather name="info" size={24} color="#A0AEC0" />
-                      <Text style={styles.emptyStateText}>Chưa có lịch trình cụ thể.</Text>
+
+                  <View style={styles.modalSection}>
+                    <View style={styles.sectionHeaderRow}>
+                      <View style={styles.sectionIconBox}>
+                        <Feather name="align-left" size={16} color="#4A7CFF" />
+                      </View>
+                      <Text style={styles.modalSectionTitle}>Giới thiệu</Text>
                     </View>
-                  ) : (
-                    <View style={styles.timelineContainer}>
-                      {selectedTripDetail.days.map((dayPlan, index) => (
-                        <View key={index} style={styles.timelineItem}>
-                          <View style={styles.timelineLeft}>
-                            <View style={styles.timelineDot} />
-                            {index < selectedTripDetail.days.length - 1 && <View style={styles.timelineLine} />}
-                          </View>
-                          <View style={styles.timelineRight}>
-                            <View style={styles.dayCard}>
-                              <View style={styles.dayCardHeader}>
-                                <Text style={styles.dayNumberText}>NGÀY {dayPlan.day}</Text>
-                                <Text style={styles.dayStatusText}>
-                                  {dayPlan.places && dayPlan.places.length > 0 ? `${dayPlan.places.length} địa điểm` : 'Ngày tự do'}
-                                </Text>
-                              </View>
-                              {dayPlan.places && dayPlan.places.length > 0 && (
-                                <View style={styles.dayPlacesList}>
-                                  {dayPlan.places.map((p, pIdx) => (
-                                    <View key={pIdx} style={pIdx === 0 ? styles.firstPlaceItem : styles.placeItem}>
-                                      <View style={styles.placeDot} />
-                                      <Text style={styles.placeNameText}>{p.name || 'Địa điểm tham quan'}</Text>
-                                    </View>
-                                  ))}
-                                </View>
+                    <Text style={styles.modalSectionText}>
+                      {selectedTripDetail.trip.description ||
+                        'Khám phá hành trình tuyệt vời này với những trải nghiệm thú vị và điểm đến độc đáo.'}
+                    </Text>
+                  </View>
+
+                  {!selectedTripDetail.trip.isPublished && (
+                    <TouchableOpacity
+                      style={[styles.publishButton, publishing && styles.publishButtonDisabled]}
+                      onPress={handlePublish}
+                      disabled={publishing}
+                    >
+                      {publishing ? (
+                        <ActivityIndicator color="#FFF" />
+                      ) : (
+                        <>
+                          <Feather name="globe" size={18} color="#FFF" />
+                          <Text style={styles.publishButtonText}>Publish Plan</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  )}
+
+                  <View style={styles.modalDivider} />
+
+                  <View style={styles.modalSection}>
+                    <View style={styles.sectionHeaderRow}>
+                      <View style={styles.sectionIconBox}>
+                        <Feather name="calendar" size={16} color="#4A7CFF" />
+                      </View>
+                      <Text style={styles.modalSectionTitle}>Lịch trình chi tiết</Text>
+                    </View>
+
+                    {selectedTripDetail.days.length === 0 ? (
+                      <View style={styles.emptyStateContainer}>
+                        <Feather name="info" size={24} color="#A0AEC0" />
+                        <Text style={styles.emptyStateText}>Chưa có lịch trình cụ thể.</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.timelineContainer}>
+                        {selectedTripDetail.days.map((dayPlan, index) => (
+                          <View key={index} style={styles.timelineItem}>
+                            <View style={styles.timelineLeft}>
+                              <View style={styles.timelineDot} />
+                              {index < selectedTripDetail.days.length - 1 && (
+                                <View style={styles.timelineLine} />
                               )}
                             </View>
+                            <View style={styles.timelineRight}>
+                              <View style={styles.dayCard}>
+                                <View style={styles.dayCardHeader}>
+                                  <Text style={styles.dayNumberText}>NGÀY {dayPlan.day}</Text>
+                                  <Text style={styles.dayStatusText}>
+                                    {dayPlan.places && dayPlan.places.length > 0
+                                      ? `${dayPlan.places.length} địa điểm`
+                                      : 'Ngày tự do'}
+                                  </Text>
+                                </View>
+                                {dayPlan.places && dayPlan.places.length > 0 && (
+                                  <View style={styles.dayPlacesList}>
+                                    {dayPlan.places.map((p, pIdx) => (
+                                      <View
+                                        key={pIdx}
+                                        style={
+                                          pIdx === 0 ? styles.firstPlaceItem : styles.placeItem
+                                        }
+                                      >
+                                        <View style={styles.placeDot} />
+                                        <Text style={styles.placeNameText}>
+                                          {p.name || 'Địa điểm tham quan'}
+                                        </Text>
+                                      </View>
+                                    ))}
+                                  </View>
+                                )}
+                              </View>
+                            </View>
                           </View>
-                        </View>
-                      ))}
-                    </View>
-                  )}
+                        ))}
+                      </View>
+                    )}
+                  </View>
                 </View>
-              </View>
-            </ScrollView>
+              </ScrollView>
+            )
           )}
         </View>
       </View>

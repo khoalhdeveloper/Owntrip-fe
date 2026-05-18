@@ -71,12 +71,12 @@ export const paymentService = {
    * Dùng khi user đặt phòng (hotel booking flow)
    */
   createBookingWithPayment: async (
-    data: CreateBookingPaymentRequest
+    data: CreateBookingPaymentRequest,
   ): Promise<CreateBookingPaymentResponse> => {
     try {
       const response = await axiosClient.post<any, CreateBookingPaymentResponse>(
         ENDPOINTS.PAYMENT.CREATE_BOOKING_PAYMENT,
-        data
+        data,
       );
       return response;
     } catch (error: any) {
@@ -89,13 +89,11 @@ export const paymentService = {
    * Tạo PayOS payment link cho booking đã tồn tại
    * Dùng khi user nạp tiền vào ví
    */
-  createPaymentLink: async (
-    data: CreatePaymentLinkRequest
-  ): Promise<CreatePaymentLinkResponse> => {
+  createPaymentLink: async (data: CreatePaymentLinkRequest): Promise<CreatePaymentLinkResponse> => {
     try {
       const response = await axiosClient.post<any, CreatePaymentLinkResponse>(
         ENDPOINTS.PAYMENT.CREATE_PAYMENT_LINK,
-        data
+        data,
       );
       return response;
     } catch (error: any) {
@@ -110,7 +108,7 @@ export const paymentService = {
   checkPaymentStatus: async (bookingId: string): Promise<PaymentStatusResponse | null> => {
     try {
       const response = await axiosClient.get<any, PaymentStatusResponse>(
-        ENDPOINTS.PAYMENT.STATUS(bookingId)
+        ENDPOINTS.PAYMENT.STATUS(bookingId),
       );
       return response;
     } catch (error) {
@@ -124,13 +122,12 @@ export const paymentService = {
    */
   cancelPaymentLink: async (
     orderCode: string,
-    cancellationReason?: string
+    cancellationReason?: string,
   ): Promise<{ success: boolean; message: string }> => {
     try {
-      const response = await axiosClient.put<any, any>(
-        ENDPOINTS.PAYMENT.CANCEL(orderCode),
-        { cancellationReason }
-      );
+      const response = await axiosClient.put<any, any>(ENDPOINTS.PAYMENT.CANCEL(orderCode), {
+        cancellationReason,
+      });
       return { success: response?.success ?? false, message: response?.message ?? '' };
     } catch (error: any) {
       return { success: false, message: error?.response?.data?.message || 'Hủy thất bại' };

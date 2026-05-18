@@ -6,17 +6,13 @@ interface PlaceMarker {
   longitude: number;
 }
 
-function haversineDistance(
-  lat1: number, lon1: number, lat2: number, lon2: number
-): number {
+function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
     Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2;
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
@@ -34,7 +30,7 @@ function estimateTime(km: number): string {
 export function generateAccommodationMapHtml(
   hotel: Accommodation,
   places: PlaceMarker[],
-  brand: string
+  brand: string,
 ): string {
   const hotelLat = hotel.address?.coordinates?.lat || 0;
   const hotelLng = hotel.address?.coordinates?.lng || 0;
@@ -46,7 +42,8 @@ export function generateAccommodationMapHtml(
   const centerLng = (Math.min(...allLngs) + Math.max(...allLngs)) / 2;
   const zoomLevel = places.length > 0 ? 13 : 15;
 
-  const esc = (s: string | undefined | null) => (s || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+  const esc = (s: string | undefined | null) =>
+    (s || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
   // Hotel marker
   const hotelMarkerJs = `
@@ -56,7 +53,11 @@ export function generateAccommodationMapHtml(
       iconSize: [44, 52], iconAnchor: [22, 52], popupAnchor: [0, -52]
     });
     var hotelMarker = L.marker([${hotelLat}, ${hotelLng}], {icon: hotelIcon, zIndexOffset: 500}).addTo(map)
-      .bindPopup('<div class="popup-content"><strong>${esc(hotel.name)}</strong><p>⭐ ${hotel.rating || 0} · ${(hotel.tags && hotel.tags[0]) || ''}</p><p>📍 ${esc(hotel.address?.fullAddress || '')}</p></div>', {className: 'branded-popup'})
+      .bindPopup('<div class="popup-content"><strong>${esc(hotel.name)}</strong><p>⭐ ${
+    hotel.rating || 0
+  } · ${(hotel.tags && hotel.tags[0]) || ''}</p><p>📍 ${esc(
+    hotel.address?.fullAddress || '',
+  )}</p></div>', {className: 'branded-popup'})
       .openPopup();
     hotelMarker.on('click', function() {
       window.ReactNativeWebView.postMessage(JSON.stringify({type:'hotelTap'}));
@@ -74,8 +75,12 @@ export function generateAccommodationMapHtml(
         html: '<div class="place-pin"><span class="place-num">${idx + 1}</span></div>',
         iconSize: [32, 44], iconAnchor: [16, 44], popupAnchor: [0, -44]
       });
-      markers[${idx}] = L.marker([${p.latitude}, ${p.longitude}], {icon: placeIcon${idx}}).addTo(map)
-        .bindPopup('<div class="popup-content"><strong>${esc(p.name)}</strong><p>📍 ${formatDist(dist)} from hotel · ${time}</p></div>', {className: 'branded-popup'});
+      markers[${idx}] = L.marker([${p.latitude}, ${
+        p.longitude
+      }], {icon: placeIcon${idx}}).addTo(map)
+        .bindPopup('<div class="popup-content"><strong>${esc(p.name)}</strong><p>📍 ${formatDist(
+        dist,
+      )} from hotel · ${time}</p></div>', {className: 'branded-popup'});
       markers[${idx}].on('click', function() {
         window.ReactNativeWebView.postMessage(JSON.stringify({type:'placeTap', index: ${idx}}));
         highlightMarker(${idx});
@@ -101,7 +106,9 @@ export function generateAccommodationMapHtml(
     .join('\n');
 
   // Fit bounds JS
-  const allCoordsStr = `[[${hotelLat},${hotelLng}]${places.map((p) => `,[${p.latitude},${p.longitude}]`).join('')}]`;
+  const allCoordsStr = `[[${hotelLat},${hotelLng}]${places
+    .map((p) => `,[${p.latitude},${p.longitude}]`)
+    .join('')}]`;
 
   return `<!DOCTYPE html>
 <html>

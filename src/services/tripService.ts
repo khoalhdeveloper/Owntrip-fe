@@ -41,6 +41,7 @@ export interface AddPlaceBody {
   latitude: number;
   longitude: number;
   rating?: number;
+  totalReviews?: number;
   photo?: string;
   mapUrl?: string;
   timeOfDay?: 'morning' | 'afternoon' | 'evening';
@@ -70,6 +71,8 @@ export interface DestinationPlace {
   latitude: number;
   longitude: number;
   rating?: number;
+  totalReviews?: number;
+  types?: string[];
   photo?: string;
   mapUrl?: string;
   order: number;
@@ -97,7 +100,7 @@ export const tripService = {
     try {
       const url = `${ENDPOINTS.TRIPS.PUBLISHED}?page=${page}&limit=${limit}`;
       const response = await axiosClient.get<any, TripsResponse>(url);
-      
+
       return response?.trips ?? [];
     } catch (error) {
       console.error('Error fetching published trips:', error);
@@ -115,7 +118,7 @@ export const tripService = {
       return null;
     }
   },
-  
+
   createTrip: async (tripData: any) => {
     try {
       const response = await axiosClient.post(ENDPOINTS.TRIPS.CREATE, tripData);
@@ -180,6 +183,18 @@ export const tripService = {
     }
   },
 
+  reorderPlacesInDay: async (dayId: string, orderedPlaceIds: string[]): Promise<any> => {
+    try {
+      // Endpoint is /api/plans/reorder
+      const url = '/api/plans/reorder';
+      const response = await axiosClient.patch(url, { dayId, orderedPlaceIds });
+      return response;
+    } catch (error) {
+      console.error(`Error reordering places in day ${dayId}:`, error);
+      throw error;
+    }
+  },
+
   updateTrip: async (tripId: string, data: {
     title?: string;
     destination?: string;
@@ -214,7 +229,7 @@ export const tripService = {
   publishTrip: async (id: string): Promise<boolean> => {
     try {
       const response = await axiosClient.patch<any, any>(ENDPOINTS.TRIPS.PUBLISH(id), {
-        isPublished: true
+        isPublished: true,
       });
       return response?.success ?? false;
     } catch (error) {

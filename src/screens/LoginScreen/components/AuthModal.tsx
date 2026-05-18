@@ -83,7 +83,11 @@ export default function AuthModal({
     setLoading(true);
     try {
       await authService.register(email.trim(), password, displayName.trim());
-      Toast.show({ type: 'success', text1: 'Thành công', text2: 'Đăng ký thành công! Hãy đăng nhập.' });
+      Toast.show({
+        type: 'success',
+        text1: 'Thành công',
+        text2: 'Đăng ký thành công! Hãy đăng nhập.',
+      });
       // Giữ email, chỉ xóa password + name, chuyển sang tab Login
       setPassword('');
       setDisplayName('');
@@ -151,9 +155,7 @@ export default function AuthModal({
                   style={[styles.tab, activeTab === 'register' && styles.tabActive]}
                   onPress={() => handleTabSwitch('register')}
                 >
-                  <Text
-                    style={[styles.tabText, activeTab === 'register' && styles.tabTextActive]}
-                  >
+                  <Text style={[styles.tabText, activeTab === 'register' && styles.tabTextActive]}>
                     Đăng ký
                   </Text>
                 </TouchableOpacity>
