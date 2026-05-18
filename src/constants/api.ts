@@ -79,4 +79,8 @@ export const ENDPOINTS = {
     CANCEL: (orderCode: string) => `/api/payment/${orderCode}/cancel`,
     INFO: (orderCode: string) => `/api/payment/${orderCode}`,
   },
+  AVATAR_ITEMS: {
+    SHOP: '/api/avatar-items/shop',
+    LIST: '/api/avatar-items',
+  },
 };
