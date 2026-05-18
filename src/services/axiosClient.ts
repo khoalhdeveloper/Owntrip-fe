@@ -1,4 +1,5 @@
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG } from '../constants/api';
 
 const axiosClient = axios.create({
@@ -12,7 +13,6 @@ const axiosClient = axios.create({
 // Request Interceptor: Tự gắn token vào header
 axiosClient.interceptors.request.use(
   async (config) => {
-    const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
     const token = await AsyncStorage.getItem('token');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -35,7 +35,6 @@ axiosClient.interceptors.response.use(
       } else if (status === 401 || status === 403) {
         console.warn('🔒 Token hết hạn hoặc bị từ chối! Đang xóa token...');
         try {
-          const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
           await AsyncStorage.removeItem('token');
         } catch (e) {
           console.error('Error clearing token:', e);

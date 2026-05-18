@@ -42,6 +42,7 @@ export const ENDPOINTS = {
   PLANS: {
     ADD_PLACE: (dayId: string) => `/api/plans/day/${dayId}/place`,
     REMOVE_PLACE: (dayId: string, placeId: string) => `/api/plans/day/${dayId}/place/${placeId}`,
+    REORDER: (dayId: string) => `/api/plans/day/${dayId}/reorder`,
   },
   CHATBOT: {
     CHAT: '/api/chatbot/chat',

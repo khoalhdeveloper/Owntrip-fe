@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -41,7 +41,26 @@ export default function WriteReviewModal({
   const [comment, setComment] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const { alert: showAlert, confirm: showConfirm } = useConfirm();
+  const [isEditing, setIsEditing] = useState(false);
+  const { alert: showAlert, confirm: showConfirm, confirmDelete } = useConfirm();
+
+  useEffect(() => {
+    if (visible && hotel) {
+      // Fetch my existing review
+      const fetchReview = async () => {
+        const myReview = await accommodationService.getMyReview(hotel.hotelId);
+        if (myReview) {
+          setRating(myReview.rating || 0);
+          setComment(myReview.comment || '');
+          setIsEditing(true);
+        } else {
+          resetForm();
+          setIsEditing(false);
+        }
+      };
+      fetchReview();
+    }
+  }, [visible, hotel]);
 
   const resetForm = () => {
     setRating(0);
@@ -154,17 +173,41 @@ export default function WriteReviewModal({
 
       if (success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        await showAlert('Thành công! 🎉', 'Đánh giá của bạn đã được gửi', 'success');
+        await showAlert('Thành công! 🎉', isEditing ? 'Đánh giá của bạn đã được cập nhật' : 'Đánh giá của bạn đã được gửi', 'success');
         resetForm(); 
         onReviewSubmitted(); 
         onClose();
       } else {
-        showAlert('Lỗi', 'Không thể gửi đánh giá. Vui lòng thử lại.', 'error');
+        showAlert('Lỗi', isEditing ? 'Không thể cập nhật đánh giá' : 'Không thể gửi đánh giá. Vui lòng thử lại.', 'error');
       }
     } catch {
       showAlert('Lỗi', 'Đã xảy ra lỗi khi gửi đánh giá', 'error');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!hotel) return;
+    const confirmed = await confirmDelete('Xóa đánh giá', 'Bạn có chắc chắn muốn xóa đánh giá này không? Hành động này không thể hoàn tác.', 'Xóa');
+    if (confirmed) {
+      setSubmitting(true);
+      try {
+        const success = await accommodationService.deleteReview(hotel.hotelId);
+        if (success) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          await showAlert('Thành công', 'Đã xóa đánh giá', 'success');
+          resetForm();
+          onReviewSubmitted();
+          onClose();
+        } else {
+          showAlert('Lỗi', 'Không thể xóa đánh giá', 'error');
+        }
+      } catch {
+        showAlert('Lỗi', 'Đã xảy ra lỗi khi xóa đánh giá', 'error');
+      } finally {
+        setSubmitting(false);
+      }
     }
   };
 
@@ -186,8 +229,14 @@ export default function WriteReviewModal({
           <TouchableOpacity onPress={handleClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <Feather name="x" size={22} color="#6B7280" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Đánh giá khách sạn</Text>
-          <View style={{ width: 22 }} />
+          <Text style={styles.headerTitle}>{isEditing ? 'Cập nhật đánh giá' : 'Đánh giá khách sạn'}</Text>
+          {isEditing ? (
+            <TouchableOpacity onPress={handleDelete} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+              <Feather name="trash-2" size={20} color="#EF4444" />
+            </TouchableOpacity>
+          ) : (
+            <View style={{ width: 22 }} />
+          )}
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
@@ -283,8 +332,8 @@ export default function WriteReviewModal({
               <ActivityIndicator color="#FFF" size="small" />
             ) : (
               <>
-                <Feather name="send" size={18} color="#FFF" />
-                <Text style={styles.submitText}>Gửi đánh giá</Text>
+                <Feather name={isEditing ? 'edit-3' : 'send'} size={18} color="#FFF" />
+                <Text style={styles.submitText}>{isEditing ? 'Cập nhật đánh giá' : 'Gửi đánh giá'}</Text>
               </>
             )}
           </TouchableOpacity>
