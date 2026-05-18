@@ -30,12 +30,7 @@ interface EditTripModalProps {
   onUpdated: (updated: Trip) => void;
 }
 
-export default function EditTripModal({
-  visible,
-  trip,
-  onClose,
-  onUpdated,
-}: EditTripModalProps) {
+export default function EditTripModal({ visible, trip, onClose, onUpdated }: EditTripModalProps) {
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState('');
   const [destination, setDestination] = useState('');
@@ -95,11 +90,7 @@ export default function EditTripModal({
 
   const handleClose = async () => {
     if (hasChanges()) {
-      const discard = await confirm(
-        'Huỷ thay đổi?',
-        'Các thay đổi chưa lưu sẽ bị mất.',
-        'Huỷ',
-      );
+      const discard = await confirm('Huỷ thay đổi?', 'Các thay đổi chưa lưu sẽ bị mất.', 'Huỷ');
       if (!discard) return;
     }
     onClose();
@@ -133,7 +124,8 @@ export default function EditTripModal({
       if (title.trim() !== trip.title) data.title = title.trim();
       if (destination.trim() !== trip.destination) data.destination = destination.trim();
       if (description.trim() !== (trip.description || '')) data.description = description.trim();
-      if (toDateStr(startDate) !== trip.startDate?.split('T')[0]) data.startDate = toDateStr(startDate);
+      if (toDateStr(startDate) !== trip.startDate?.split('T')[0])
+        data.startDate = toDateStr(startDate);
       if (toDateStr(endDate) !== trip.endDate?.split('T')[0]) data.endDate = toDateStr(endDate);
       if (budget && Number(budget) !== trip.budget) data.budget = Number(budget);
 
@@ -188,12 +180,7 @@ export default function EditTripModal({
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent
-      statusBarTranslucent
-    >
+    <Modal visible={visible} animationType="slide" transparent statusBarTranslucent>
       <View style={styles.overlay}>
         <KeyboardAvoidingView
           style={[styles.container, { paddingBottom: Math.max(insets.bottom, 16) }]}
@@ -206,7 +193,10 @@ export default function EditTripModal({
 
           {/* Header */}
           <View style={[styles.header, { paddingTop: Math.max(insets.top - 20, 4) }]}>
-            <TouchableOpacity onPress={handleClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <TouchableOpacity
+              onPress={handleClose}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
               <Feather name="x" size={22} color="#6B7280" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Chỉnh sửa chuyến đi</Text>
@@ -236,15 +226,16 @@ export default function EditTripModal({
               <TextInput
                 style={[styles.input, errors.title && styles.inputError]}
                 value={title}
-                onChangeText={(v) => { setTitle(v); clearError('title'); }}
+                onChangeText={(v) => {
+                  setTitle(v);
+                  clearError('title');
+                }}
                 placeholder="Tên chuyến đi"
                 placeholderTextColor="#9CA3AF"
                 maxLength={100}
                 returnKeyType="next"
               />
-              {errors.title && (
-                <Text style={styles.errorText}>Tiêu đề không được để trống</Text>
-              )}
+              {errors.title && <Text style={styles.errorText}>Tiêu đề không được để trống</Text>}
             </View>
 
             {/* Destination */}
@@ -265,10 +256,7 @@ export default function EditTripModal({
             <View style={styles.dateRow}>
               <View style={[styles.fieldGroup, { flex: 1 }]}>
                 <Text style={styles.label}>Ngày bắt đầu</Text>
-                <Pressable
-                  style={styles.dateBtn}
-                  onPress={() => setShowStartPicker(true)}
-                >
+                <Pressable style={styles.dateBtn} onPress={() => setShowStartPicker(true)}>
                   <Feather name="calendar" size={15} color={BRAND} />
                   <Text style={styles.dateBtnText}>{formatDisplayDate(startDate)}</Text>
                 </Pressable>
@@ -285,9 +273,7 @@ export default function EditTripModal({
                   <Feather name="calendar" size={15} color={BRAND} />
                   <Text style={styles.dateBtnText}>{formatDisplayDate(endDate)}</Text>
                 </Pressable>
-                {errors.endDate && (
-                  <Text style={styles.errorText}>Phải sau ngày bắt đầu</Text>
-                )}
+                {errors.endDate && <Text style={styles.errorText}>Phải sau ngày bắt đầu</Text>}
               </View>
             </View>
 
@@ -304,9 +290,7 @@ export default function EditTripModal({
                 returnKeyType="next"
               />
               {budget ? (
-                <Text style={styles.budgetHint}>
-                  {Number(budget).toLocaleString('vi-VN')} ₫
-                </Text>
+                <Text style={styles.budgetHint}>{Number(budget).toLocaleString('vi-VN')} ₫</Text>
               ) : null}
             </View>
 
@@ -393,9 +377,13 @@ const styles = StyleSheet.create({
   handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#E5E7EB' },
 
   header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 20, paddingBottom: 14,
-    borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
   headerTitle: { fontSize: 17, fontWeight: '700', color: '#1A1A1A' },
   headerSave: { fontSize: 16, fontWeight: '700', color: BRAND },
@@ -406,9 +394,13 @@ const styles = StyleSheet.create({
   label: { fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 },
   required: { color: '#EF4444', fontSize: 14 },
   input: {
-    backgroundColor: '#F9FAFB', borderRadius: 12, padding: 14,
-    fontSize: 15, color: '#1A1A1A',
-    borderWidth: 1, borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 15,
+    color: '#1A1A1A',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   inputError: {
     borderColor: '#EF4444',
@@ -416,7 +408,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
   },
   errorText: {
-    fontSize: 12, color: '#EF4444', marginTop: 4, fontWeight: '500',
+    fontSize: 12,
+    color: '#EF4444',
+    marginTop: 4,
+    fontWeight: '500',
   },
   textArea: { minHeight: 100, lineHeight: 22 },
   charCount: { fontSize: 11, color: '#9CA3AF', textAlign: 'right', marginTop: 4 },
@@ -425,9 +420,14 @@ const styles = StyleSheet.create({
   dateRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 4 },
   dateArrow: { paddingTop: 38, paddingHorizontal: 2 },
   dateBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#F9FAFB', borderRadius: 12, padding: 14,
-    borderWidth: 1, borderColor: '#E5E7EB',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   dateBtnText: { fontSize: 14, color: '#1A1A1A', fontWeight: '500' },
 
@@ -435,12 +435,18 @@ const styles = StyleSheet.create({
   budgetHint: { fontSize: 12, color: '#6B7280', marginTop: 4, fontWeight: '500' },
 
   footer: {
-    paddingHorizontal: 20, paddingVertical: 12,
-    borderTopWidth: 1, borderTopColor: '#F3F4F6',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
   },
   saveBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, backgroundColor: BRAND, borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: BRAND,
+    borderRadius: 14,
     paddingVertical: 16,
   },
   saveBtnDisabled: { opacity: 0.5 },

@@ -78,11 +78,15 @@ export default function AccommodationDetailModal({
   const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
   const [liked, setLiked] = useState(false);
   const [showAllAmenities, setShowAllAmenities] = useState(false);
-  const [nearbyPlaces, setNearbyPlaces] = useState<{ name: string; latitude: number; longitude: number }[]>([]);
+  const [nearbyPlaces, setNearbyPlaces] = useState<
+    { name: string; latitude: number; longitude: number }[]
+  >([]);
   const [mapLoading, setMapLoading] = useState(true);
   const [locatingUser, setLocatingUser] = useState(false);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
-  const [roomAvailability, setRoomAvailability] = useState<Record<string, { total: number; booked: number }>>({});
+  const [roomAvailability, setRoomAvailability] = useState<
+    Record<string, { total: number; booked: number }>
+  >({});
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const webViewRef = useRef<WebView>(null);
 
@@ -108,7 +112,7 @@ export default function AccommodationDetailModal({
       tomorrow.setDate(today.getDate() + 1);
       const startStr = today.toISOString().split('T')[0];
       const endStr = tomorrow.toISOString().split('T')[0];
-      
+
       const result = await bookingService.getInventory(hotelId, startStr, endStr);
       if (result?.data) {
         const availability: Record<string, { total: number; booked: number }> = {};
@@ -189,14 +193,17 @@ export default function AccommodationDetailModal({
         const lat = hotel.latitude ?? hotel.address?.coordinates?.lat ?? 0;
         const lng = hotel.longitude ?? hotel.address?.coordinates?.lng ?? 0;
         const results = await placesService.searchNearby({
-          lat, lng, radius: 3000, type: 'tourist_attraction',
+          lat,
+          lng,
+          radius: 3000,
+          type: 'tourist_attraction',
         });
         setNearbyPlaces(
           results.slice(0, 5).map((p) => ({
             name: p.name,
             latitude: p.latitude,
             longitude: p.longitude,
-          }))
+          })),
         );
       } catch {
         setNearbyPlaces([]);
@@ -246,7 +253,7 @@ export default function AccommodationDetailModal({
       if (status !== 'granted') return;
       const loc = await Location.getCurrentPositionAsync({});
       webViewRef.current?.injectJavaScript(
-        `showUserLocation(${loc.coords.latitude}, ${loc.coords.longitude}); true;`
+        `showUserLocation(${loc.coords.latitude}, ${loc.coords.longitude}); true;`,
       );
     } catch {
       // ignore
@@ -261,25 +268,27 @@ export default function AccommodationDetailModal({
   }, []);
 
   // Handle WebView messages (my-location from HTML, marker taps)
-  const handleWebViewMessage = useCallback(async (event: any) => {
-    try {
-      const data = JSON.parse(event.nativeEvent.data);
-      if (data.type === 'requestLocation') {
-        handleMyLocation();
-      }
-    } catch {}
-  }, [handleMyLocation]);
+  const handleWebViewMessage = useCallback(
+    async (event: any) => {
+      try {
+        const data = JSON.parse(event.nativeEvent.data);
+        if (data.type === 'requestLocation') {
+          handleMyLocation();
+        }
+      } catch {}
+    },
+    [handleMyLocation],
+  );
 
   if (!hotel) return null;
 
-  const amenitiesDisplay = showAllAmenities
-    ? hotel.amenities
-    : hotel.amenities?.slice(0, 6) ?? [];
+  const amenitiesDisplay = showAllAmenities ? hotel.amenities : hotel.amenities?.slice(0, 6) ?? [];
   const hasMoreAmenities = (hotel.amenities?.length ?? 0) > 6;
 
-  const avgRating = reviews.length > 0
-    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
-    : hotel.rating?.toFixed(1) ?? '0';
+  const avgRating =
+    reviews.length > 0
+      ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+      : hotel.rating?.toFixed(1) ?? '0';
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
@@ -337,12 +346,9 @@ export default function AccommodationDetailModal({
                 {hotel.images.length > 1 && (
                   <View style={styles.paginationRow}>
                     {hotel.images.map((_, i) => (
-                      <View 
-                        key={i} 
-                        style={[
-                          styles.dot, 
-                          activeImageIndex === i && styles.activeDot
-                        ]} 
+                      <View
+                        key={i}
+                        style={[styles.dot, activeImageIndex === i && styles.activeDot]}
                       />
                     ))}
                   </View>
@@ -357,11 +363,11 @@ export default function AccommodationDetailModal({
             <View style={styles.heroOverlay}>
               <View style={styles.starRow}>
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <FontAwesome 
-                    key={i} 
-                    name="star" 
-                    size={14} 
-                    color={i < (hotel.starRating || 0) ? "#F59E0B" : "#D1D5DB"} 
+                  <FontAwesome
+                    key={i}
+                    name="star"
+                    size={14}
+                    color={i < (hotel.starRating || 0) ? '#F59E0B' : '#D1D5DB'}
                   />
                 ))}
               </View>
@@ -379,10 +385,11 @@ export default function AccommodationDetailModal({
 
             <View style={styles.infoRow}>
               <Feather name="map-pin" size={14} color="#9CA3AF" />
-              <Text style={styles.infoText}>{hotel.address?.fullAddress || ''}{hotel.address?.city ? `, ${hotel.address.city}` : ''}</Text>
+              <Text style={styles.infoText}>
+                {hotel.address?.fullAddress || ''}
+                {hotel.address?.city ? `, ${hotel.address.city}` : ''}
+              </Text>
             </View>
-
-
 
             <View style={styles.ratingRow}>
               <View style={styles.ratingBadge}>
@@ -390,7 +397,8 @@ export default function AccommodationDetailModal({
                 <Feather name="star" size={12} color="#FFF" />
               </View>
               <Text style={styles.ratingLabel}>
-                {STAR_LABELS[Math.round(Number(avgRating))] || ''} · ({hotel.reviewsCount?.toLocaleString() ?? reviews.length} đánh giá)
+                {STAR_LABELS[Math.round(Number(avgRating))] || ''} · (
+                {hotel.reviewsCount?.toLocaleString() ?? reviews.length} đánh giá)
               </Text>
             </View>
           </View>
@@ -407,14 +415,18 @@ export default function AccommodationDetailModal({
                 </TouchableOpacity>
               </View>
               <View style={styles.amenitiesGrid}>
-                {(showAllAmenities ? hotel.amenities : hotel.amenities.slice(0, 8)).map((item, index) => (
-                  <View key={index} style={styles.amenityItem}>
-                    <View style={styles.amenityIconCircle}>
-                      <Feather name={getAmenityIcon(item)} size={18} color={BRAND} />
+                {(showAllAmenities ? hotel.amenities : hotel.amenities.slice(0, 8)).map(
+                  (item, index) => (
+                    <View key={index} style={styles.amenityItem}>
+                      <View style={styles.amenityIconCircle}>
+                        <Feather name={getAmenityIcon(item)} size={18} color={BRAND} />
+                      </View>
+                      <Text style={styles.amenityText} numberOfLines={1}>
+                        {item}
+                      </Text>
                     </View>
-                    <Text style={styles.amenityText} numberOfLines={1}>{item}</Text>
-                  </View>
-                ))}
+                  ),
+                )}
               </View>
             </View>
           )}
@@ -453,9 +465,15 @@ export default function AccommodationDetailModal({
             )}
 
             {hotel.website && (
-              <TouchableOpacity style={styles.contactRow} onPress={handleWebsite} activeOpacity={0.7}>
+              <TouchableOpacity
+                style={styles.contactRow}
+                onPress={handleWebsite}
+                activeOpacity={0.7}
+              >
                 <Feather name="globe" size={16} color={BRAND} />
-                <Text style={styles.contactText} numberOfLines={1}>{hotel.website}</Text>
+                <Text style={styles.contactText} numberOfLines={1}>
+                  {hotel.website}
+                </Text>
                 <Feather name="external-link" size={12} color="#9CA3AF" />
               </TouchableOpacity>
             )}
@@ -471,9 +489,13 @@ export default function AccommodationDetailModal({
                 const availableRooms = avail ? avail.total - avail.booked : -1; // -1 = unknown
                 const isSoldOut = avail ? availableRooms <= 0 : false;
                 return (
-                  <TouchableOpacity 
-                    key={room.roomTypeId} 
-                    style={[styles.roomCard, isSelected && styles.roomCardSelected, isSoldOut && styles.roomCardSoldOut]}
+                  <TouchableOpacity
+                    key={room.roomTypeId}
+                    style={[
+                      styles.roomCard,
+                      isSelected && styles.roomCardSelected,
+                      isSoldOut && styles.roomCardSoldOut,
+                    ]}
                     activeOpacity={isSoldOut ? 1 : 0.9}
                     onPress={() => {
                       if (isSoldOut) return;
@@ -483,9 +505,9 @@ export default function AccommodationDetailModal({
                   >
                     {room.images && room.images.length > 0 ? (
                       <View style={styles.roomImageContainer}>
-                        <Image 
-                          source={{ uri: room.images[0] }} 
-                          style={[styles.roomCardImage, isSoldOut && { opacity: 0.5 }]} 
+                        <Image
+                          source={{ uri: room.images[0] }}
+                          style={[styles.roomCardImage, isSoldOut && { opacity: 0.5 }]}
                         />
                         {room.images.length > 1 && (
                           <View style={styles.imageCountBadge}>
@@ -513,14 +535,24 @@ export default function AccommodationDetailModal({
                       </View>
                       {/* Room Availability Badge */}
                       {avail ? (
-                        <View style={[styles.availBadge, isSoldOut ? styles.availBadgeSoldOut : styles.availBadgeAvailable]}>
-                          <View style={[styles.availDot, isSoldOut ? styles.availDotSoldOut : styles.availDotAvailable]} />
+                        <View
+                          style={[
+                            styles.availBadge,
+                            isSoldOut ? styles.availBadgeSoldOut : styles.availBadgeAvailable,
+                          ]}
+                        >
+                          <View
+                            style={[
+                              styles.availDot,
+                              isSoldOut ? styles.availDotSoldOut : styles.availDotAvailable,
+                            ]}
+                          />
                           <Text style={[styles.availText, isSoldOut && styles.availTextSoldOut]}>
                             {isSoldOut ? 'Hết phòng' : `Còn ${availableRooms} phòng`}
                           </Text>
                         </View>
                       ) : (
-                        <TouchableOpacity 
+                        <TouchableOpacity
                           onPress={(e) => {
                             e.stopPropagation();
                             if (room.images && room.images.length > 0) openImageViewer(room.images);
@@ -531,7 +563,9 @@ export default function AccommodationDetailModal({
                       )}
                     </View>
                     <View style={styles.roomRight}>
-                      <Text style={[styles.roomPrice, isSoldOut && { color: '#9CA3AF' }]}>{formatCurrency(room.basePrice || room.price || 0)}</Text>
+                      <Text style={[styles.roomPrice, isSoldOut && { color: '#9CA3AF' }]}>
+                        {formatCurrency(room.basePrice || room.price || 0)}
+                      </Text>
                       <Text style={styles.roomPriceUnit}>/đêm</Text>
                       {isSelected && !isSoldOut && (
                         <View style={styles.selectedBadge}>
@@ -578,10 +612,11 @@ export default function AccommodationDetailModal({
                 activeOpacity={0.8}
                 disabled={locatingUser}
               >
-                {locatingUser
-                  ? <ActivityIndicator size="small" color={BRAND} />
-                  : <Feather name="crosshair" size={16} color={BRAND} />
-                }
+                {locatingUser ? (
+                  <ActivityIndicator size="small" color={BRAND} />
+                ) : (
+                  <Feather name="crosshair" size={16} color={BRAND} />
+                )}
               </TouchableOpacity>
 
               {/* Floating FitAll button */}
@@ -593,7 +628,11 @@ export default function AccommodationDetailModal({
                 <Feather name="maximize-2" size={16} color={BRAND} />
               </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.directionsBtn} onPress={handleDirections} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.directionsBtn}
+              onPress={handleDirections}
+              activeOpacity={0.7}
+            >
               <Feather name="navigation" size={16} color={BRAND} />
               <Text style={styles.directionsBtnText}>Chỉ đường trên bản đồ</Text>
             </TouchableOpacity>
@@ -654,7 +693,11 @@ export default function AccommodationDetailModal({
                   </View>
                   <Text style={styles.reviewComment}>{review.comment}</Text>
                   {review.images && review.images.length > 0 && (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.reviewImagesScroll}>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      style={styles.reviewImagesScroll}
+                    >
                       {review.images.map((img, i) => (
                         <Image key={i} source={{ uri: img }} style={styles.reviewImage} />
                       ))}
@@ -664,7 +707,6 @@ export default function AccommodationDetailModal({
               ))
             )}
           </View>
-
         </ScrollView>
 
         {/* ===== CTA Footer ===== */}
@@ -672,8 +714,8 @@ export default function AccommodationDetailModal({
           <View style={styles.footerPriceSection}>
             <Text style={styles.footerPrice}>
               {(() => {
-                const room = hotel.rooms.find(r => r.roomTypeId === selectedRoomId);
-                const displayPrice = room ? (room.basePrice || room.price || 0) : hotel.pricePerNight;
+                const room = hotel.rooms.find((r) => r.roomTypeId === selectedRoomId);
+                const displayPrice = room ? room.basePrice || room.price || 0 : hotel.pricePerNight;
                 return displayPrice > 0 ? formatCurrency(displayPrice) : 'Liên hệ';
               })()}
             </Text>
@@ -683,7 +725,7 @@ export default function AccommodationDetailModal({
             style={[styles.bookCTA, !selectedRoomId && styles.bookCTADisabled]}
             activeOpacity={0.8}
             onPress={() => {
-              const room = hotel.rooms.find(r => r.roomTypeId === selectedRoomId);
+              const room = hotel.rooms.find((r) => r.roomTypeId === selectedRoomId);
               if (room) {
                 onBook(hotel, room);
               } else {
@@ -693,7 +735,9 @@ export default function AccommodationDetailModal({
             }}
           >
             <Feather name="calendar" size={18} color="#FFF" />
-            <Text style={styles.bookCTADisabled ? styles.bookCTAText : styles.bookCTAText}>{selectedRoomId ? 'Đặt phòng ngay' : 'Chọn loại phòng'}</Text>
+            <Text style={styles.bookCTADisabled ? styles.bookCTAText : styles.bookCTAText}>
+              {selectedRoomId ? 'Đặt phòng ngay' : 'Chọn loại phòng'}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -701,13 +745,13 @@ export default function AccommodationDetailModal({
       {/* ===== Full Screen Image Viewer Modal ===== */}
       <Modal visible={isImageViewerVisible} transparent={false} animationType="fade">
         <View style={styles.viewerContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.closeViewerBtn}
             onPress={() => setIsImageViewerVisible(false)}
           >
             <Feather name="x" size={28} color="#FFF" />
           </TouchableOpacity>
-          
+
           <FlatList
             data={selectedRoomImages}
             horizontal
@@ -733,17 +777,30 @@ const styles = StyleSheet.create({
   handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#E5E7EB' },
 
   header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 20, paddingBottom: 12,
-    borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
   headerBackBtn: {
-    width: 36, height: 36, borderRadius: 18,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#F3F4F6',
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: { fontSize: 17, fontWeight: '700', color: '#1A1A1A', flex: 1, textAlign: 'center' },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 16, width: 36, justifyContent: 'flex-end' },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    width: 36,
+    justifyContent: 'flex-end',
+  },
 
   scroll: { paddingBottom: 20 },
 
@@ -769,13 +826,19 @@ const styles = StyleSheet.create({
   },
   heroPlaceholder: { justifyContent: 'center', alignItems: 'center' },
   heroOverlay: {
-    position: 'absolute', bottom: 12, left: 14,
-    flexDirection: 'row', alignItems: 'center', gap: 8,
+    position: 'absolute',
+    bottom: 12,
+    left: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   starRow: { flexDirection: 'row', gap: 2 },
   categoryBadge: {
-    backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 6,
-    paddingHorizontal: 8, paddingVertical: 3,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
   categoryText: { fontSize: 11, fontWeight: '700', color: '#FFF' },
 
@@ -786,20 +849,28 @@ const styles = StyleSheet.create({
   infoText: { fontSize: 13, color: '#6B7280', flex: 1 },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   ratingBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: BRAND, borderRadius: 8,
-    paddingHorizontal: 8, paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: BRAND,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   ratingValue: { fontSize: 14, fontWeight: '800', color: '#FFF' },
   ratingLabel: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
 
   // Section
   section: {
-    paddingHorizontal: 20, paddingTop: 20,
-    borderTopWidth: 1, borderTopColor: '#F3F4F6',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
   },
   sectionHeaderRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 12,
   },
   sectionTitle: { fontSize: 17, fontWeight: '700', color: '#1A1A1A', marginBottom: 12 },
@@ -846,9 +917,12 @@ const styles = StyleSheet.create({
 
   // Contact
   contactRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     paddingVertical: 10,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#F3F4F6',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#F3F4F6',
   },
   contactText: { fontSize: 14, color: BRAND, fontWeight: '500', flex: 1 },
 
@@ -966,25 +1040,40 @@ const styles = StyleSheet.create({
 
   // Map
   mapContainer: {
-    height: 280, borderRadius: 16, overflow: 'hidden',
-    backgroundColor: '#F3F4F6', position: 'relative',
+    height: 280,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#F3F4F6',
+    position: 'relative',
   },
   mapWebview: { flex: 1 },
   mapLoadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#F9FAFB',
-    justifyContent: 'center', alignItems: 'center',
-    zIndex: 10, gap: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+    gap: 8,
   },
   mapLoadingText: { fontSize: 12, color: '#9CA3AF' },
   mapFloatingBtn: {
-    position: 'absolute', bottom: 14, right: 14,
-    width: 40, height: 40, borderRadius: 12,
+    position: 'absolute',
+    bottom: 14,
+    right: 14,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     backgroundColor: 'rgba(255,255,255,0.95)',
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
     zIndex: 20,
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 6 },
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+      },
       android: { elevation: 4 },
     }),
   },
@@ -992,9 +1081,14 @@ const styles = StyleSheet.create({
     bottom: 62,
   },
   directionsBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, paddingVertical: 12, marginTop: 8,
-    backgroundColor: '#EBF5FF', borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    marginTop: 8,
+    backgroundColor: '#EBF5FF',
+    borderRadius: 12,
   },
   directionsBtnText: { fontSize: 14, fontWeight: '600', color: BRAND },
   mapHint: { fontSize: 12, color: '#9CA3AF', marginTop: 8, textAlign: 'center' },
@@ -1004,9 +1098,13 @@ const styles = StyleSheet.create({
 
   // Reviews
   writeReviewBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 12, paddingVertical: 6,
-    backgroundColor: '#EBF5FF', borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#EBF5FF',
+    borderRadius: 8,
   },
   writeReviewText: { fontSize: 13, fontWeight: '600', color: BRAND },
   emptyReviews: { alignItems: 'center', gap: 6, paddingVertical: 24 },
@@ -1014,11 +1112,17 @@ const styles = StyleSheet.create({
   emptySubtext: { fontSize: 13, color: '#D1D5DB' },
 
   reviewCard: {
-    backgroundColor: '#F9FAFB', borderRadius: 12, padding: 14,
-    marginBottom: 10, borderWidth: 1, borderColor: '#F3F4F6',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
   reviewHeader: {
-    flexDirection: 'row', alignItems: 'center', marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
   },
   reviewAvatar: { width: 36, height: 36, borderRadius: 18, marginRight: 10 },
   reviewMeta: { flex: 1 },
@@ -1028,16 +1132,23 @@ const styles = StyleSheet.create({
   reviewComment: { fontSize: 13, color: '#4B5563', lineHeight: 20 },
   reviewImagesScroll: { marginTop: 10 },
   reviewImage: {
-    width: 80, height: 80, borderRadius: 10, marginRight: 8,
+    width: 80,
+    height: 80,
+    borderRadius: 10,
+    marginRight: 8,
     backgroundColor: '#E5E7EB',
   },
 
   // Footer
   footer: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
     backgroundColor: '#FFF',
-    borderTopWidth: 1, borderTopColor: '#F3F4F6',
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
     ...Platform.select({
       ios: { paddingBottom: 30 },
     }),
@@ -1046,16 +1157,25 @@ const styles = StyleSheet.create({
   footerPrice: { fontSize: 20, fontWeight: '800', color: '#1A1A1A' },
   footerPriceUnit: { fontSize: 13, color: '#9CA3AF', marginLeft: 2 },
   bookCTA: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: BRAND, borderRadius: 14,
-    paddingHorizontal: 24, paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: BRAND,
+    borderRadius: 14,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
   },
   bookCTAText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
   cancelCTA: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#FEF2F2', borderRadius: 14,
-    paddingHorizontal: 24, paddingVertical: 14,
-    borderWidth: 1, borderColor: '#FECACA',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FEF2F2',
+    borderRadius: 14,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: '#FECACA',
   },
   cancelCTAText: { fontSize: 16, fontWeight: '700', color: '#EF4444' },
 });

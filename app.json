@@ -48,7 +48,13 @@
           }
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxGLImpl": "mapbox"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

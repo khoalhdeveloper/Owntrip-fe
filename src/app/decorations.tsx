@@ -84,9 +84,15 @@ export default function DecorationsScreen() {
                 </View>
                 <Text style={styles.promoTitle}>CHECKPOINT CACHE</Text>
                 <View style={styles.emojiRow}>
-                  <View style={styles.emojiCircle}><Text style={styles.emojiText}>✨</Text></View>
-                  <View style={styles.emojiCircle}><Text style={styles.emojiText}>🍌</Text></View>
-                  <View style={styles.emojiCircle}><Text style={styles.emojiText}>🐻</Text></View>
+                  <View style={styles.emojiCircle}>
+                    <Text style={styles.emojiText}>✨</Text>
+                  </View>
+                  <View style={styles.emojiCircle}>
+                    <Text style={styles.emojiText}>🍌</Text>
+                  </View>
+                  <View style={styles.emojiCircle}>
+                    <Text style={styles.emojiText}>🐻</Text>
+                  </View>
                 </View>
                 <TouchableOpacity style={styles.takeMeBtn} activeOpacity={0.85}>
                   <Text style={styles.takeMeBtnText}>Khám phá ngay</Text>
@@ -96,8 +102,12 @@ export default function DecorationsScreen() {
                 <View style={styles.promoCardTopSpacer} />
                 <Text style={styles.promoTitle}>Gothica</Text>
                 <View style={styles.emojiRow}>
-                  <View style={styles.emojiCircle}><Text style={styles.emojiText}>🦇</Text></View>
-                  <View style={styles.emojiCircle}><Text style={styles.emojiText}>🌹</Text></View>
+                  <View style={styles.emojiCircle}>
+                    <Text style={styles.emojiText}>🦇</Text>
+                  </View>
+                  <View style={styles.emojiCircle}>
+                    <Text style={styles.emojiText}>🌹</Text>
+                  </View>
                 </View>
                 <TouchableOpacity style={styles.takeMeBtn} activeOpacity={0.85}>
                   <Text style={styles.takeMeBtnText}>Khám phá ngay</Text>
@@ -120,11 +130,17 @@ export default function DecorationsScreen() {
                   contentContainerStyle={styles.featuredScroll}
                 >
                   {featuredItems.map((item) => (
-                    <TouchableOpacity key={item.id} style={styles.featuredCard} activeOpacity={0.85}>
+                    <TouchableOpacity
+                      key={item.id}
+                      style={styles.featuredCard}
+                      activeOpacity={0.85}
+                    >
                       <View style={styles.featuredImageWrap}>
                         <Image source={{ uri: item.image }} style={styles.featuredImage} />
                       </View>
-                      <Text style={styles.featuredName} numberOfLines={2}>{item.name}</Text>
+                      <Text style={styles.featuredName} numberOfLines={2}>
+                        {item.name}
+                      </Text>
                       <View style={styles.coinsRow}>
                         <Feather name="award" size={12} color="#C4B5FD" />
                         <Text style={styles.coinsText}>{item.coins} xu</Text>
@@ -139,7 +155,9 @@ export default function DecorationsScreen() {
             <View style={styles.section}>
               <View style={styles.sectionRow}>
                 <Text style={styles.sectionTitle}>Tất cả</Text>
-                <Text style={styles.pageInfo}>Trang {page} / {totalPages}</Text>
+                <Text style={styles.pageInfo}>
+                  Trang {page} / {totalPages}
+                </Text>
               </View>
               <View style={styles.grid}>
                 {pageItems.map((item) => (
@@ -147,7 +165,9 @@ export default function DecorationsScreen() {
                     <View style={styles.gridImageWrap}>
                       <Image source={{ uri: item.image }} style={styles.gridImage} />
                     </View>
-                    <Text style={styles.gridName} numberOfLines={2}>{item.name}</Text>
+                    <Text style={styles.gridName} numberOfLines={2}>
+                      {item.name}
+                    </Text>
                     <View style={styles.coinsRow}>
                       <Feather name="award" size={10} color="#C4B5FD" />
                       <Text style={styles.gridCoins}>{item.coins} xu</Text>
@@ -243,9 +263,19 @@ const styles = StyleSheet.create({
   promoCardTopSpacer: { height: 28, marginBottom: 4 },
 
   section: { marginBottom: 28 },
-  sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  sectionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   sectionTitle: { fontSize: 17, fontWeight: '700', color: '#F8FAFC' },
-  buyAllBtn: { paddingVertical: 6, paddingHorizontal: 14, backgroundColor: '#7C3AED', borderRadius: 8 },
+  buyAllBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    backgroundColor: '#7C3AED',
+    borderRadius: 8,
+  },
   buyAllText: { fontSize: 13, fontWeight: '600', color: '#FFF' },
   pageInfo: { fontSize: 13, color: '#A78BFA', fontWeight: '500' },
 
@@ -267,7 +297,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   featuredImage: { width: '100%', height: '100%', resizeMode: 'cover' },
-  featuredName: { fontSize: 11, fontWeight: '600', color: '#E2E8F0', marginTop: 8, marginBottom: 4, textAlign: 'center' },
+  featuredName: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#E2E8F0',
+    marginTop: 8,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
   coinsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
   coinsText: { fontSize: 11, color: '#C4B5FD', fontWeight: '600' },
 
@@ -289,11 +326,23 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   gridImage: { width: '100%', height: '100%', resizeMode: 'cover' },
-  gridName: { fontSize: 10, fontWeight: '600', color: '#E2E8F0', marginTop: 6, marginBottom: 2, textAlign: 'center' },
+  gridName: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#E2E8F0',
+    marginTop: 6,
+    marginBottom: 2,
+    textAlign: 'center',
+  },
   gridCoins: { fontSize: 9, color: '#C4B5FD', fontWeight: '600', textAlign: 'center' },
 
   pagination: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 20 },
-  pageBtn: { paddingVertical: 10, paddingHorizontal: 20, backgroundColor: '#5B21B6', borderRadius: 10 },
+  pageBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: '#5B21B6',
+    borderRadius: 10,
+  },
   pageBtnDisabled: { opacity: 0.5 },
   pageBtnText: { fontSize: 13, fontWeight: '600', color: '#E2E8F0' },
 });

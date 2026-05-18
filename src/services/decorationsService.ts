@@ -14,8 +14,9 @@ function isValidDecoration(item: unknown): item is Record<string, unknown> {
   const o = item as Record<string, unknown>;
   const hasName = typeof o.name === 'string';
   const price = o.priceCoins ?? o.coins ?? o.amount;
-  const hasPrice = typeof price === 'number' && !Number.isNaN(price)
-    || (typeof price === 'string' && !Number.isNaN(Number(price)));
+  const hasPrice =
+    (typeof price === 'number' && !Number.isNaN(price)) ||
+    (typeof price === 'string' && !Number.isNaN(Number(price)));
   return hasName && hasPrice;
 }
 

@@ -30,12 +30,12 @@ export default function InstantPlanScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      
+
       {/* Decorative Background Elements */}
       <View style={styles.bgCircle1} />
       <View style={styles.bgCircle2} />
       <View style={styles.bgCircle3} />
-      
+
       {/* Background Patterns */}
       <View style={styles.gridPattern}>
         {[...Array(10)].map((_, i) => (
@@ -47,10 +47,7 @@ export default function InstantPlanScreen() {
         ))}
       </View>
 
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent} 
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.titleContainer}>
           <View style={styles.aiBadgeContainer}>
             <Feather name="star" size={12} color="#FFF" />
@@ -61,8 +58,8 @@ export default function InstantPlanScreen() {
         </View>
 
         {/* Plan your trip card */}
-        <TouchableOpacity 
-          style={styles.cardContainer} 
+        <TouchableOpacity
+          style={styles.cardContainer}
           activeOpacity={0.85}
           onPress={handlePlanTrip}
         >
@@ -78,7 +75,9 @@ export default function InstantPlanScreen() {
               <View style={styles.textSection}>
                 <View style={styles.featuredRow}>
                   <Text style={styles.cardTitle}>Lên kế hoạch</Text>
-                  <View style={styles.newTag}><Text style={styles.newTagText}>PRO</Text></View>
+                  <View style={styles.newTag}>
+                    <Text style={styles.newTagText}>PRO</Text>
+                  </View>
                 </View>
                 <Text style={styles.cardDescription}>
                   Tự động sắp xếp lịch trình tối ưu dựa trên sở thích cá nhân.
@@ -86,8 +85,8 @@ export default function InstantPlanScreen() {
               </View>
               <View style={styles.cardRight}>
                 <View style={styles.iconContainerMain}>
-                  <Image 
-                    source={{ uri: 'https://cdn-icons-png.flaticon.com/512/854/854878.png' }} 
+                  <Image
+                    source={{ uri: 'https://cdn-icons-png.flaticon.com/512/854/854878.png' }}
                     style={styles.cardIconLarge}
                   />
                 </View>
@@ -110,13 +109,13 @@ export default function InstantPlanScreen() {
               <View style={styles.textSection}>
                 <Text style={styles.cardTitle}>Cẩm nang du lịch</Text>
                 <Text style={styles.cardDescription}>
-                   Viết hướng dẫn bỏ túi và chia sẻ khoảnh khắc đẹp.
+                  Viết hướng dẫn bỏ túi và chia sẻ khoảnh khắc đẹp.
                 </Text>
               </View>
               <View style={styles.cardRight}>
                 <View style={styles.iconContainerMain}>
-                   <Image 
-                    source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2666/2666505.png' }} 
+                  <Image
+                    source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2666/2666505.png' }}
                     style={styles.cardIconLarge}
                   />
                 </View>
@@ -129,7 +128,7 @@ export default function InstantPlanScreen() {
       {/* Footer Back Button */}
       <View style={styles.footer}>
         <BlurView intensity={80} tint="light" style={styles.blurWrapper}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.bottomBackButton}
             activeOpacity={0.7}
             onPress={() => router.back()}
@@ -148,7 +147,7 @@ export default function InstantPlanScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF', 
+    backgroundColor: '#FFFFFF',
   },
   gridPattern: {
     position: 'absolute',

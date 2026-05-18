@@ -21,7 +21,12 @@ interface ConfirmContextValue {
   /** Shortcut: show an alert with single OK button */
   alert: (title: string, message?: string, icon?: IconPreset | string) => Promise<void>;
   /** Shortcut: show a confirm dialog with Cancel + Confirm */
-  confirm: (title: string, message?: string, confirmText?: string, icon?: IconPreset | string) => Promise<boolean>;
+  confirm: (
+    title: string,
+    message?: string,
+    confirmText?: string,
+    icon?: IconPreset | string,
+  ) => Promise<boolean>;
   /** Shortcut: show a destructive confirm (Cancel + Delete) */
   confirmDelete: (title: string, message?: string, deleteText?: string) => Promise<boolean>;
 }
@@ -52,7 +57,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
             btn.onPress?.();
             resolve(index);
           },
-        })
+        }),
       );
 
       setOptions({ ...opts, buttons: wrappedButtons });
@@ -69,11 +74,16 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
         buttons: [{ text: 'OK', style: 'default' }],
       });
     },
-    [show]
+    [show],
   );
 
   const confirm = useCallback(
-    async (title: string, message?: string, confirmText = 'Xác nhận', icon?: IconPreset | string) => {
+    async (
+      title: string,
+      message?: string,
+      confirmText = 'Xác nhận',
+      icon?: IconPreset | string,
+    ) => {
       const idx = await show({
         title,
         message,
@@ -85,7 +95,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
       });
       return idx === 1;
     },
-    [show]
+    [show],
   );
 
   const confirmDelete = useCallback(
@@ -101,12 +111,12 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
       });
       return idx === 1;
     },
-    [show]
+    [show],
   );
 
   const handleDismiss = useCallback(() => {
     setVisible(false);
-    resolveRef.current?.(- 1);
+    resolveRef.current?.(-1);
   }, []);
 
   return (

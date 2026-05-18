@@ -4,7 +4,7 @@ export const getImageSource = (uri: string | null | undefined): any => {
   }
 
   let cleanUri = uri.trim();
-  
+
   // Handle protocol-relative URLs
   if (cleanUri.startsWith('//')) {
     cleanUri = `https:${cleanUri}`;
@@ -17,8 +17,9 @@ export const getImageSource = (uri: string | null | undefined): any => {
     return {
       uri: encodedUri,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
-      }
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+      },
     };
   }
 

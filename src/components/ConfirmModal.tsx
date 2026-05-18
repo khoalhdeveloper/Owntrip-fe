@@ -20,12 +20,12 @@ const BRAND = '#4A7CFF';
 type IconPreset = 'info' | 'success' | 'warning' | 'error' | 'delete' | 'question';
 
 const ICON_MAP: Record<IconPreset, { name: string; color: string; bg: string }> = {
-  info:     { name: 'info',          color: BRAND,    bg: '#EBF5FF' },
-  success:  { name: 'check-circle',  color: '#10B981', bg: '#ECFDF5' },
-  warning:  { name: 'alert-triangle', color: '#F59E0B', bg: '#FFFBEB' },
-  error:    { name: 'x-circle',      color: '#EF4444', bg: '#FEF2F2' },
-  delete:   { name: 'trash-2',       color: '#EF4444', bg: '#FEF2F2' },
-  question: { name: 'help-circle',   color: BRAND,    bg: '#EBF5FF' },
+  info: { name: 'info', color: BRAND, bg: '#EBF5FF' },
+  success: { name: 'check-circle', color: '#10B981', bg: '#ECFDF5' },
+  warning: { name: 'alert-triangle', color: '#F59E0B', bg: '#FFFBEB' },
+  error: { name: 'x-circle', color: '#EF4444', bg: '#FEF2F2' },
+  delete: { name: 'trash-2', color: '#EF4444', bg: '#FEF2F2' },
+  question: { name: 'help-circle', color: BRAND, bg: '#EBF5FF' },
 };
 
 export interface ConfirmModalButton {
@@ -66,9 +66,10 @@ export default function ConfirmModal({
   const resolvedBg = preset?.bg ?? '#EBF5FF';
 
   // Default button
-  const resolvedButtons: ConfirmModalButton[] = buttons && buttons.length > 0
-    ? buttons
-    : [{ text: 'OK', style: 'default', onPress: onDismiss }];
+  const resolvedButtons: ConfirmModalButton[] =
+    buttons && buttons.length > 0
+      ? buttons
+      : [{ text: 'OK', style: 'default', onPress: onDismiss }];
 
   const handlePress = (btn: ConfirmModalButton) => {
     if (btn.style === 'destructive') {
@@ -81,7 +82,7 @@ export default function ConfirmModal({
 
   const handleBackdropPress = () => {
     // If there's a cancel button, trigger it; otherwise call onDismiss
-    const cancelBtn = resolvedButtons.find(b => b.style === 'cancel');
+    const cancelBtn = resolvedButtons.find((b) => b.style === 'cancel');
     if (cancelBtn) {
       cancelBtn.onPress?.();
     } else {
@@ -97,11 +98,7 @@ export default function ConfirmModal({
       statusBarTranslucent
       onRequestClose={handleBackdropPress}
     >
-      <TouchableOpacity
-        style={styles.backdrop}
-        activeOpacity={1}
-        onPress={handleBackdropPress}
-      >
+      <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={handleBackdropPress}>
         <TouchableOpacity activeOpacity={1} style={styles.card}>
           {/* Icon */}
           <View style={[styles.iconCircle, { backgroundColor: resolvedBg }]}>
@@ -115,10 +112,7 @@ export default function ConfirmModal({
           {message ? <Text style={styles.message}>{message}</Text> : null}
 
           {/* Buttons */}
-          <View style={[
-            styles.buttonRow,
-            resolvedButtons.length === 1 && styles.buttonRowSingle,
-          ]}>
+          <View style={[styles.buttonRow, resolvedButtons.length === 1 && styles.buttonRowSingle]}>
             {resolvedButtons.map((btn, i) => {
               const isDestructive = btn.style === 'destructive';
               const isCancel = btn.style === 'cancel';

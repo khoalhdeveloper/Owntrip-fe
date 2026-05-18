@@ -40,7 +40,20 @@ const TABS: TabItem[] = [
 
 function formatDateShort(dateStr: string): string {
   const d = new Date(dateStr);
-  const months = ['Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'];
+  const months = [
+    'Th1',
+    'Th2',
+    'Th3',
+    'Th4',
+    'Th5',
+    'Th6',
+    'Th7',
+    'Th8',
+    'Th9',
+    'Th10',
+    'Th11',
+    'Th12',
+  ];
   return `${d.getDate()} ${months[d.getMonth()]}`;
 }
 
@@ -77,7 +90,9 @@ export default function TripDetailScreen({ tripId }: { tripId: string }) {
     }
   }, [tripId]);
 
-  useEffect(() => { fetchTrip(); }, [fetchTrip]);
+  useEffect(() => {
+    fetchTrip();
+  }, [fetchTrip]);
 
   const handleTabPress = (tabKey: string, index: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -146,13 +161,13 @@ export default function TripDetailScreen({ tripId }: { tripId: string }) {
           <SummaryTab trip={trip} days={days} />
         </View>
         <View style={{ display: activeTab === 'itinerary' ? 'flex' : 'none' }}>
-          <ItineraryTab trip={trip} days={days} />
+          <ItineraryTab trip={trip} days={days} onRefresh={fetchTrip} />
         </View>
         <View style={{ display: activeTab === 'explore' ? 'flex' : 'none' }}>
           <ExploreTab trip={trip} days={days} />
         </View>
         <View style={{ display: activeTab === 'journal' ? 'flex' : 'none' }}>
-          <JournalTab trip={trip} days={days} onScrollToMap={handleScrollToMap} />
+          <JournalTab trip={trip} days={days} onScrollToMap={handleScrollToMap} onRefresh={fetchTrip} />
         </View>
       </>
     );
@@ -166,7 +181,9 @@ export default function TripDetailScreen({ tripId }: { tripId: string }) {
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <Animated.Image
           source={{
-            uri: trip.provinceImage || 'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?auto=format&fit=crop&q=80&w=1200',
+            uri:
+              trip.provinceImage ||
+              'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?auto=format&fit=crop&q=80&w=1200',
           }}
           style={[
             styles.headerImage,
@@ -182,12 +199,21 @@ export default function TripDetailScreen({ tripId }: { tripId: string }) {
         <View style={styles.topBar}>
           <TouchableOpacity
             style={styles.topBarBtn}
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.back(); }}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.back();
+            }}
           >
             <Feather name="arrow-left" size={20} color="#FFF" />
           </TouchableOpacity>
           <View style={styles.topBarRight}>
-            <TouchableOpacity style={styles.topBarBtn} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setEditVisible(true); }}>
+            <TouchableOpacity
+              style={styles.topBarBtn}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setEditVisible(true);
+              }}
+            >
               <Feather name="edit-2" size={18} color="#FFF" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.topBarBtn}>
@@ -197,10 +223,15 @@ export default function TripDetailScreen({ tripId }: { tripId: string }) {
         </View>
 
         {/* Trip Info */}
-        <Animated.View style={[styles.headerInfo, { transform: [{ translateY: titleTranslateY }] }]}>
-          <Text style={styles.headerTitle} numberOfLines={2}>{trip.title}</Text>
+        <Animated.View
+          style={[styles.headerInfo, { transform: [{ translateY: titleTranslateY }] }]}
+        >
+          <Text style={styles.headerTitle} numberOfLines={2}>
+            {trip.title}
+          </Text>
           <Text style={styles.headerMeta}>
-            {formatDateShort(trip.startDate)} – {formatDateShort(trip.endDate)} · {trip.totalDays} ngày
+            {formatDateShort(trip.startDate)} – {formatDateShort(trip.endDate)} · {trip.totalDays}{' '}
+            ngày
           </Text>
         </Animated.View>
       </View>
@@ -208,10 +239,13 @@ export default function TripDetailScreen({ tripId }: { tripId: string }) {
       {/* ===== TAB BAR ===== */}
       <View style={styles.tabBar}>
         <Animated.View
-          style={[styles.tabIndicator, {
-            width: TAB_WIDTH - 16,
-            transform: [{ translateX: indicatorTranslateX }],
-          }]}
+          style={[
+            styles.tabIndicator,
+            {
+              width: TAB_WIDTH - 16,
+              transform: [{ translateX: indicatorTranslateX }],
+            },
+          ]}
         />
         {TABS.map((tab, index) => {
           const isActive = activeTab === tab.key;
@@ -235,13 +269,19 @@ export default function TripDetailScreen({ tripId }: { tripId: string }) {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: true }
-        )}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+          useNativeDriver: true,
+        })}
         scrollEventThrottle={16}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchTrip(); }} tintColor="#1A1A1A" />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              fetchTrip();
+            }}
+            tintColor="#1A1A1A"
+          />
         }
       >
         {renderTabContent()}
@@ -265,12 +305,19 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
 
   loadingContainer: {
-    flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF', gap: 12,
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    gap: 12,
   },
   loadingText: { fontSize: 14, color: '#9CA3AF', fontWeight: '500' },
   backButton: {
-    marginTop: 8, paddingHorizontal: 20, paddingVertical: 10,
-    backgroundColor: '#4A7CFF', borderRadius: 10,
+    marginTop: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#4A7CFF',
+    borderRadius: 10,
   },
   backButtonText: { color: '#FFF', fontWeight: '600', fontSize: 14 },
 
@@ -283,49 +330,78 @@ const styles = StyleSheet.create({
   },
   headerImage: {
     ...StyleSheet.absoluteFillObject,
-    width: undefined, height: undefined, resizeMode: 'cover',
+    width: undefined,
+    height: undefined,
+    resizeMode: 'cover',
   },
   topBar: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 16, paddingTop: 8, zIndex: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    zIndex: 10,
   },
   topBarRight: { flexDirection: 'row', gap: 8 },
   topBarBtn: {
-    width: 36, height: 36, borderRadius: 18,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerInfo: {
-    position: 'absolute', bottom: 16, left: 16, right: 16,
+    position: 'absolute',
+    bottom: 16,
+    left: 16,
+    right: 16,
   },
   headerTitle: {
-    fontSize: 24, fontWeight: '700', color: '#FFF', marginBottom: 4,
-    textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3,
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFF',
+    marginBottom: 4,
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   headerMeta: {
-    fontSize: 13, color: 'rgba(255,255,255,0.85)', fontWeight: '500',
-    textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.85)',
+    fontWeight: '500',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 
   // Tab Bar — neutral colors
   tabBar: {
-    flexDirection: 'row', backgroundColor: '#FFFFFF',
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E5E7EB',
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E5E7EB',
     position: 'relative',
   },
   tabItem: { flex: 1, alignItems: 'center', paddingVertical: 12, gap: 3 },
   tabLabel: { fontSize: 11, fontWeight: '600', color: '#9CA3AF' },
   tabLabelActive: { color: '#1A1A1A' },
   tabIndicator: {
-    position: 'absolute', bottom: 0, height: 2,
-    borderRadius: 1, backgroundColor: '#4A7CFF',
+    position: 'absolute',
+    bottom: 0,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: '#4A7CFF',
   },
 
   scrollView: { flex: 1 },
   scrollContent: { paddingBottom: 120 },
 
   comingSoonContainer: {
-    alignItems: 'center', justifyContent: 'center', paddingVertical: 80, gap: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+    gap: 8,
   },
   comingSoonTitle: { fontSize: 17, fontWeight: '600', color: '#1A1A1A' },
   comingSoonText: { fontSize: 14, color: '#9CA3AF' },

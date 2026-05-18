@@ -21,6 +21,7 @@ import Animated, {
 import { Trip, TripDay, Destination, tripService } from '@/services/tripService';
 import AddPlaceModal from './AddPlaceModal';
 import { useConfirm } from '@/components/ConfirmProvider';
+import { getDayColor } from './journal/types';
 
 const BRAND = '#4A7CFF';
 const BRAND_LIGHT = '#EBF5FF';
@@ -28,7 +29,20 @@ const BRAND_LIGHT = '#EBF5FF';
 // ===== HELPERS =====
 function formatDayDate(dateStr: string): string {
   const d = new Date(dateStr);
-  const months = ['Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'];
+  const months = [
+    'Th1',
+    'Th2',
+    'Th3',
+    'Th4',
+    'Th5',
+    'Th6',
+    'Th7',
+    'Th8',
+    'Th9',
+    'Th10',
+    'Th11',
+    'Th12',
+  ];
   return `${d.getDate()} ${months[d.getMonth()]}`;
 }
 
@@ -41,7 +55,15 @@ function getTimeOfDay(order: number): { label: string; color: string } {
 const ITEM_HEIGHT = 78; // approx card height + margin
 
 // ===== MAIN COMPONENT =====
-export default function ItineraryTab({ trip, days }: { trip: Trip; days: TripDay[] }) {
+export default function ItineraryTab({
+  trip,
+  days,
+  onRefresh,
+}: {
+  trip: Trip;
+  days: TripDay[];
+  onRefresh: () => void;
+}) {
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedDays, setExpandedDays] = useState<Record<number, boolean>>({});
@@ -56,26 +78,33 @@ export default function ItineraryTab({ trip, days }: { trip: Trip; days: TripDay
   const swipeableRefs = useRef<Record<string, Swipeable | null>>({});
   const openSwipeable = useRef<string | null>(null);
 
-  const fetchDestinations = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await tripService.getDestinations(trip._id);
-      setDestinations(data);
-      // Auto-expand first day or day with activities
-      if (data.length > 0) {
-        const firstDay = Math.min(...data.map((d) => d.day));
-        setExpandedDays((prev) => ({ ...prev, [firstDay]: true }));
-      } else if (days.length > 0) {
-        setExpandedDays((prev) => ({ ...prev, [days[0].day]: true }));
-      }
-    } catch (e) {
-      console.error('Error fetching destinations:', e);
-    } finally {
-      setLoading(false);
-    }
-  }, [trip._id, days]);
+  // Derive destinations from the days prop in real-time
+  useEffect(() => {
+    const derived: Destination[] = [];
+    days.forEach((day) => {
+      const sortedPlaces = [...(day.places || [])].sort((a, b) => a.order - b.order);
+      sortedPlaces.forEach((place) => {
+        derived.push({
+          dayId: day.dayId,
+          day: day.day,
+          date: day.date,
+          place,
+        });
+      });
+    });
+    setDestinations(derived);
+    setLoading(false);
 
-  useEffect(() => { fetchDestinations(); }, [fetchDestinations]);
+    // Auto-expand first day or day with activities
+    if (Object.keys(expandedDays).length === 0) {
+      if (derived.length > 0) {
+        const firstDay = Math.min(...derived.map((d) => d.day));
+        setExpandedDays({ [firstDay]: true });
+      } else if (days.length > 0) {
+        setExpandedDays({ [days[0].day]: true });
+      }
+    }
+  }, [days]);
 
   // Group destinations by day
   const destByDay = destinations.reduce<Record<number, Destination[]>>((acc, dest) => {
@@ -83,6 +112,8 @@ export default function ItineraryTab({ trip, days }: { trip: Trip; days: TripDay
     acc[dest.day].push(dest);
     return acc;
   }, {});
+
+  const uniqueDates = React.useMemo(() => days.map((d) => d.date), [days]);
 
   const toggleDay = (dayNum: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -100,7 +131,7 @@ export default function ItineraryTab({ trip, days }: { trip: Trip; days: TripDay
   };
 
   const handlePlaceAdded = () => {
-    fetchDestinations();
+    onRefresh();
   };
 
   const { confirmDelete, alert: showAlert } = useConfirm();
@@ -124,6 +155,7 @@ export default function ItineraryTab({ trip, days }: { trip: Trip; days: TripDay
 
     try {
       await tripService.removePlaceFromDay(dest.dayId, dest.place._id);
+      onRefresh(); // Refresh parent to synchronize across tabs!
     } catch (error: any) {
       setDestinations(backup);
       const msg = error?.response?.data?.message || 'Không thể xóa địa điểm';
@@ -137,28 +169,48 @@ export default function ItineraryTab({ trip, days }: { trip: Trip; days: TripDay
   };
 
   // Drag reorder handler — no bounce, just swap
-  const handleDragEnd = useCallback((dayNum: number, fromIdx: number, dy: number) => {
-    const dayDests = (destByDay[dayNum] || []).sort((a, b) => a.place.order - b.place.order);
-    const offset = Math.round(dy / ITEM_HEIGHT);
-    const toIdx = Math.max(0, Math.min(dayDests.length - 1, fromIdx + offset));
-    if (toIdx === fromIdx) return;
+  const handleDragEnd = useCallback(
+    async (dayNum: number, fromIdx: number, dy: number) => {
+      const dayDests = (destByDay[dayNum] || []).sort((a, b) => a.place.order - b.place.order);
+      const offset = Math.round(dy / ITEM_HEIGHT);
+      const toIdx = Math.max(0, Math.min(dayDests.length - 1, fromIdx + offset));
+      if (toIdx === fromIdx) return;
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    // Swap in local destinations
-    const reordered = [...dayDests];
-    const [moved] = reordered.splice(fromIdx, 1);
-    reordered.splice(toIdx, 0, moved);
+      // Swap in local destinations
+      const reordered = [...dayDests];
+      const [moved] = reordered.splice(fromIdx, 1);
+      reordered.splice(toIdx, 0, moved);
 
-    // Update order values
-    const updatedDests = destinations.map((d) => {
-      if (d.dayId !== dayDests[0]?.dayId) return d;
-      const newIdx = reordered.findIndex((r) => r.place._id === d.place._id);
-      if (newIdx === -1) return d;
-      return { ...d, place: { ...d.place, order: newIdx + 1 } };
-    });
-    setDestinations(updatedDests);
-  }, [destByDay, destinations]);
+      // Update order values
+      const updatedDests = destinations.map((d) => {
+        if (d.dayId !== dayDests[0]?.dayId) return d;
+        const newIdx = reordered.findIndex((r) => r.place._id === d.place._id);
+        if (newIdx === -1) return d;
+        return { ...d, place: { ...d.place, order: newIdx + 1 } };
+      });
+      setDestinations(updatedDests);
+      
+      // Auto-save to database
+      const dayId = dayDests[0]?.dayId;
+      if (dayId) {
+        try {
+          // Send the newly ordered Document IDs (_id) to the backend
+          const orderedPlaceIds = reordered.map(r => r.place._id);
+          await tripService.reorderPlacesInDay(dayId, orderedPlaceIds);
+          console.log(`Reordered day ${dayNum} successfully`);
+          onRefresh(); // Sync other tabs immediately!
+        } catch (error) {
+          console.error('Failed to auto-save reorder', error);
+          showAlert('Lỗi', 'Không thể lưu thứ tự mới. Vui lòng thử lại.', 'error');
+          // Revert if failed
+          setDestinations(destinations);
+        }
+      }
+    },
+    [destByDay, destinations, showAlert, onRefresh],
+  );
 
   if (loading) {
     return (
@@ -183,8 +235,8 @@ export default function ItineraryTab({ trip, days }: { trip: Trip; days: TripDay
               activeOpacity={0.7}
               onPress={() => toggleDay(day.day)}
             >
-              <View style={styles.dayNumCircle}>
-                <Text style={styles.dayNumText}>{day.day}</Text>
+              <View style={[styles.dayNumCircle, { backgroundColor: getDayColor(day.date, uniqueDates) }]}>
+                <Text style={[styles.dayNumText, { color: '#FFF' }]}>{day.day}</Text>
               </View>
               <View style={styles.dayHeaderInfo}>
                 <Text style={styles.dayTitle}>Ngày {day.day}</Text>
@@ -217,10 +269,13 @@ export default function ItineraryTab({ trip, days }: { trip: Trip; days: TripDay
                       idx={idx}
                       isLast={idx === dayDests.length - 1}
                       dayNum={day.day}
+                      dayColor={getDayColor(day.date, uniqueDates)}
                       imgErrors={imgErrors}
                       onImageError={handleImageError}
                       onDelete={handleDeletePlace}
-                      onDragStart={() => {/* drag visual only */}}
+                      onDragStart={() => {
+                        /* drag visual only */
+                      }}
                       onDragEnd={handleDragEnd}
                       swipeableRefs={swipeableRefs}
                       openSwipeable={openSwipeable}
@@ -268,7 +323,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 12 },
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 12,
+      },
       android: { elevation: 3 },
     }),
   },
@@ -281,9 +341,12 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   dayNumCircle: {
-    width: 36, height: 36, borderRadius: 18,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: BRAND_LIGHT,
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   dayNumText: { fontSize: 15, fontWeight: '700', color: BRAND },
   dayHeaderInfo: { flex: 1, gap: 1 },
@@ -298,7 +361,9 @@ const styles = StyleSheet.create({
 
   // Empty day
   emptyDay: {
-    alignItems: 'center', paddingVertical: 16, gap: 4,
+    alignItems: 'center',
+    paddingVertical: 16,
+    gap: 4,
     marginLeft: 24,
   },
   emptyDayText: { fontSize: 14, fontWeight: '500', color: '#6B7280' },
@@ -317,7 +382,9 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   timelineDot: {
-    width: 8, height: 8, borderRadius: 4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: BRAND,
     zIndex: 1,
   },
@@ -339,11 +406,19 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 12,
   },
   swipeDeleteCircle: {
-    width: 36, height: 36, borderRadius: 18,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#FFF',
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 4 },
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 4,
+      },
       android: { elevation: 2 },
     }),
   },
@@ -359,11 +434,14 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   activityThumb: {
-    width: 48, height: 48, borderRadius: 10,
+    width: 48,
+    height: 48,
+    borderRadius: 10,
     backgroundColor: '#E5E7EB',
   },
   activityThumbPlaceholder: {
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   activityInfo: { flex: 1, gap: 2 },
   activityName: { fontSize: 14, fontWeight: '600', color: '#1A1A1A' },
@@ -387,8 +465,10 @@ const styles = StyleSheet.create({
 
   // Drag handle
   dragHandle: {
-    paddingHorizontal: 6, paddingVertical: 10,
-    justifyContent: 'center', alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 
@@ -398,6 +478,7 @@ interface DraggableActivityItemProps {
   idx: number;
   isLast: boolean;
   dayNum: number;
+  dayColor: string;
   imgErrors: Record<string, boolean>;
   onImageError: (id: string) => void;
   onDelete: (dest: Destination) => void;
@@ -408,9 +489,18 @@ interface DraggableActivityItemProps {
 }
 
 function DraggableActivityItem({
-  dest, idx, isLast, dayNum, imgErrors,
-  onImageError, onDelete, onDragStart, onDragEnd,
-  swipeableRefs, openSwipeable,
+  dest,
+  idx,
+  isLast,
+  dayNum,
+  dayColor,
+  imgErrors,
+  onImageError,
+  onDelete,
+  onDragStart,
+  onDragEnd,
+  swipeableRefs,
+  openSwipeable,
 }: DraggableActivityItemProps) {
   const tod = getTimeOfDay(dest.place.order);
   const hasPhoto = dest.place.photo && !imgErrors[dest.place._id];
@@ -426,9 +516,12 @@ function DraggableActivityItem({
     onDragStart(dayNum);
   }, [onDragStart, dayNum]);
 
-  const triggerDragEnd = useCallback((dy: number) => {
-    onDragEnd(dayNum, idx, dy);
-  }, [onDragEnd, dayNum, idx]);
+  const triggerDragEnd = useCallback(
+    (dy: number) => {
+      onDragEnd(dayNum, idx, dy);
+    },
+    [onDragEnd, dayNum, idx],
+  );
 
   const longPressGesture = Gesture.LongPress()
     .minDuration(200)
@@ -489,21 +582,20 @@ function DraggableActivityItem({
 
   return (
     <Animated.View
-      style={[
-        { shadowColor: '#000', shadowOffset: { width: 0, height: 2 } },
-        animatedStyle,
-      ]}
+      style={[{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 } }, animatedStyle]}
     >
       <View style={styles.timelineItem}>
         {/* Timeline line + dot */}
         <View style={styles.timelineTrack}>
-          <View style={styles.timelineDot} />
-          {!isLast && <View style={styles.timelineLine} />}
+          <View style={[styles.timelineDot, { backgroundColor: dayColor }]} />
+          {!isLast && <View style={[styles.timelineLine, { backgroundColor: dayColor, opacity: 0.25 }]} />}
         </View>
 
         {/* Activity card — swipeable */}
         <Swipeable
-          ref={(ref) => { swipeableRefs.current[dest.place._id] = ref; }}
+          ref={(ref) => {
+            swipeableRefs.current[dest.place._id] = ref;
+          }}
           renderRightActions={renderDeleteAction}
           rightThreshold={60}
           overshootRight={false}
@@ -544,9 +636,7 @@ function DraggableActivityItem({
                     <Text style={styles.activityDot}>·</Text>
                   </>
                 ) : null}
-                <Text style={[styles.activityTag, { color: tod.color }]}>
-                  {tod.label}
-                </Text>
+                <Text style={[styles.activityTag, { color: tod.color }]}>{tod.label}</Text>
               </View>
               {dest.place.address ? (
                 <Text style={styles.activityAddr} numberOfLines={1}>

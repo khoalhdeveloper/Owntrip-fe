@@ -15,9 +15,10 @@ export const notificationService = {
   getAll: async (): Promise<Notification[]> => {
     try {
       const response: any = await axiosClient.get(ENDPOINTS.NOTIFICATIONS.GET_ALL);
-      // Backend usually wraps data in a 'notifications' or 'data' key, 
+      // Backend usually wraps data in a 'notifications' or 'data' key,
       // or returns the array directly.
-      const data = response?.notifications || response?.data || (Array.isArray(response) ? response : []);
+      const data =
+        response?.notifications || response?.data || (Array.isArray(response) ? response : []);
       return Array.isArray(data) ? data : [];
     } catch (error) {
       console.error('Error fetching notifications:', error);

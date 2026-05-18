@@ -1,12 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Modal,
-  TouchableOpacity,
-  Platform,
-} from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
@@ -17,8 +10,8 @@ interface StayDatePickerModalProps {
   visible: boolean;
   onClose: () => void;
   hotelName: string;
-  tripStartDate: string;   // ISO string
-  tripEndDate: string;      // ISO string
+  tripStartDate: string; // ISO string
+  tripEndDate: string; // ISO string
   onConfirm: (checkIn: Date, checkOut: Date) => void;
   initialCheckIn?: Date | null;
   initialCheckOut?: Date | null;
@@ -26,9 +19,11 @@ interface StayDatePickerModalProps {
 
 // Helpers
 function sameDay(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear()
-    && a.getMonth() === b.getMonth()
-    && a.getDate() === b.getDate();
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
 }
 
 function stripTime(d: Date): Date {
@@ -77,8 +72,18 @@ export default function StayDatePickerModal({
   }, [visible, initialCheckIn, initialCheckOut, tripStart]);
 
   const MONTHS = [
-    'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
-    'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12',
+    'Tháng 1',
+    'Tháng 2',
+    'Tháng 3',
+    'Tháng 4',
+    'Tháng 5',
+    'Tháng 6',
+    'Tháng 7',
+    'Tháng 8',
+    'Tháng 9',
+    'Tháng 10',
+    'Tháng 11',
+    'Tháng 12',
   ];
 
   // Build calendar grid
@@ -167,13 +172,14 @@ export default function StayDatePickerModal({
     return d > checkIn && d < checkOut;
   };
 
-  const isCheckIn = (d: Date) => checkIn ? sameDay(d, checkIn) : false;
-  const isCheckOut = (d: Date) => checkOut ? sameDay(d, checkOut) : false;
+  const isCheckIn = (d: Date) => (checkIn ? sameDay(d, checkIn) : false);
+  const isCheckOut = (d: Date) => (checkOut ? sameDay(d, checkOut) : false);
   const isToday = (d: Date) => sameDay(d, stripTime(new Date()));
 
-  const nights = checkIn && checkOut
-    ? Math.round((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24))
-    : 0;
+  const nights =
+    checkIn && checkOut
+      ? Math.round((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24))
+      : 0;
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
@@ -185,9 +191,13 @@ export default function StayDatePickerModal({
 
         {/* Header */}
         <View style={styles.header}>
-          {(checkIn || checkOut) ? (
+          {checkIn || checkOut ? (
             <TouchableOpacity
-              onPress={() => { setCheckIn(null); setCheckOut(null); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+              onPress={() => {
+                setCheckIn(null);
+                setCheckOut(null);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
               <Text style={styles.clearBtn}>Xóa</Text>
@@ -195,7 +205,10 @@ export default function StayDatePickerModal({
           ) : (
             <View />
           )}
-          <TouchableOpacity onPress={handleClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <TouchableOpacity
+            onPress={handleClose}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
             <Feather name="x" size={22} color="#6B7280" />
           </TouchableOpacity>
         </View>
@@ -207,7 +220,11 @@ export default function StayDatePickerModal({
             Chọn ngày bạn sẽ ở lại tại <Text style={styles.hotelName}>{hotelName}</Text>
           </Text>
           <Text style={styles.tapHint}>
-            {!checkIn ? 'Nhấn một ngày để chọn nhận phòng' : !checkOut ? 'Tiếp theo, hãy chọn ngày trả phòng' : 'Đã chọn xong! Nhấn Tiếp tục'}
+            {!checkIn
+              ? 'Nhấn một ngày để chọn nhận phòng'
+              : !checkOut
+              ? 'Tiếp theo, hãy chọn ngày trả phòng'
+              : 'Đã chọn xong! Nhấn Tiếp tục'}
           </Text>
         </View>
 
@@ -218,7 +235,9 @@ export default function StayDatePickerModal({
             <TouchableOpacity onPress={prevMonth} style={styles.monthArrow}>
               <Feather name="chevron-left" size={20} color="#6B7280" />
             </TouchableOpacity>
-            <Text style={styles.monthTitle}>{MONTHS[currentMonth]} {currentYear}</Text>
+            <Text style={styles.monthTitle}>
+              {MONTHS[currentMonth]} {currentYear}
+            </Text>
             <TouchableOpacity onPress={nextMonth} style={styles.monthArrow}>
               <Feather name="chevron-right" size={20} color="#6B7280" />
             </TouchableOpacity>
@@ -259,17 +278,21 @@ export default function StayDatePickerModal({
                   disabled={!inRange}
                   onPress={() => handleDayTap(date)}
                 >
-                  <View style={[
-                    styles.dayCircle,
-                    (isStart || isEnd) && styles.dayCircleSelected,
-                    today && !isStart && !isEnd && styles.dayCircleToday,
-                  ]}>
-                    <Text style={[
-                      styles.dayText,
-                      !inRange && styles.dayTextDisabled,
-                      (isStart || isEnd) && styles.dayTextSelected,
-                      today && !isStart && !isEnd && styles.dayTextToday,
-                    ]}>
+                  <View
+                    style={[
+                      styles.dayCircle,
+                      (isStart || isEnd) && styles.dayCircleSelected,
+                      today && !isStart && !isEnd && styles.dayCircleToday,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.dayText,
+                        !inRange && styles.dayTextDisabled,
+                        (isStart || isEnd) && styles.dayTextSelected,
+                        today && !isStart && !isEnd && styles.dayTextToday,
+                      ]}
+                    >
                       {date.getDate()}
                     </Text>
                   </View>
@@ -343,8 +366,11 @@ const styles = StyleSheet.create({
   handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#E5E7EB' },
 
   header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 20, paddingBottom: 4,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 4,
   },
   clearBtn: { fontSize: 14, fontWeight: '600', color: '#EF4444' },
 
@@ -361,13 +387,20 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 12 },
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 12,
+      },
       android: { elevation: 3 },
     }),
   },
 
   monthNav: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 16,
   },
   monthArrow: { padding: 4 },
@@ -399,8 +432,11 @@ const styles = StyleSheet.create({
   },
 
   dayCircle: {
-    width: 36, height: 36, borderRadius: 18,
-    justifyContent: 'center', alignItems: 'center',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   dayCircleSelected: {
     backgroundColor: BRAND,
@@ -417,31 +453,42 @@ const styles = StyleSheet.create({
 
   // Selection Summary
   selectionSummary: {
-    flexDirection: 'row', alignItems: 'center',
-    marginHorizontal: 20, marginTop: 20,
-    paddingVertical: 14, paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginTop: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     backgroundColor: '#F9FAFB',
     borderRadius: 12,
-    borderWidth: 1, borderColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
   dateBox: { flex: 1, gap: 2 },
   dateSeparator: {
-    width: 32, alignItems: 'center',
+    width: 32,
+    alignItems: 'center',
   },
   dateLabel: { fontSize: 10, fontWeight: '600', color: '#9CA3AF', letterSpacing: 0.5 },
   dateValue: { fontSize: 17, fontWeight: '700', color: '#1A1A1A' },
   selectHint: { fontSize: 14, color: '#D1D5DB', fontWeight: '500' },
   nightsBadge: {
-    position: 'absolute', right: 16, top: -10,
+    position: 'absolute',
+    right: 16,
+    top: -10,
     backgroundColor: BRAND,
-    paddingHorizontal: 10, paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 10,
   },
   nightsText: { fontSize: 11, fontWeight: '700', color: '#FFF' },
 
   // Confirm
   confirmBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
     marginHorizontal: 20,
     backgroundColor: BRAND,
     paddingVertical: 16,

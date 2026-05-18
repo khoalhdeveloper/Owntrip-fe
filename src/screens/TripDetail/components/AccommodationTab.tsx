@@ -53,7 +53,9 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
   const [payosCheckoutUrl, setPayosCheckoutUrl] = useState<string | null>(null);
   const [payosBookingId, setPayosBookingId] = useState<string | null>(null);
   const [payosModalVisible, setPayosModalVisible] = useState(false);
-  const [tempBookingInfo, setTempBookingInfo] = useState<{ total: number; nights: number } | null>(null);
+  const [tempBookingInfo, setTempBookingInfo] = useState<{ total: number; nights: number } | null>(
+    null,
+  );
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -79,7 +81,7 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
     }
   }, [trip.destination, trip.province]);
 
-  useEffect(() => { 
+  useEffect(() => {
     fetchAccommodations();
     loadUserProfile();
   }, [fetchAccommodations]);
@@ -125,7 +127,9 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
 
     try {
       const formatDate = (d: Date) =>
-        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+          d.getDate(),
+        ).padStart(2, '0')}`;
 
       const checkInStr = formatDate(checkIn);
       const checkOutStr = formatDate(checkOut);
@@ -190,7 +194,11 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
   const handlePayOSSuccess = (bookingId: string) => {
     setPayosModalVisible(false);
     if (tempBookingInfo) {
-      showToast(`🎉 Đặt phòng thành công! Đã thanh toán ${formatCurrency(tempBookingInfo.total)} cho ${tempBookingInfo.nights} đêm.`);
+      showToast(
+        `🎉 Đặt phòng thành công! Đã thanh toán ${formatCurrency(tempBookingInfo.total)} cho ${
+          tempBookingInfo.nights
+        } đêm.`,
+      );
     } else {
       showToast(`🎉 Đặt phòng thành công!`);
     }
@@ -271,13 +279,16 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
             ))}
           </View>
 
-          <Text style={styles.hotelName} numberOfLines={1}>{item.name}</Text>
+          <Text style={styles.hotelName} numberOfLines={1}>
+            {item.name}
+          </Text>
 
           {/* Address */}
           <View style={styles.addressRow}>
             <Feather name="map-pin" size={12} color="#9CA3AF" />
             <Text style={styles.addressText} numberOfLines={1}>
-              {item.address?.fullAddress || ''}{item.address?.city ? `, ${item.address.city}` : ''}
+              {item.address?.fullAddress || ''}
+              {item.address?.city ? `, ${item.address.city}` : ''}
             </Text>
           </View>
 
@@ -299,9 +310,7 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
                   <Text style={styles.amenityText}>{a}</Text>
                 </View>
               ))}
-              {extraCount > 0 && (
-                <Text style={styles.amenityMore}>+{extraCount}</Text>
-              )}
+              {extraCount > 0 && <Text style={styles.amenityMore}>+{extraCount}</Text>}
             </View>
           )}
 
@@ -309,7 +318,9 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
           <View style={styles.priceRow}>
             <View>
               <Text style={styles.priceValue}>
-                {cheapestRoom ? `Từ ${formatCurrency(cheapestRoom.basePrice || cheapestRoom.price || 0)}` : formatCurrency(item.pricePerNight)}
+                {cheapestRoom
+                  ? `Từ ${formatCurrency(cheapestRoom.basePrice || cheapestRoom.price || 0)}`
+                  : formatCurrency(item.pricePerNight)}
               </Text>
               <Text style={styles.priceUnit}>/đêm</Text>
             </View>
@@ -354,7 +365,11 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
         hotel={selectedHotel}
         trip={trip}
         days={days}
-        onClose={() => { setDetailVisible(false); setSelectedHotel(null); setSelectedRoom(null); }}
+        onClose={() => {
+          setDetailVisible(false);
+          setSelectedHotel(null);
+          setSelectedRoom(null);
+        }}
         onBook={handleBook}
         onWriteReview={handleWriteReview}
       />
@@ -363,7 +378,9 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
       <WriteReviewModal
         visible={reviewVisible}
         hotel={selectedHotel}
-        onClose={() => { setReviewVisible(false); }}
+        onClose={() => {
+          setReviewVisible(false);
+        }}
         onReviewSubmitted={() => {
           // Refresh to show new review
           if (selectedHotel) {
@@ -376,7 +393,11 @@ export default function AccommodationTab({ trip, days }: AccommodationTabProps) 
       {selectedHotel && (
         <StayDatePickerModal
           visible={calendarVisible}
-          onClose={() => { setCalendarVisible(false); setSelectedHotel(null); setSelectedRoom(null); }}
+          onClose={() => {
+            setCalendarVisible(false);
+            setSelectedHotel(null);
+            setSelectedRoom(null);
+          }}
           hotelName={selectedHotel.name}
           tripStartDate={trip.startDate}
           tripEndDate={trip.endDate}
@@ -411,14 +432,19 @@ const styles = StyleSheet.create({
 
   // Loading
   loadingContainer: {
-    flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12,
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
     paddingVertical: 80,
   },
   loadingText: { fontSize: 14, color: '#9CA3AF' },
 
   // Empty
   emptyContainer: {
-    alignItems: 'center', gap: 8, paddingVertical: 80,
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 80,
   },
   emptyTitle: { fontSize: 16, fontWeight: '600', color: '#6B7280' },
   emptySubtitle: { fontSize: 13, color: '#9CA3AF' },
@@ -429,7 +455,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 16 },
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 16,
+      },
       android: { elevation: 4 },
     }),
   },
@@ -437,29 +468,46 @@ const styles = StyleSheet.create({
   imageContainer: { position: 'relative' },
   hotelImage: { width: '100%', height: 200, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
   imagePlaceholder: {
-    backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   ratingBadge: {
-    position: 'absolute', left: 12, bottom: 12,
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: BRAND, borderRadius: 8,
-    paddingHorizontal: 8, paddingVertical: 4,
+    position: 'absolute',
+    left: 12,
+    bottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: BRAND,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   ratingValue: { fontSize: 14, fontWeight: '800', color: '#FFF' },
 
   categoryBadge: {
-    position: 'absolute', left: 12, top: 12,
-    backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 6,
-    paddingHorizontal: 8, paddingVertical: 3,
+    position: 'absolute',
+    left: 12,
+    top: 12,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
   categoryText: { fontSize: 11, fontWeight: '700', color: '#FFF' },
 
   favBtn: {
-    position: 'absolute', right: 12, top: 12,
-    width: 34, height: 34, borderRadius: 17,
+    position: 'absolute',
+    right: 12,
+    top: 12,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: 'rgba(0,0,0,0.25)',
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   infoSection: { padding: 14, gap: 6 },
@@ -477,29 +525,42 @@ const styles = StyleSheet.create({
 
   amenitiesRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
   amenityChip: {
-    backgroundColor: '#F3F4F6', borderRadius: 6,
-    paddingHorizontal: 8, paddingVertical: 3,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
   amenityText: { fontSize: 11, fontWeight: '500', color: '#6B7280' },
   amenityMore: { fontSize: 11, fontWeight: '600', color: '#9CA3AF' },
 
   priceRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginTop: 6,
   },
   priceValue: { fontSize: 18, fontWeight: '800', color: BRAND },
   priceUnit: { fontSize: 11, color: '#9CA3AF', fontWeight: '500' },
 
   viewDetailBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
   },
   viewDetailText: { fontSize: 13, fontWeight: '600', color: BRAND },
-  
+
   // Toast
   toastContainer: {
-    position: 'absolute', bottom: 100, left: 20, right: 20,
-    backgroundColor: 'rgba(0,0,0,0.8)', paddingVertical: 12, paddingHorizontal: 20,
-    borderRadius: 25, alignItems: 'center', zIndex: 9999,
+    position: 'absolute',
+    bottom: 100,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    alignItems: 'center',
+    zIndex: 9999,
   },
   toastText: { color: '#FFF', fontSize: 14, fontWeight: '600', textAlign: 'center' },
 });

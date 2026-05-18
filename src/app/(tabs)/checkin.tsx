@@ -26,7 +26,7 @@ export default function CheckinScreen() {
   const [mediaPermission, requestMediaPermission] = MediaLibrary.usePermissions();
   const [isCapturing, setIsCapturing] = useState(false);
   const [lastPhoto, setLastPhoto] = useState<string | null>(null);
-  
+
   const cameraRef = useRef<CameraView>(null);
   const flashAnim = useRef(new Animated.Value(0)).current;
   const { alert: showAlert } = useConfirm();
@@ -38,14 +38,20 @@ export default function CheckinScreen() {
   }, []);
 
   if (!permission) {
-    return <View style={styles.loadingContainer}><ActivityIndicator size="large" color="#4A7CFF" /></View>;
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4A7CFF" />
+      </View>
+    );
   }
 
   if (!permission.granted) {
     return (
       <View style={styles.permissionContainer}>
         <Feather name="camera-off" size={64} color="#CBD5E0" />
-        <Text style={styles.permissionText}>Chúng tôi cần quyền truy cập camera để bạn thực hiện check-in.</Text>
+        <Text style={styles.permissionText}>
+          Chúng tôi cần quyền truy cập camera để bạn thực hiện check-in.
+        </Text>
         <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
           <Text style={styles.permissionButtonText}>Cấp quyền Camera</Text>
         </TouchableOpacity>
@@ -54,11 +60,11 @@ export default function CheckinScreen() {
   }
 
   const toggleCameraFacing = () => {
-    setFacing(current => (current === 'back' ? 'front' : 'back'));
+    setFacing((current) => (current === 'back' ? 'front' : 'back'));
   };
 
   const toggleFlash = () => {
-    setFlash(current => {
+    setFlash((current) => {
       if (current === 'off') return 'on';
       if (current === 'on') return 'auto';
       return 'off';
@@ -70,7 +76,7 @@ export default function CheckinScreen() {
 
     try {
       setIsCapturing(true);
-      
+
       // Shutter effect
       Animated.sequence([
         Animated.timing(flashAnim, { toValue: 1, duration: 50, useNativeDriver: true }),
@@ -88,7 +94,7 @@ export default function CheckinScreen() {
         // Save to gallery
         const asset = await MediaLibrary.createAssetAsync(photo.uri);
         await MediaLibrary.createAlbumAsync('OwnTrip', asset, false);
-        
+
         // Success feedback (vibrate or toast could go here)
       }
     } catch (error) {
@@ -101,21 +107,16 @@ export default function CheckinScreen() {
 
   return (
     <View style={styles.container}>
-      <CameraView 
-        style={styles.camera} 
-        facing={facing} 
-        flash={flash}
-        ref={cameraRef}
-      >
+      <CameraView style={styles.camera} facing={facing} flash={flash} ref={cameraRef}>
         <SafeAreaView style={styles.overlay} edges={['top']}>
           {/* Top Bar */}
           <View style={styles.topContainer}>
             <BlurView intensity={20} style={styles.topBar}>
               <TouchableOpacity style={styles.topIconButton} onPress={toggleFlash}>
-                <Feather 
-                  name={flash === 'on' ? 'zap' : flash === 'auto' ? 'zap' : 'zap-off'} 
-                  size={20} 
-                  color={flash === 'off' ? '#FFF' : '#FFD700'} 
+                <Feather
+                  name={flash === 'on' ? 'zap' : flash === 'auto' ? 'zap' : 'zap-off'}
+                  size={20}
+                  color={flash === 'off' ? '#FFF' : '#FFD700'}
                 />
                 {flash === 'auto' && <Text style={styles.autoText}>A</Text>}
               </TouchableOpacity>
@@ -148,14 +149,16 @@ export default function CheckinScreen() {
                 </TouchableOpacity>
 
                 {/* Main Capture Button */}
-                <TouchableOpacity 
-                  style={styles.captureButtonContainer} 
+                <TouchableOpacity
+                  style={styles.captureButtonContainer}
                   onPress={takePicture}
                   activeOpacity={0.7}
                   disabled={isCapturing}
                 >
                   <View style={styles.captureButtonOuter}>
-                    <View style={[styles.captureButtonInner, isCapturing && styles.captureButtonActive]} />
+                    <View
+                      style={[styles.captureButtonInner, isCapturing && styles.captureButtonActive]}
+                    />
                   </View>
                 </TouchableOpacity>
 
@@ -169,13 +172,7 @@ export default function CheckinScreen() {
         </SafeAreaView>
 
         {/* Shutter Animation */}
-        <Animated.View 
-          pointerEvents="none"
-          style={[
-            styles.shutterFlash, 
-            { opacity: flashAnim }
-          ]} 
-        />
+        <Animated.View pointerEvents="none" style={[styles.shutterFlash, { opacity: flashAnim }]} />
       </CameraView>
     </View>
   );

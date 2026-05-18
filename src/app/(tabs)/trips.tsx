@@ -12,7 +12,6 @@ import {
   StatusBar,
   Dimensions,
   Animated,
-
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -38,11 +37,26 @@ const FILTERS: FilterType[] = ['all', 'upcoming', 'past'];
 function formatDateRange(start: string, end: string): string {
   const s = new Date(start);
   const e = new Date(end);
-  const months = ['Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'];
+  const months = [
+    'Th1',
+    'Th2',
+    'Th3',
+    'Th4',
+    'Th5',
+    'Th6',
+    'Th7',
+    'Th8',
+    'Th9',
+    'Th10',
+    'Th11',
+    'Th12',
+  ];
   if (s.getMonth() === e.getMonth()) {
     return `${s.getDate()} – ${e.getDate()} ${months[e.getMonth()]}, ${e.getFullYear()}`;
   }
-  return `${s.getDate()} ${months[s.getMonth()]} – ${e.getDate()} ${months[e.getMonth()]}, ${e.getFullYear()}`;
+  return `${s.getDate()} ${months[s.getMonth()]} – ${e.getDate()} ${
+    months[e.getMonth()]
+  }, ${e.getFullYear()}`;
 }
 
 function getDaysUntil(startDate: string): number {
@@ -84,7 +98,11 @@ export default function TripsScreen() {
     }
   }, []);
 
-  useFocusEffect(useCallback(() => { fetchTrips(); }, [fetchTrips]));
+  useFocusEffect(
+    useCallback(() => {
+      fetchTrips();
+    }, [fetchTrips]),
+  );
 
   const handleFilterChange = (newFilter: FilterType) => {
     if (newFilter === filter) return;
@@ -163,7 +181,9 @@ export default function TripsScreen() {
 
     return (
       <Swipeable
-        ref={(ref) => { swipeableRefs.current[item._id] = ref; }}
+        ref={(ref) => {
+          swipeableRefs.current[item._id] = ref;
+        }}
         renderRightActions={() => renderRightActions(item)}
         rightThreshold={60}
         overshootRight={false}
@@ -186,7 +206,11 @@ export default function TripsScreen() {
         >
           <View style={styles.cardImageBox}>
             <Image
-              source={{ uri: item.provinceImage || 'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?auto=format&fit=crop&q=80&w=800' }}
+              source={{
+                uri:
+                  item.provinceImage ||
+                  'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?auto=format&fit=crop&q=80&w=800',
+              }}
               style={styles.cardImage}
             />
             <LinearGradient
@@ -210,7 +234,9 @@ export default function TripsScreen() {
             )}
 
             <View style={styles.cardImageContent}>
-              <Text style={styles.cardImageTitle} numberOfLines={2}>{item.title}</Text>
+              <Text style={styles.cardImageTitle} numberOfLines={2}>
+                {item.title}
+              </Text>
               <Text style={styles.cardImageMeta}>
                 {item.destination} · {item.totalDays} ngày
               </Text>
@@ -219,7 +245,9 @@ export default function TripsScreen() {
 
           <View style={styles.cardBottom}>
             <Feather name="calendar" size={13} color="#9CA3AF" />
-            <Text style={styles.cardBottomText}>{formatDateRange(item.startDate, item.endDate)}</Text>
+            <Text style={styles.cardBottomText}>
+              {formatDateRange(item.startDate, item.endDate)}
+            </Text>
             <View style={{ flex: 1 }} />
             <TouchableOpacity
               onPress={(e) => {
@@ -269,9 +297,12 @@ export default function TripsScreen() {
         />
         {FILTERS.map((key) => {
           const active = filter === key;
-          const label = key === 'all' ? `Tất cả (${counts.all})`
-            : key === 'upcoming' ? `Sắp đi (${counts.upcoming})`
-            : `Đã đi (${counts.past})`;
+          const label =
+            key === 'all'
+              ? `Tất cả (${counts.all})`
+              : key === 'upcoming'
+              ? `Sắp đi (${counts.upcoming})`
+              : `Đã đi (${counts.past})`;
           return (
             <TouchableOpacity
               key={key}
@@ -294,11 +325,11 @@ export default function TripsScreen() {
         <View style={styles.empty}>
           <Feather name="map" size={44} color="#D1D5DB" />
           <Text style={styles.emptyTitle}>
-            {filter === 'all' ? 'Chưa có chuyến đi nào' : `Không có chuyến đi ${filter === 'upcoming' ? 'sắp tới' : 'đã qua'}`}
+            {filter === 'all'
+              ? 'Chưa có chuyến đi nào'
+              : `Không có chuyến đi ${filter === 'upcoming' ? 'sắp tới' : 'đã qua'}`}
           </Text>
-          <Text style={styles.emptySub}>
-            Khi bạn lên kế hoạch, các chuyến đi sẽ hiện ở đây.
-          </Text>
+          <Text style={styles.emptySub}>Khi bạn lên kế hoạch, các chuyến đi sẽ hiện ở đây.</Text>
           {filter === 'all' && (
             <TouchableOpacity
               style={styles.emptyBtn}
@@ -319,7 +350,10 @@ export default function TripsScreen() {
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => { setRefreshing(true); fetchTrips(); }}
+              onRefresh={() => {
+                setRefreshing(true);
+                fetchTrips();
+              }}
               tintColor="#1A1A1A"
             />
           }
@@ -335,15 +369,22 @@ const styles = StyleSheet.create({
 
   // Header
   header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 24, paddingTop: 8, paddingBottom: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 8,
   },
   headerTitle: { fontSize: 30, fontWeight: '700', color: '#1A1A1A', letterSpacing: -0.5 },
 
   // Plan Trip button — text CTA, not icon-only
   planBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 16, paddingVertical: 9,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
     borderRadius: 10,
     backgroundColor: BRAND,
   },
@@ -351,17 +392,28 @@ const styles = StyleSheet.create({
 
   // Animated Segmented Control
   segmented: {
-    flexDirection: 'row', marginHorizontal: SEGMENT_HORIZONTAL_MARGIN, marginBottom: 16,
-    backgroundColor: '#F3F4F6', borderRadius: 10, padding: SEGMENT_PADDING,
+    flexDirection: 'row',
+    marginHorizontal: SEGMENT_HORIZONTAL_MARGIN,
+    marginBottom: 16,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 10,
+    padding: SEGMENT_PADDING,
     position: 'relative',
   },
   segSlider: {
     position: 'absolute',
-    top: SEGMENT_PADDING, bottom: SEGMENT_PADDING, left: SEGMENT_PADDING,
+    top: SEGMENT_PADDING,
+    bottom: SEGMENT_PADDING,
+    left: SEGMENT_PADDING,
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 3 },
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 3,
+      },
       android: { elevation: 2 },
     }),
   },
@@ -374,9 +426,17 @@ const styles = StyleSheet.create({
 
   // Card
   card: {
-    marginBottom: 16, borderRadius: 14, overflow: 'hidden', backgroundColor: '#FFF',
+    marginBottom: 16,
+    borderRadius: 14,
+    overflow: 'hidden',
+    backgroundColor: '#FFF',
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6 },
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+      },
       android: { elevation: 2 },
     }),
   },
@@ -385,34 +445,58 @@ const styles = StyleSheet.create({
   cardOverlay: { ...StyleSheet.absoluteFillObject },
 
   liveIndicator: {
-    position: 'absolute', top: 12, left: 12,
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: 'rgba(0,0,0,0.65)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6,
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
   liveDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#34D399' },
   liveText: { fontSize: 10, fontWeight: '600', color: '#FFF' },
 
   countdownBadge: {
-    position: 'absolute', top: 12, right: 12,
+    position: 'absolute',
+    top: 12,
+    right: 12,
     backgroundColor: 'rgba(255,255,255,0.88)',
-    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
   countdownText: { fontSize: 11, fontWeight: '700', color: '#1A1A1A' },
 
   cardImageContent: { position: 'absolute', bottom: 14, left: 14, right: 14 },
   cardImageTitle: {
-    fontSize: 20, fontWeight: '700', color: '#FFF',
-    textShadowColor: 'rgba(0,0,0,0.4)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFF',
+    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   cardImageMeta: {
-    fontSize: 13, fontWeight: '500', color: 'rgba(255,255,255,0.85)', marginTop: 2,
-    textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2,
+    fontSize: 13,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.85)',
+    marginTop: 2,
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 
   cardBottom: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 14, paddingVertical: 12,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#F3F4F6',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#F3F4F6',
   },
   cardBottomText: { fontSize: 13, color: '#6B7280' },
 
@@ -428,11 +512,19 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   swipeDeleteCircle: {
-    width: 44, height: 44, borderRadius: 22,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#FFF',
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 4 },
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 4,
+      },
       android: { elevation: 2 },
     }),
   },
@@ -447,9 +539,14 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 18, fontWeight: '600', color: '#1A1A1A', marginTop: 12 },
   emptySub: { fontSize: 14, color: '#9CA3AF', textAlign: 'center', lineHeight: 20 },
   emptyBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    marginTop: 16, paddingHorizontal: 20, paddingVertical: 12,
-    backgroundColor: BRAND, borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: BRAND,
+    borderRadius: 10,
   },
   emptyBtnText: { fontSize: 14, fontWeight: '600', color: '#FFF' },
 });

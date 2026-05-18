@@ -57,7 +57,7 @@ export default function ProfileScreen() {
   const [loadingTripDetail, setLoadingTripDetail] = useState(false);
   const { aiButtonEnabled, setAiButtonEnabled } = useChatbotSetting();
   const { alert: showAlert, confirm: showConfirm } = useConfirm();
-  
+
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isNotifModalVisible, setIsNotifModalVisible] = useState(false);
   const [selectedNotifForDetail, setSelectedNotifForDetail] = useState<Notification | null>(null);
@@ -100,7 +100,7 @@ export default function ProfileScreen() {
       console.log('🔄 Profile: Starting loadData...');
       let userId = await AsyncStorage.getItem('userId');
       const token = await AsyncStorage.getItem('token');
-      
+
       console.log('📦 Profile: Storage state:', { userId, hasToken: !!token });
 
       if (!token) {
@@ -131,7 +131,7 @@ export default function ProfileScreen() {
       const [profileData, tripsData, localInv] = await Promise.all([
         userService.getMyProfile(userId as string),
         tripService.getMyTrips(),
-        userService.getLocalInventory(userId as string)
+        userService.getLocalInventory(userId as string),
       ]);
 
       console.log('✨ Profile: Data fetch complete');
@@ -149,7 +149,7 @@ export default function ProfileScreen() {
       if (error?.response?.status === 401) {
         router.replace('/(auth)/login');
       } else {
-        showAlert("Lỗi", "Không thể tải dữ liệu cá nhân. Vui lòng thử lại sau.", "error");
+        showAlert('Lỗi', 'Không thể tải dữ liệu cá nhân. Vui lòng thử lại sau.', 'error');
       }
     } finally {
       setLoading(false);
@@ -160,7 +160,7 @@ export default function ProfileScreen() {
   useFocusEffect(
     useCallback(() => {
       loadData();
-    }, [loadData])
+    }, [loadData]),
   );
 
   const onRefresh = () => {
@@ -183,9 +183,9 @@ export default function ProfileScreen() {
 
   const handleLogout = async () => {
     const isConfirmed = await showConfirm(
-      "Đăng xuất",
-      "Bạn có chắc chắn muốn đăng xuất?",
-      "Đăng xuất"
+      'Đăng xuất',
+      'Bạn có chắc chắn muốn đăng xuất?',
+      'Đăng xuất',
     );
 
     if (isConfirmed) {
@@ -211,37 +211,43 @@ export default function ProfileScreen() {
         } as any);
         // QUAN TRỌNG: Bạn hãy vào Settings -> Upload -> Add upload preset
         // Đặt tên là 'owntrip' và CHỌN 'Unsigned' ở phần Signing Mode
-        formData.append('upload_preset', 'owntrip'); 
+        formData.append('upload_preset', 'owntrip');
 
         try {
-          const cloudResponse = await fetch('https://api.cloudinary.com/v1_1/djm9x06oh/image/upload', {
-            method: 'POST',
-            body: formData,
-          });
+          const cloudResponse = await fetch(
+            'https://api.cloudinary.com/v1_1/djm9x06oh/image/upload',
+            {
+              method: 'POST',
+              body: formData,
+            },
+          );
           const cloudData = await cloudResponse.json();
           if (cloudData.secure_url) {
             finalImageUrl = cloudData.secure_url;
             console.log('✅ Cloudinary URL:', finalImageUrl);
           } else {
             console.error('❌ Cloudinary Error:', cloudData);
-            showAlert("Lỗi", "Không thể upload ảnh lên Cloudinary", "error");
+            showAlert('Lỗi', 'Không thể upload ảnh lên Cloudinary', 'error');
             setIsUpdating(false);
             return;
           }
         } catch (err) {
           console.error('🔥 Cloudinary Fetch Error:', err);
-          showAlert("Lỗi", "Lỗi kết nối Cloudinary", "error");
+          showAlert('Lỗi', 'Lỗi kết nối Cloudinary', 'error');
           setIsUpdating(false);
           return;
         }
       }
 
       // 2. Cập nhật Profile với URL ảnh cuối cùng
-      console.log('🚀 Updating profile for:', profile.userId, { displayName: newDisplayName, image: finalImageUrl });
-      
-      const success = await userService.updateProfile(profile.userId, { 
+      console.log('🚀 Updating profile for:', profile.userId, {
+        displayName: newDisplayName,
+        image: finalImageUrl,
+      });
+
+      const success = await userService.updateProfile(profile.userId, {
         displayName: newDisplayName.trim(),
-        image: finalImageUrl.trim() || undefined
+        image: finalImageUrl.trim() || undefined,
       });
 
       console.log('✅ Update result:', success);
@@ -249,23 +255,27 @@ export default function ProfileScreen() {
       if (success) {
         // Cập nhật giao diện trong máy ngay lập tức + cache buster để tránh ảnh cũ
         const finalUrl = finalImageUrl.trim();
-        setProfile(prev => prev ? { 
-          ...prev, 
-          displayName: newDisplayName.trim(),
-          image: finalUrl ? `${finalUrl}?t=${Date.now()}` : prev.image
-        } : null);
-        
+        setProfile((prev) =>
+          prev
+            ? {
+                ...prev,
+                displayName: newDisplayName.trim(),
+                image: finalUrl ? `${finalUrl}?t=${Date.now()}` : prev.image,
+              }
+            : null,
+        );
+
         setEditModalVisible(false);
         setNewImage(''); // Xóa biến tạm
-        showToast("Đã cập nhật hồ sơ");
+        showToast('Đã cập nhật hồ sơ');
         // Đợi 2 giây để server kịp đồng bộ DB
         setTimeout(() => loadData(), 2000);
       } else {
-        showToast("Không thể cập nhật hồ sơ. Vui lòng thử lại.");
+        showToast('Không thể cập nhật hồ sơ. Vui lòng thử lại.');
       }
     } catch (error) {
       console.error('🔥 Update Error:', error);
-      showAlert("Lỗi", "Đã có lỗi xảy ra", "error");
+      showAlert('Lỗi', 'Đã có lỗi xảy ra', 'error');
     } finally {
       setIsUpdating(false);
     }
@@ -282,7 +292,6 @@ export default function ProfileScreen() {
     try {
       setIsToppingUp(true);
       setTopUpAmountModal(false);
-
 
       const desc = `Nap tien ${amount.toLocaleString()}d`;
       const tempBookingId = `topup_${Date.now()}`;
@@ -322,13 +331,13 @@ export default function ProfileScreen() {
       setIsToppingUp(true);
       const result = await userService.testTopUpBalance();
       if (result.success) {
-        showAlert("Thành công", "Đã nạp tiền vào tài khoản của bạn!", "success");
+        showAlert('Thành công', 'Đã nạp tiền vào tài khoản của bạn!', 'success');
         loadData(); // Refresh profile to show new balance
       } else {
-        showAlert("Lỗi", result.message || "Không thể nạp tiền", "error");
+        showAlert('Lỗi', result.message || 'Không thể nạp tiền', 'error');
       }
     } catch (error) {
-      showAlert("Lỗi", "Đã có lỗi xảy ra", "error");
+      showAlert('Lỗi', 'Đã có lỗi xảy ra', 'error');
     } finally {
       setIsToppingUp(false);
     }
@@ -337,8 +346,8 @@ export default function ProfileScreen() {
   const handleMarkAsRead = async (id: string) => {
     const success = await notificationService.markAsRead(id);
     if (success) {
-      setNotifications(prev => 
-        prev.map(notif => notif._id === id ? { ...notif, isRead: true } : notif)
+      setNotifications((prev) =>
+        prev.map((notif) => (notif._id === id ? { ...notif, isRead: true } : notif)),
       );
     }
   };
@@ -350,7 +359,7 @@ export default function ProfileScreen() {
     }
   };
 
-  const hasUnread = notifications.some(n => !n.isRead);
+  const hasUnread = notifications.some((n) => !n.isRead);
 
   const openEditModal = () => {
     setNewDisplayName(profile?.displayName || '');
@@ -369,8 +378,8 @@ export default function ProfileScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      
-      <ScrollView 
+
+      <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
@@ -395,9 +404,9 @@ export default function ProfileScreen() {
           {/* Profile Card */}
           <View style={styles.profileCard}>
             <View style={styles.avatarContainer}>
-              <ExpoImage 
-                source={getImageSource(profile?.image || 'https://i.pravatar.cc/300')} 
-                style={styles.avatar} 
+              <ExpoImage
+                source={getImageSource(profile?.image || 'https://i.pravatar.cc/300')}
+                style={styles.avatar}
                 contentFit="cover"
               />
               {profile?.isVerified && (
@@ -406,10 +415,10 @@ export default function ProfileScreen() {
                 </View>
               )}
             </View>
-            
+
             <Text style={styles.userName}>{profile?.displayName || 'Người dùng'}</Text>
             <Text style={styles.userEmail}>{profile?.email}</Text>
-            
+
             <View style={styles.roleTag}>
               <Text style={styles.roleText}>{profile?.role?.toUpperCase()}</Text>
             </View>
@@ -427,9 +436,11 @@ export default function ProfileScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.assetLabel}>Số dư</Text>
-                <Text style={styles.assetValue} numberOfLines={1}>{profile?.balance?.toLocaleString() || 0}đ</Text>
-                <TouchableOpacity 
-                  style={[styles.topUpMiniBtn, { marginTop: 4, alignSelf: 'flex-start' }]} 
+                <Text style={styles.assetValue} numberOfLines={1}>
+                  {profile?.balance?.toLocaleString() || 0}đ
+                </Text>
+                <TouchableOpacity
+                  style={[styles.topUpMiniBtn, { marginTop: 4, alignSelf: 'flex-start' }]}
                   onPress={() => setTopUpAmountModal(true)}
                   disabled={isToppingUp}
                 >
@@ -448,7 +459,9 @@ export default function ProfileScreen() {
             <View style={styles.assetDivider} />
 
             <View style={styles.assetItem}>
-              <View style={[styles.assetIconContainer, { backgroundColor: 'rgba(255, 179, 0, 0.1)' }]}>
+              <View
+                style={[styles.assetIconContainer, { backgroundColor: 'rgba(255, 179, 0, 0.1)' }]}
+              >
                 <MaterialIcons name="stars" size={24} color="#FFB300" />
               </View>
               <View>
@@ -467,7 +480,7 @@ export default function ProfileScreen() {
             <View style={styles.emptyTrips}>
               <Feather name="map" size={40} color="#CBD5E0" />
               <Text style={styles.emptyText}>Chưa có chuyến đi nào</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.createBtn}
                 onPress={() => router.push('/create-trip')}
               >
@@ -477,14 +490,23 @@ export default function ProfileScreen() {
           ) : (
             <View style={styles.tripsList}>
               {trips.slice(0, 3).map((trip, index) => (
-                <TouchableOpacity key={index} style={styles.tripItem} onPress={() => handleTripPress(trip._id)}>
-                   <ExpoImage 
-                    source={getImageSource(trip.provinceImage || 'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=800')} 
-                    style={styles.tripImage} 
+                <TouchableOpacity
+                  key={index}
+                  style={styles.tripItem}
+                  onPress={() => handleTripPress(trip._id)}
+                >
+                  <ExpoImage
+                    source={getImageSource(
+                      trip.provinceImage ||
+                        'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=800',
+                    )}
+                    style={styles.tripImage}
                     contentFit="cover"
                   />
                   <View style={styles.tripInfo}>
-                    <Text style={styles.tripTitle} numberOfLines={1}>{trip.title}</Text>
+                    <Text style={styles.tripTitle} numberOfLines={1}>
+                      {trip.title}
+                    </Text>
                     <View style={styles.tripMeta}>
                       <Feather name="map-pin" size={12} color="#718096" />
                       <Text style={styles.tripDestination}>{trip.destination}</Text>
@@ -512,22 +534,24 @@ export default function ProfileScreen() {
               <Text style={styles.emptyText}>Chưa có vật phẩm nào</Text>
             </View>
           ) : (
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false} 
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.inventoryList}
               style={styles.inventoryScroll}
             >
               {profile.inventory.map((item, index) => (
                 <View key={index} style={styles.inventoryItemCard}>
                   <View style={styles.inventoryImageWrap}>
-                    <ExpoImage 
-                      source={getImageSource(item.image)} 
-                      style={styles.inventoryImage} 
+                    <ExpoImage
+                      source={getImageSource(item.image)}
+                      style={styles.inventoryImage}
                       contentFit="cover"
                     />
                   </View>
-                  <Text style={styles.inventoryName} numberOfLines={1}>{item.name}</Text>
+                  <Text style={styles.inventoryName} numberOfLines={1}>
+                    {item.name}
+                  </Text>
                   <View style={styles.inventoryBadge}>
                     <Text style={styles.inventoryBadgeText}>{item.type.toUpperCase()}</Text>
                   </View>
@@ -538,45 +562,44 @@ export default function ProfileScreen() {
 
           {/* Settings Section */}
           <View style={styles.settingsGroup}>
-           
-             {(profile?.role === 'hotel_owner' || profile?.role === 'admin') && (
-               <TouchableOpacity 
-                 style={styles.settingItem}
-                 onPress={() => router.push('/hotel-management')}
-               >
-                 <View style={[styles.settingIcon, { backgroundColor: '#FFF5EE' }]}>
-                   <FontAwesome5 name="hotel" size={16} color="#FF6B35" />
-                 </View>
-                 <Text style={styles.settingLabel}>Quản lý khách sạn</Text>
-                 <Feather name="chevron-right" size={20} color="#CBD5E0" />
-               </TouchableOpacity>
-             )}
-
-             <TouchableOpacity 
+            {(profile?.role === 'hotel_owner' || profile?.role === 'admin') && (
+              <TouchableOpacity
                 style={styles.settingItem}
-                onPress={() => setIsNotifModalVisible(true)}
+                onPress={() => router.push('/hotel-management')}
               >
-                <View style={[styles.settingIcon, { backgroundColor: '#F0FFF4' }]}>
-                  <Feather name="bell" size={18} color="#38A169" />
-                  {hasUnread && <View style={styles.notifDotMini} />}
+                <View style={[styles.settingIcon, { backgroundColor: '#FFF5EE' }]}>
+                  <FontAwesome5 name="hotel" size={16} color="#FF6B35" />
                 </View>
-                <Text style={styles.settingLabel}>Thông báo</Text>
+                <Text style={styles.settingLabel}>Quản lý khách sạn</Text>
                 <Feather name="chevron-right" size={20} color="#CBD5E0" />
-             </TouchableOpacity>
+              </TouchableOpacity>
+            )}
 
-             {/* AI Chatbot Toggle */}
-             <View style={styles.settingItem}>
-                <View style={[styles.settingIcon, { backgroundColor: '#EBF4FF' }]}>
-                  <Feather name="message-square" size={18} color="#4A7CFF" />
-                </View>
-                <Text style={styles.settingLabel}>Nút trợ lý AI</Text>
-                <Switch
-                  value={aiButtonEnabled}
-                  onValueChange={setAiButtonEnabled}
-                  trackColor={{ false: '#E2E8F0', true: '#BEE3F8' }}
-                  thumbColor={aiButtonEnabled ? '#4A7CFF' : '#A0AEC0'}
-                />
-             </View>
+            <TouchableOpacity
+              style={styles.settingItem}
+              onPress={() => setIsNotifModalVisible(true)}
+            >
+              <View style={[styles.settingIcon, { backgroundColor: '#F0FFF4' }]}>
+                <Feather name="bell" size={18} color="#38A169" />
+                {hasUnread && <View style={styles.notifDotMini} />}
+              </View>
+              <Text style={styles.settingLabel}>Thông báo</Text>
+              <Feather name="chevron-right" size={20} color="#CBD5E0" />
+            </TouchableOpacity>
+
+            {/* AI Chatbot Toggle */}
+            <View style={styles.settingItem}>
+              <View style={[styles.settingIcon, { backgroundColor: '#EBF4FF' }]}>
+                <Feather name="message-square" size={18} color="#4A7CFF" />
+              </View>
+              <Text style={styles.settingLabel}>Nút trợ lý AI</Text>
+              <Switch
+                value={aiButtonEnabled}
+                onValueChange={setAiButtonEnabled}
+                trackColor={{ false: '#E2E8F0', true: '#BEE3F8' }}
+                thumbColor={aiButtonEnabled ? '#4A7CFF' : '#A0AEC0'}
+              />
+            </View>
           </View>
 
           <View style={{ height: 100 }} />
@@ -591,20 +614,20 @@ export default function ProfileScreen() {
         onRequestClose={() => setEditModalVisible(false)}
       >
         <BlurView intensity={10} style={styles.modalOverlay}>
-          <KeyboardAvoidingView 
+          <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={styles.modalContent}
           >
             <View style={styles.modalCard}>
               <Text style={styles.modalTitle}>Chỉnh sửa hồ sơ</Text>
-              
+
               <View style={styles.modalAvatarContainer}>
-                <Image 
-                  source={getImageSource(newImage || 'https://i.pravatar.cc/300')} 
-                  style={styles.modalAvatar} 
+                <Image
+                  source={getImageSource(newImage || 'https://i.pravatar.cc/300')}
+                  style={styles.modalAvatar}
                 />
               </View>
-              
+
               <View style={styles.editInputGroup}>
                 <Text style={styles.editInputLabel}>Tên hiển thị</Text>
                 <TextInput
@@ -634,15 +657,15 @@ export default function ProfileScreen() {
               </View>
 
               <View style={styles.modalActions}>
-                <TouchableOpacity 
-                  style={styles.cancelBtn} 
+                <TouchableOpacity
+                  style={styles.cancelBtn}
                   onPress={() => setEditModalVisible(false)}
                 >
                   <Text style={styles.cancelBtnText}>Hủy</Text>
                 </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={styles.saveBtn} 
+
+                <TouchableOpacity
+                  style={styles.saveBtn}
                   onPress={handleUpdate}
                   disabled={isUpdating}
                 >
@@ -713,7 +736,12 @@ export default function ProfileScreen() {
                     style={[styles.notifItem, !item.isRead && styles.notifItemUnread]}
                     onPress={() => handleNotifPress(item)}
                   >
-                    <View style={[styles.notifIcon, { backgroundColor: item.isRead ? '#F7FAFC' : '#EBF8FF' }]}>
+                    <View
+                      style={[
+                        styles.notifIcon,
+                        { backgroundColor: item.isRead ? '#F7FAFC' : '#EBF8FF' },
+                      ]}
+                    >
                       <Feather
                         name={item.type === 'promotion' ? 'tag' : 'bell'}
                         size={18}
@@ -750,30 +778,33 @@ export default function ProfileScreen() {
         <View style={styles.detailNotifOverlay}>
           <View style={styles.detailNotifContent}>
             <View style={styles.detailNotifHeader}>
-              <View style={[styles.notifIconDetail, { backgroundColor: '#EBF8FF', marginBottom: 0 }]}>
-                 <Feather 
-                  name={selectedNotifForDetail?.type === 'promotion' ? 'tag' : 'bell'} 
-                  size={24} 
-                  color="#4299E1" 
+              <View
+                style={[styles.notifIconDetail, { backgroundColor: '#EBF8FF', marginBottom: 0 }]}
+              >
+                <Feather
+                  name={selectedNotifForDetail?.type === 'promotion' ? 'tag' : 'bell'}
+                  size={24}
+                  color="#4299E1"
                 />
               </View>
               <TouchableOpacity onPress={() => setSelectedNotifForDetail(null)}>
                 <Feather name="x" size={20} color="#CBD5E0" />
               </TouchableOpacity>
             </View>
-            
+
             <Text style={styles.detailNotifTitle}>{selectedNotifForDetail?.title}</Text>
             <Text style={styles.detailNotifTime}>
-              {selectedNotifForDetail && new Date(selectedNotifForDetail.createdAt).toLocaleString('vi-VN')}
+              {selectedNotifForDetail &&
+                new Date(selectedNotifForDetail.createdAt).toLocaleString('vi-VN')}
             </Text>
-            
+
             <View style={styles.detailNotifDivider} />
-            
+
             <ScrollView style={{ maxHeight: 200 }}>
               <Text style={styles.detailNotifMessage}>{selectedNotifForDetail?.message}</Text>
             </ScrollView>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.detailNotifButton}
               onPress={() => setSelectedNotifForDetail(null)}
             >
@@ -813,7 +844,9 @@ export default function ProfileScreen() {
                   style={[styles.quickAmtChip, topUpAmount === amt && styles.quickAmtChipActive]}
                   onPress={() => setTopUpAmount(amt)}
                 >
-                  <Text style={[styles.quickAmtText, topUpAmount === amt && styles.quickAmtTextActive]}>
+                  <Text
+                    style={[styles.quickAmtText, topUpAmount === amt && styles.quickAmtTextActive]}
+                  >
                     {parseInt(amt).toLocaleString()}đ
                   </Text>
                 </TouchableOpacity>
@@ -821,10 +854,17 @@ export default function ProfileScreen() {
             </View>
 
             <View style={styles.topUpActions}>
-              <TouchableOpacity style={styles.topUpCancelBtn} onPress={() => setTopUpAmountModal(false)}>
+              <TouchableOpacity
+                style={styles.topUpCancelBtn}
+                onPress={() => setTopUpAmountModal(false)}
+              >
                 <Text style={styles.topUpCancelText}>Hủy</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.topUpConfirmBtn} onPress={handlePayOSTopUp} disabled={isToppingUp}>
+              <TouchableOpacity
+                style={styles.topUpConfirmBtn}
+                onPress={handlePayOSTopUp}
+                disabled={isToppingUp}
+              >
                 {isToppingUp ? (
                   <ActivityIndicator color="#FFF" size="small" />
                 ) : (

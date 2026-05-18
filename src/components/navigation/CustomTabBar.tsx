@@ -1,17 +1,9 @@
 import React, { useEffect, useRef } from 'react';
-import {
-  View,
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-  Animated,
-  Platform,
-} from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, Animated, Platform } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-
 
 interface TabConfig {
   name: string;
@@ -76,11 +68,7 @@ function TabItem({
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
-            <Feather
-              name={tab.icon}
-              size={26}
-              color={isFocused ? '#FFFFFF' : '#718096'}
-            />
+            <Feather name={tab.icon} size={26} color={isFocused ? '#FFFFFF' : '#718096'} />
           </LinearGradient>
         </Animated.View>
         <Text style={[styles.label, { color: isFocused ? tab.color : INACTIVE_COLOR }]}>

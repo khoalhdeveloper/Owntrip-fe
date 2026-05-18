@@ -28,7 +28,7 @@ interface Category {
   key: string;
   label: string;
   emoji: string;
-  apiType: string;  // sent to API as `type` param
+  apiType: string; // sent to API as `type` param
 }
 
 const CATEGORIES: Category[] = [
@@ -44,7 +44,20 @@ const CATEGORIES: Category[] = [
 /* ─── Helpers ─── */
 const formatDate = (dateStr: string) => {
   const d = new Date(dateStr);
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
   return `${months[d.getMonth()]} ${d.getDate()}`;
 };
 
@@ -78,7 +91,7 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
   const STORAGE_KEY = `explore_saved_${trip._id}`;
 
   /* ─── Saved place IDs for quick lookup ─── */
-  const savedPlaceIds = useMemo(() => new Set(savedPlaces.map(p => p.placeId)), [savedPlaces]);
+  const savedPlaceIds = useMemo(() => new Set(savedPlaces.map((p) => p.placeId)), [savedPlaces]);
 
   /* ─── Already-added place IDs (to mark them) ─── */
   const addedPlaceIds = useMemo(() => {
@@ -130,39 +143,42 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
   }, [days, trip.destination, trip.province]);
 
   /* ─── Fetch places (per-category API call) ─── */
-  const fetchPlaces = useCallback(async (category?: string, query?: string) => {
-    if (!coords) return;
-    setLoading(true);
-    try {
-      let result: Place[];
-      if (query && query.trim().length > 0) {
-        // Text search with location bias
-        result = await placesService.searchText({
-          q: query,
-          lat: coords.lat,
-          lng: coords.lng,
-          radius: 5000,
-          limit: 30,
-        });
-      } else {
-        // Category-specific API call
-        const cat = CATEGORIES.find(c => c.key === (category || activeCategory));
-        const typeParam = cat?.apiType || '';
-        result = await placesService.searchNearby({
-          lat: coords.lat,
-          lng: coords.lng,
-          radius: 5000,
-          ...(typeParam ? { type: typeParam } : {}),
-        });
+  const fetchPlaces = useCallback(
+    async (category?: string, query?: string) => {
+      if (!coords) return;
+      setLoading(true);
+      try {
+        let result: Place[];
+        if (query && query.trim().length > 0) {
+          // Text search with location bias
+          result = await placesService.searchText({
+            q: query,
+            lat: coords.lat,
+            lng: coords.lng,
+            radius: 5000,
+            limit: 30,
+          });
+        } else {
+          // Category-specific API call
+          const cat = CATEGORIES.find((c) => c.key === (category || activeCategory));
+          const typeParam = cat?.apiType || '';
+          result = await placesService.searchNearby({
+            lat: coords.lat,
+            lng: coords.lng,
+            radius: 5000,
+            ...(typeParam ? { type: typeParam } : {}),
+          });
+        }
+        setPlaces(result);
+      } catch (error) {
+        console.error('Error fetching explore places:', error);
+        setPlaces([]);
+      } finally {
+        setLoading(false);
       }
-      setPlaces(result);
-    } catch (error) {
-      console.error('Error fetching explore places:', error);
-      setPlaces([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [coords, activeCategory]);
+    },
+    [coords, activeCategory],
+  );
 
   /* ─── Auto-fetch on coords/category change ─── */
   useEffect(() => {
@@ -170,17 +186,20 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
   }, [coords, activeCategory, fetchPlaces]);
 
   /* ─── Debounced search ─── */
-  const handleSearchChange = useCallback((text: string) => {
-    setSearchQuery(text);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      if (text.trim().length > 0) {
-        fetchPlaces(activeCategory, text);
-      } else {
-        fetchPlaces(activeCategory);
-      }
-    }, 500);
-  }, [fetchPlaces, activeCategory]);
+  const handleSearchChange = useCallback(
+    (text: string) => {
+      setSearchQuery(text);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        if (text.trim().length > 0) {
+          fetchPlaces(activeCategory, text);
+        } else {
+          fetchPlaces(activeCategory);
+        }
+      }, 500);
+    },
+    [fetchPlaces, activeCategory],
+  );
 
   /* ─── Category select ─── */
   const handleCategoryPress = useCallback((key: string) => {
@@ -189,22 +208,23 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
   }, []);
 
   /* ─── Bookmark toggle (persist to AsyncStorage) ─── */
-  const toggleSave = useCallback((place: Place) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSavedPlaces(prev => {
-      const exists = prev.some(p => p.placeId === place.placeId);
-      const next = exists
-        ? prev.filter(p => p.placeId !== place.placeId)
-        : [...prev, place];
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
-      // Exit edit mode if fewer than 2 saved places remain
-      if (next.length < 2) {
-        setEditMode(false);
-        setSelectedIds(new Set());
-      }
-      return next;
-    });
-  }, [STORAGE_KEY]);
+  const toggleSave = useCallback(
+    (place: Place) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setSavedPlaces((prev) => {
+        const exists = prev.some((p) => p.placeId === place.placeId);
+        const next = exists ? prev.filter((p) => p.placeId !== place.placeId) : [...prev, place];
+        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+        // Exit edit mode if fewer than 2 saved places remain
+        if (next.length < 2) {
+          setEditMode(false);
+          setSelectedIds(new Set());
+        }
+        return next;
+      });
+    },
+    [STORAGE_KEY],
+  );
 
   /* ─── Add to trip ─── */
   const handleAddToTrip = useCallback((place: Place) => {
@@ -213,32 +233,39 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
     setShowDayPicker(true);
   }, []);
 
-  const handleConfirmAddToDay = useCallback(async (dayId: string) => {
-    if (!selectedPlace) return;
-    setAddingToDay(dayId);
-    try {
-      const body: AddPlaceBody = {
-        placeId: selectedPlace.placeId,
-        name: selectedPlace.name,
-        address: selectedPlace.address,
-        latitude: selectedPlace.latitude,
-        longitude: selectedPlace.longitude,
-        rating: selectedPlace.rating,
-        totalReviews: selectedPlace.totalReviews,
-        photo: selectedPlace.photo || undefined,
-        mapUrl: selectedPlace.mapUrl,
-      };
-      await tripService.addPlaceToDay(dayId, body);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showAlert('Đã thêm! ✅', `${selectedPlace.name} đã được thêm vào lịch trình của bạn.`, 'success');
-      setShowDayPicker(false);
-      setSelectedPlace(null);
-    } catch {
-      showAlert('Lỗi', 'Không thể thêm địa điểm. Vui lòng thử lại.', 'error');
-    } finally {
-      setAddingToDay(null);
-    }
-  }, [selectedPlace]);
+  const handleConfirmAddToDay = useCallback(
+    async (dayId: string) => {
+      if (!selectedPlace) return;
+      setAddingToDay(dayId);
+      try {
+        const body: AddPlaceBody = {
+          placeId: selectedPlace.placeId,
+          name: selectedPlace.name,
+          address: selectedPlace.address,
+          latitude: selectedPlace.latitude,
+          longitude: selectedPlace.longitude,
+          rating: selectedPlace.rating,
+          totalReviews: selectedPlace.totalReviews,
+          photo: selectedPlace.photo || undefined,
+          mapUrl: selectedPlace.mapUrl,
+        };
+        await tripService.addPlaceToDay(dayId, body);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        showAlert(
+          'Đã thêm! ✅',
+          `${selectedPlace.name} đã được thêm vào lịch trình của bạn.`,
+          'success',
+        );
+        setShowDayPicker(false);
+        setSelectedPlace(null);
+      } catch {
+        showAlert('Lỗi', 'Không thể thêm địa điểm. Vui lòng thử lại.', 'error');
+      } finally {
+        setAddingToDay(null);
+      }
+    },
+    [selectedPlace],
+  );
 
   /* ─── Pull to refresh ─── */
   const handleRefresh = useCallback(async () => {
@@ -249,92 +276,97 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
 
   /* ─── Image error ─── */
   const handleImageError = useCallback((id: string) => {
-    setFailedImages(prev => new Set(prev).add(id));
+    setFailedImages((prev) => new Set(prev).add(id));
   }, []);
 
   /* ─── Section title ─── */
   const sectionTitle = useMemo(() => {
     if (searchQuery.trim().length > 0) return `Kết quả cho "${searchQuery}"`;
-    const cat = CATEGORIES.find(c => c.key === activeCategory);
+    const cat = CATEGORIES.find((c) => c.key === activeCategory);
     const count = places.length;
-    return `${cat?.emoji || '📍'} ${count} ${cat?.label || 'Địa điểm'} gần ${trip.destination || trip.province}`;
+    return `${cat?.emoji || '📍'} ${count} ${cat?.label || 'Địa điểm'} gần ${
+      trip.destination || trip.province
+    }`;
   }, [searchQuery, activeCategory, trip.destination, trip.province, places.length]);
 
   /* ─── Render Place Card ─── */
-  const renderPlaceCard = useCallback(({ item, itemKey }: { item: Place; itemKey?: string }) => {
-    const hasPhoto = item.photo && !failedImages.has(item.placeId);
-    const isSaved = savedPlaceIds.has(item.placeId);
-    const isAdded = addedPlaceIds.has(item.placeId);
+  const renderPlaceCard = useCallback(
+    ({ item, itemKey }: { item: Place; itemKey?: string }) => {
+      const hasPhoto = item.photo && !failedImages.has(item.placeId);
+      const isSaved = savedPlaceIds.has(item.placeId);
+      const isAdded = addedPlaceIds.has(item.placeId);
 
-    return (
-      <View key={itemKey} style={styles.placeCard}>
-        {/* Image */}
-        {hasPhoto ? (
-          <Image
-            source={{ uri: item.photo! }}
-            style={styles.placeImage}
-            onError={() => handleImageError(item.placeId)}
-          />
-        ) : (
-          <View style={[styles.placeImage, styles.placeImagePlaceholder]}>
-            <Feather name="image" size={24} color="#D1D5DB" />
-          </View>
-        )}
-
-        {/* Info */}
-        <View style={styles.placeInfo}>
-          <Text style={styles.placeName} numberOfLines={1}>{item.name}</Text>
-
-          {/* Rating row */}
-          {(item.rating ?? 0) > 0 && (
-            <View style={styles.ratingRow}>
-              <Feather name="star" size={13} color="#F59E0B" />
-              <Text style={styles.ratingText}>{item.rating!.toFixed(1)}</Text>
-              {(item.totalReviews ?? 0) > 0 && (
-                <Text style={styles.reviewCount}>({item.totalReviews} đánh giá)</Text>
-              )}
+      return (
+        <View key={itemKey} style={styles.placeCard}>
+          {/* Image */}
+          {hasPhoto ? (
+            <Image
+              source={{ uri: item.photo! }}
+              style={styles.placeImage}
+              onError={() => handleImageError(item.placeId)}
+            />
+          ) : (
+            <View style={[styles.placeImage, styles.placeImagePlaceholder]}>
+              <Feather name="image" size={24} color="#D1D5DB" />
             </View>
           )}
 
-          {/* Address */}
-          <View style={styles.addressRow}>
-            <Feather name="map-pin" size={11} color="#9CA3AF" />
-            <Text style={styles.addressText} numberOfLines={1}>{item.address}</Text>
-          </View>
+          {/* Info */}
+          <View style={styles.placeInfo}>
+            <Text style={styles.placeName} numberOfLines={1}>
+              {item.name}
+            </Text>
 
-          {/* Action row: Add to Trip OR Already Added */}
-          <View style={styles.actionRow}>
-            {isAdded ? (
-              <View style={styles.addedBadge}>
-                <Feather name="check" size={12} color="#10B981" />
-                <Text style={styles.addedText}>Đã thêm</Text>
+            {/* Rating row */}
+            {(item.rating ?? 0) > 0 && (
+              <View style={styles.ratingRow}>
+                <Feather name="star" size={13} color="#F59E0B" />
+                <Text style={styles.ratingText}>{item.rating!.toFixed(1)}</Text>
+                {(item.totalReviews ?? 0) > 0 && (
+                  <Text style={styles.reviewCount}>({item.totalReviews} đánh giá)</Text>
+                )}
               </View>
-            ) : (
-              <TouchableOpacity
-                style={styles.addBtn}
-                onPress={() => handleAddToTrip(item)}
-                activeOpacity={0.7}
-              >
-                <Feather name="plus" size={13} color="#FFF" />
-                <Text style={styles.addBtnText}>Thêm</Text>
-              </TouchableOpacity>
             )}
 
-            <TouchableOpacity
-              onPress={() => toggleSave(item)}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <Feather
-                name="bookmark"
-                size={20}
-                color={isSaved ? BRAND : '#D1D5DB'}
-              />
-            </TouchableOpacity>
+            {/* Address */}
+            <View style={styles.addressRow}>
+              <Feather name="map-pin" size={11} color="#9CA3AF" />
+              <Text style={styles.addressText} numberOfLines={1}>
+                {item.address}
+              </Text>
+            </View>
+
+            {/* Action row: Add to Trip OR Already Added */}
+            <View style={styles.actionRow}>
+              {isAdded ? (
+                <View style={styles.addedBadge}>
+                  <Feather name="check" size={12} color="#10B981" />
+                  <Text style={styles.addedText}>Đã thêm</Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.addBtn}
+                  onPress={() => handleAddToTrip(item)}
+                  activeOpacity={0.7}
+                >
+                  <Feather name="plus" size={13} color="#FFF" />
+                  <Text style={styles.addBtnText}>Thêm</Text>
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity
+                onPress={() => toggleSave(item)}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Feather name="bookmark" size={20} color={isSaved ? BRAND : '#D1D5DB'} />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
-    );
-  }, [failedImages, savedPlaceIds, addedPlaceIds, toggleSave, handleImageError, handleAddToTrip]);
+      );
+    },
+    [failedImages, savedPlaceIds, addedPlaceIds, toggleSave, handleImageError, handleAddToTrip],
+  );
 
   /* ─── Empty state ─── */
   const renderEmpty = () => {
@@ -378,9 +410,7 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
                 }}
                 hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
               >
-                <Text style={styles.editToggleText}>
-                  {editMode ? 'Xong' : 'Sửa'}
-                </Text>
+                <Text style={styles.editToggleText}>{editMode ? 'Xong' : 'Sửa'}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -389,7 +419,7 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.savedList}
           >
-            {savedPlaces.map(place => {
+            {savedPlaces.map((place) => {
               const hasImg = place.photo && !failedImages.has(place.placeId);
               const isSelected = selectedIds.has(place.placeId);
               return (
@@ -400,7 +430,7 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
                   onPress={() => {
                     if (editMode) {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      setSelectedIds(prev => {
+                      setSelectedIds((prev) => {
                         const next = new Set(prev);
                         if (next.has(place.placeId)) next.delete(place.placeId);
                         else next.add(place.placeId);
@@ -430,7 +460,9 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
                       <Feather name="map-pin" size={18} color="#D1D5DB" />
                     </View>
                   )}
-                  <Text style={styles.savedName} numberOfLines={2}>{place.name}</Text>
+                  <Text style={styles.savedName} numberOfLines={2}>
+                    {place.name}
+                  </Text>
                   {(place.rating ?? 0) > 0 && (
                     <View style={styles.savedRating}>
                       <Feather name="star" size={10} color="#F59E0B" />
@@ -452,7 +484,7 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
                   if (selectedIds.size === savedPlaces.length) {
                     setSelectedIds(new Set());
                   } else {
-                    setSelectedIds(new Set(savedPlaces.map(p => p.placeId)));
+                    setSelectedIds(new Set(savedPlaces.map((p) => p.placeId)));
                   }
                 }}
               >
@@ -479,8 +511,8 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
                     'Hành động này không thể hoàn tác.',
                   );
                   if (ok) {
-                    setSavedPlaces(prev => {
-                      const next = prev.filter(p => !selectedIds.has(p.placeId));
+                    setSavedPlaces((prev) => {
+                      const next = prev.filter((p) => !selectedIds.has(p.placeId));
                       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
                       if (next.length < 2) setEditMode(false);
                       setSelectedIds(new Set());
@@ -490,11 +522,17 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
                   }
                 }}
               >
-                <Feather name="trash-2" size={14} color={selectedIds.size === 0 ? '#D1D5DB' : '#EF4444'} />
-                <Text style={[
-                  styles.batchDeleteText,
-                  selectedIds.size === 0 && styles.batchDeleteTextDisabled,
-                ]}>
+                <Feather
+                  name="trash-2"
+                  size={14}
+                  color={selectedIds.size === 0 ? '#D1D5DB' : '#EF4444'}
+                />
+                <Text
+                  style={[
+                    styles.batchDeleteText,
+                    selectedIds.size === 0 && styles.batchDeleteTextDisabled,
+                  ]}
+                >
                   Xóa ({selectedIds.size})
                 </Text>
               </TouchableOpacity>
@@ -527,7 +565,7 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
         contentContainerStyle={styles.categoryContainer}
         style={styles.categoryScroll}
       >
-        {CATEGORIES.map(cat => {
+        {CATEGORIES.map((cat) => {
           const isActive = cat.key === activeCategory;
           return (
             <TouchableOpacity
@@ -576,14 +614,23 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
       <View style={styles.listContent}>
         {renderListHeader()}
         {!loading && places.length === 0 && renderEmpty()}
-        {!loading && places.length > 0 && places.map((item) => (
-          renderPlaceCard({ item, itemKey: item.placeId })
-        ))}
+        {!loading &&
+          places.length > 0 &&
+          places.map((item) => renderPlaceCard({ item, itemKey: item.placeId }))}
       </View>
 
       {/* ═══ Day Picker Modal ═══ */}
-      <Modal visible={showDayPicker} transparent animationType="fade" onRequestClose={() => setShowDayPicker(false)}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowDayPicker(false)}>
+      <Modal
+        visible={showDayPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDayPicker(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowDayPicker(false)}
+        >
           <View style={styles.dayPickerSheet}>
             {/* Handle bar */}
             <View style={styles.sheetHandle} />
@@ -626,10 +673,7 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
               })}
             </ScrollView>
 
-            <TouchableOpacity
-              style={styles.cancelBtn}
-              onPress={() => setShowDayPicker(false)}
-            >
+            <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowDayPicker(false)}>
               <Text style={styles.cancelBtnText}>Hủy bỏ</Text>
             </TouchableOpacity>
           </View>
@@ -645,14 +689,21 @@ const styles = StyleSheet.create({
 
   /* ── Search ── */
   searchContainer: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    marginHorizontal: 16, marginTop: 16, marginBottom: 12,
-    paddingHorizontal: 16, paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: '#F3F4F6',
     borderRadius: 14,
   },
   searchInput: {
-    flex: 1, fontSize: 15, color: '#1A1A1A',
+    flex: 1,
+    fontSize: 15,
+    color: '#1A1A1A',
     paddingVertical: 0,
   },
 
@@ -660,11 +711,15 @@ const styles = StyleSheet.create({
   categoryScroll: { marginBottom: 16 },
   categoryContainer: { paddingHorizontal: 16, gap: 8 },
   categoryChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 14, paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
-    borderWidth: 1.5, borderColor: '#E5E7EB',
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
   },
   categoryChipActive: {
     backgroundColor: BRAND,
@@ -676,134 +731,195 @@ const styles = StyleSheet.create({
 
   /* ── Section header ── */
   sectionTitle: {
-    fontSize: 16, fontWeight: '700', color: '#1A1A1A',
-    paddingHorizontal: 16, marginBottom: 14,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    paddingHorizontal: 16,
+    marginBottom: 14,
   },
 
   /* ── Loading ── */
   loadingContainer: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, paddingVertical: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 32,
   },
   loadingText: { fontSize: 14, color: '#9CA3AF' },
 
   /* ── Place card ── */
   placeCard: {
     flexDirection: 'row',
-    marginHorizontal: 16, marginBottom: 12,
-    paddingVertical: 14, paddingHorizontal: 14,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    borderWidth: 1, borderColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8 },
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 8,
+      },
       android: { elevation: 2 },
     }),
   },
   placeImage: {
-    width: 80, height: 80,
+    width: 80,
+    height: 80,
     borderRadius: 12,
   },
   placeImagePlaceholder: {
     backgroundColor: '#F3F4F6',
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   placeInfo: {
-    flex: 1, marginLeft: 14, gap: 3,
+    flex: 1,
+    marginLeft: 14,
+    gap: 3,
   },
   placeName: {
-    fontSize: 15, fontWeight: '600', color: '#1A1A1A',
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1A1A1A',
   },
   ratingRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   ratingText: {
-    fontSize: 13, fontWeight: '700', color: '#F59E0B',
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#F59E0B',
   },
   reviewCount: {
-    fontSize: 12, color: '#9CA3AF',
+    fontSize: 12,
+    color: '#9CA3AF',
   },
   addressRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   addressText: {
-    fontSize: 12, color: '#6B7280', flex: 1,
+    fontSize: 12,
+    color: '#6B7280',
+    flex: 1,
   },
 
   /* ── Action row ── */
   actionRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginTop: 6,
   },
   addBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     backgroundColor: BRAND,
-    paddingHorizontal: 12, paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 8,
   },
   addBtnText: { fontSize: 12, fontWeight: '600', color: '#FFF' },
   addedBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     backgroundColor: '#ECFDF5',
-    paddingHorizontal: 10, paddingVertical: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 8,
   },
   addedText: { fontSize: 12, fontWeight: '600', color: '#10B981' },
 
   /* ── Empty state ── */
   emptyState: {
-    alignItems: 'center', justifyContent: 'center',
-    paddingVertical: 60, gap: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    gap: 8,
   },
   emptyTitle: {
-    fontSize: 17, fontWeight: '600', color: '#1A1A1A',
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#1A1A1A',
   },
   emptySubtitle: {
-    fontSize: 14, color: '#9CA3AF', textAlign: 'center',
+    fontSize: 14,
+    color: '#9CA3AF',
+    textAlign: 'center',
     paddingHorizontal: 40,
   },
 
   /* ── Day Picker Modal ── */
   modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.4)',
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'flex-end',
   },
   dayPickerSheet: {
     backgroundColor: '#FFF',
-    borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    paddingTop: 12, paddingBottom: 34,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 12,
+    paddingBottom: 34,
     maxHeight: '60%',
   },
   sheetHandle: {
-    width: 36, height: 4, borderRadius: 2,
-    backgroundColor: '#E5E7EB', alignSelf: 'center',
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#E5E7EB',
+    alignSelf: 'center',
     marginBottom: 16,
   },
   dayPickerTitle: {
-    fontSize: 18, fontWeight: '700', color: '#1A1A1A',
-    paddingHorizontal: 20, marginBottom: 4,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    paddingHorizontal: 20,
+    marginBottom: 4,
   },
   dayPickerSubtitle: {
-    fontSize: 14, color: '#6B7280',
-    paddingHorizontal: 20, marginBottom: 16,
+    fontSize: 14,
+    color: '#6B7280',
+    paddingHorizontal: 20,
+    marginBottom: 16,
   },
   dayList: { paddingHorizontal: 20 },
   dayOption: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
     paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
   dayCircle: {
-    width: 40, height: 40, borderRadius: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#EBF5FF',
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   dayCircleText: { fontSize: 15, fontWeight: '700', color: BRAND },
   dayOptionInfo: { flex: 1, gap: 2 },
   dayOptionTitle: { fontSize: 15, fontWeight: '600', color: '#1A1A1A' },
   dayOptionDate: { fontSize: 13, color: '#9CA3AF' },
   cancelBtn: {
-    marginHorizontal: 20, marginTop: 16,
+    marginHorizontal: 20,
+    marginTop: 16,
     paddingVertical: 14,
     backgroundColor: '#F3F4F6',
     borderRadius: 14,
@@ -813,103 +929,168 @@ const styles = StyleSheet.create({
 
   /* ── Saved Places Section ── */
   savedSection: {
-    marginTop: 16, marginBottom: 4,
+    marginTop: 16,
+    marginBottom: 4,
   },
   savedHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    marginBottom: 12,
   },
   savedTitleRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   savedTitle: {
-    fontSize: 16, fontWeight: '700', color: '#1A1A1A',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1A1A1A',
   },
   savedCount: {
-    backgroundColor: BRAND, borderRadius: 10,
-    paddingHorizontal: 8, paddingVertical: 2,
+    backgroundColor: BRAND,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
   savedCountText: {
-    fontSize: 11, fontWeight: '700', color: '#FFF',
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFF',
   },
   editToggleText: {
-    fontSize: 14, fontWeight: '600', color: BRAND,
+    fontSize: 14,
+    fontWeight: '600',
+    color: BRAND,
   },
   savedList: {
-    paddingHorizontal: 16, gap: 12,
+    paddingHorizontal: 16,
+    gap: 12,
   },
   savedCard: {
-    width: 120, alignItems: 'center',
-    backgroundColor: '#FFF', borderRadius: 14,
-    padding: 10, borderWidth: 1.5, borderColor: '#F3F4F6',
+    width: 120,
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderRadius: 14,
+    padding: 10,
+    borderWidth: 1.5,
+    borderColor: '#F3F4F6',
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4 },
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 4,
+      },
       android: { elevation: 1 },
     }),
   },
   savedCardSelected: {
-    borderColor: BRAND, backgroundColor: '#F0F5FF',
+    borderColor: BRAND,
+    backgroundColor: '#F0F5FF',
   },
   savedRemoveBtn: {
-    position: 'absolute', top: 6, right: 6, zIndex: 1,
-    width: 20, height: 20, borderRadius: 10,
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    zIndex: 1,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: '#F3F4F6',
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   savedCheckbox: {
-    position: 'absolute', top: 6, left: 6, zIndex: 1,
-    width: 20, height: 20, borderRadius: 10,
-    borderWidth: 1.5, borderColor: '#D1D5DB',
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    zIndex: 1,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#D1D5DB',
     backgroundColor: '#FFF',
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   savedCheckboxChecked: {
-    backgroundColor: BRAND, borderColor: BRAND,
+    backgroundColor: BRAND,
+    borderColor: BRAND,
   },
   savedImage: {
-    width: 60, height: 60, borderRadius: 12,
+    width: 60,
+    height: 60,
+    borderRadius: 12,
     marginBottom: 6,
   },
   savedImagePlaceholder: {
     backgroundColor: '#F3F4F6',
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   savedName: {
-    fontSize: 12, fontWeight: '600', color: '#1A1A1A',
-    textAlign: 'center', lineHeight: 16,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    textAlign: 'center',
+    lineHeight: 16,
   },
   savedRating: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
     marginTop: 4,
   },
   savedRatingText: {
-    fontSize: 11, fontWeight: '600', color: '#F59E0B',
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#F59E0B',
   },
 
   /* ── Edit Mode Toolbar ── */
   editToolbar: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    marginHorizontal: 16, marginTop: 12,
-    paddingHorizontal: 14, paddingVertical: 10,
-    backgroundColor: '#F9FAFB', borderRadius: 12,
-    borderWidth: 1, borderColor: '#E5E7EB',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: 16,
+    marginTop: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   selectAllBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   selectAllText: {
-    fontSize: 13, fontWeight: '600', color: BRAND,
+    fontSize: 13,
+    fontWeight: '600',
+    color: BRAND,
   },
   batchDeleteBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 12, paddingVertical: 7,
-    backgroundColor: '#FEF2F2', borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    backgroundColor: '#FEF2F2',
+    borderRadius: 8,
   },
   batchDeleteBtnDisabled: {
     backgroundColor: '#F9FAFB',
   },
   batchDeleteText: {
-    fontSize: 13, fontWeight: '600', color: '#EF4444',
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#EF4444',
   },
   batchDeleteTextDisabled: {
     color: '#D1D5DB',

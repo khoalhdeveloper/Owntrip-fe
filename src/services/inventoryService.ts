@@ -37,15 +37,18 @@ export interface UpdateInventoryRequest {
 
 export interface DashboardStats {
   dateRange: { start: string; end: string };
-  roomTypeStats: Record<string, {
-    totalInventory: number;
-    totalBooked: number;
-    totalRevenue: number;
-    avgPrice: number;
-    days: number;
-    occupancyRate: string;
-    availableRooms: number;
-  }>;
+  roomTypeStats: Record<
+    string,
+    {
+      totalInventory: number;
+      totalBooked: number;
+      totalRevenue: number;
+      avgPrice: number;
+      days: number;
+      occupancyRate: string;
+      availableRooms: number;
+    }
+  >;
   totalRecords: number;
 }
 
@@ -53,7 +56,12 @@ export const inventoryService = {
   /**
    * Lấy inventory theo khoảng thời gian
    */
-  getInventory: async (hotelId: string, startDate: string, endDate: string, roomTypeId?: string): Promise<{ data: InventoryRecord[], stats: InventoryStats } | null> => {
+  getInventory: async (
+    hotelId: string,
+    startDate: string,
+    endDate: string,
+    roomTypeId?: string,
+  ): Promise<{ data: InventoryRecord[]; stats: InventoryStats } | null> => {
     try {
       let url = `${ENDPOINTS.INVENTORY.GET}?hotelId=${hotelId}&startDate=${startDate}&endDate=${endDate}`;
       if (roomTypeId) url += `&roomTypeId=${roomTypeId}`;
@@ -94,9 +102,19 @@ export const inventoryService = {
   /**
    * Cập nhật giá hàng loạt
    */
-  bulkPriceUpdate: async (data: { hotelId: string; startDate: string; endDate: string; roomTypeId?: string; priceMultiplier?: number; fixedPrice?: number }): Promise<any> => {
+  bulkPriceUpdate: async (data: {
+    hotelId: string;
+    startDate: string;
+    endDate: string;
+    roomTypeId?: string;
+    priceMultiplier?: number;
+    fixedPrice?: number;
+  }): Promise<any> => {
     try {
-      const response = await axiosClient.post<any, any>(ENDPOINTS.INVENTORY.BULK_PRICE_UPDATE, data);
+      const response = await axiosClient.post<any, any>(
+        ENDPOINTS.INVENTORY.BULK_PRICE_UPDATE,
+        data,
+      );
       return response;
     } catch (error: any) {
       const message = error?.response?.data?.message || 'Không thể cập nhật giá';
@@ -104,14 +122,15 @@ export const inventoryService = {
     }
   },
 
- 
   getDashboard: async (hotelId: string): Promise<{ data: DashboardStats } | null> => {
     try {
-      const response = await axiosClient.get<any, any>(`${ENDPOINTS.INVENTORY.DASHBOARD}?hotelId=${hotelId}`);
+      const response = await axiosClient.get<any, any>(
+        `${ENDPOINTS.INVENTORY.DASHBOARD}?hotelId=${hotelId}`,
+      );
       return response;
     } catch (error) {
       console.error('Error fetching inventory dashboard:', error);
       return null;
     }
-  }
+  },
 };

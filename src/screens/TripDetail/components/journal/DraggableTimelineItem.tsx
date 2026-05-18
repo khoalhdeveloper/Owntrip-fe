@@ -110,10 +110,7 @@ export function DraggableTimelineItem({
   // ── Animated styles ──
   const animatedCardStyle = useAnimatedStyle(() => {
     return {
-      transform: [
-        { translateY: translateY.value },
-        { scale: scale.value },
-      ],
+      transform: [{ translateY: translateY.value }, { scale: scale.value }],
       zIndex: isDragging.value ? 100 : 0,
       ...(Platform.OS === 'ios'
         ? {
@@ -140,10 +137,7 @@ export function DraggableTimelineItem({
         {/* Tap gesture on the whole card */}
         <GestureDetector gesture={tapGesture}>
           <Animated.View
-            style={[
-              styles.timelineItem,
-              isHighlighted && styles.timelineItemHighlighted,
-            ]}
+            style={[styles.timelineItem, isHighlighted && styles.timelineItemHighlighted]}
           >
             {/* Drag Handle — long press + pan gesture */}
             <GestureDetector gesture={dragGesture}>
@@ -154,17 +148,9 @@ export function DraggableTimelineItem({
 
             {/* Step Number */}
             <View style={styles.timelineStepCol}>
-              <View
-                style={[
-                  styles.timelineStepDot,
-                  isHighlighted && styles.timelineStepDotActive,
-                ]}
-              >
+              <View style={[styles.timelineStepDot, isHighlighted && styles.timelineStepDotActive]}>
                 <Text
-                  style={[
-                    styles.timelineStepNum,
-                    isHighlighted && styles.timelineStepNumActive,
-                  ]}
+                  style={[styles.timelineStepNum, isHighlighted && styles.timelineStepNumActive]}
                 >
                   {idx + 1}
                 </Text>
@@ -175,17 +161,9 @@ export function DraggableTimelineItem({
             {/* Photo */}
             <View style={styles.timelineAvatar}>
               {hasPhoto ? (
-                <Image
-                  source={{ uri: entry.photo }}
-                  style={styles.timelineAvatarImg}
-                />
+                <Image source={{ uri: entry.photo }} style={styles.timelineAvatarImg} />
               ) : (
-                <View
-                  style={[
-                    styles.timelineAvatarImg,
-                    styles.timelineAvatarPlaceholder,
-                  ]}
-                >
+                <View style={[styles.timelineAvatarImg, styles.timelineAvatarPlaceholder]}>
                   <Feather name="map-pin" size={16} color="#9CA3AF" />
                 </View>
               )}
@@ -202,9 +180,13 @@ export function DraggableTimelineItem({
                   {entry.mockTime} · {formatShortDate(entry.dayDate)}
                 </Text>
                 {entry.rating ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginLeft: 6 }}>
+                  <View
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginLeft: 6 }}
+                  >
                     <Feather name="star" size={10} color="#F59E0B" />
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#F59E0B' }}>{entry.rating.toFixed(1)}</Text>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#F59E0B' }}>
+                      {entry.rating.toFixed(1)}
+                    </Text>
                   </View>
                 ) : null}
               </View>
