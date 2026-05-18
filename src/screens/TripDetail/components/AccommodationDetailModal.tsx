@@ -669,32 +669,49 @@ export default function AccommodationDetailModal({
 
         {/* ===== CTA Footer ===== */}
         <View style={styles.footer}>
-          <View style={styles.footerPriceSection}>
-            <Text style={styles.footerPrice}>
-              {(() => {
-                const room = hotel.rooms.find(r => r.roomTypeId === selectedRoomId);
-                const displayPrice = room ? (room.basePrice || room.price || 0) : hotel.pricePerNight;
-                return displayPrice > 0 ? formatCurrency(displayPrice) : 'Liên hệ';
-              })()}
-            </Text>
-            <Text style={styles.footerPriceUnit}>/đêm</Text>
-          </View>
-          <TouchableOpacity
-            style={[styles.bookCTA, !selectedRoomId && styles.bookCTADisabled]}
-            activeOpacity={0.8}
-            onPress={() => {
-              const room = hotel.rooms.find(r => r.roomTypeId === selectedRoomId);
-              if (room) {
-                onBook(hotel, room);
-              } else {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-                alert('Vui lòng chọn loại phòng trước khi đặt.');
-              }
-            }}
-          >
-            <Feather name="calendar" size={18} color="#FFF" />
-            <Text style={styles.bookCTADisabled ? styles.bookCTAText : styles.bookCTAText}>{selectedRoomId ? 'Đặt phòng ngay' : 'Chọn loại phòng'}</Text>
-          </TouchableOpacity>
+          {isBooked ? (
+            <View style={{ flex: 1, flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity
+                style={[styles.bookCTA, { backgroundColor: '#FEE2E2', flex: 1 }]}
+                activeOpacity={0.8}
+                onPress={() => {
+                  if (onCancelBooking) onCancelBooking(hotel);
+                }}
+              >
+                <Feather name="trash-2" size={18} color="#EF4444" />
+                <Text style={[styles.bookCTAText, { color: '#EF4444' }]}>Hủy phòng</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
+              <View style={styles.footerPriceSection}>
+                <Text style={styles.footerPrice}>
+                  {(() => {
+                    const room = hotel.rooms.find(r => r.roomTypeId === selectedRoomId);
+                    const displayPrice = room ? (room.basePrice || room.price || 0) : hotel.pricePerNight;
+                    return displayPrice > 0 ? formatCurrency(displayPrice) : 'Liên hệ';
+                  })()}
+                </Text>
+                <Text style={styles.footerPriceUnit}>/đêm</Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.bookCTA, !selectedRoomId && styles.bookCTADisabled]}
+                activeOpacity={0.8}
+                onPress={() => {
+                  const room = hotel.rooms.find(r => r.roomTypeId === selectedRoomId);
+                  if (room) {
+                    onBook(hotel, room);
+                  } else {
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                    alert('Vui lòng chọn loại phòng trước khi đặt.');
+                  }
+                }}
+              >
+                <Feather name="calendar" size={18} color="#FFF" />
+                <Text style={styles.bookCTADisabled ? styles.bookCTAText : styles.bookCTAText}>{selectedRoomId ? 'Đặt phòng ngay' : 'Chọn loại phòng'}</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </View>
 

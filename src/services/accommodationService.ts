@@ -163,8 +163,19 @@ export const accommodationService = {
    */
   getReviews: async (hotelId: string): Promise<AccommodationReview[]> => {
     try {
-      // For now return empty — reviews come from hotel detail page
-      return [];
+      const hotel = await accommodationService.getById(hotelId);
+      if (!hotel || !hotel.topReviews) return [];
+      
+      return hotel.topReviews.map((r: any) => ({
+        id: r._id || r.id,
+        hotelId: hotelId,
+        userName: r.userName || 'Khách ẩn danh',
+        userAvatar: r.userAvatar || 'https://i.pravatar.cc/100',
+        rating: r.rating || 5,
+        comment: r.comment || '',
+        images: r.images || [],
+        createdAt: r.createdAt || new Date().toISOString()
+      }));
     } catch (error) {
       console.error('Error fetching reviews:', error);
       return [];
@@ -192,6 +203,31 @@ export const accommodationService = {
       return response?.success ?? false;
     } catch (error) {
       console.error('Error submitting review:', error);
+      return false;
+    }
+  },
+
+  /**
+   * Lấy đánh giá của tôi cho khách sạn
+   */
+  getMyReview: async (hotelId: string): Promise<any | null> => {
+    try {
+      const response = await axiosClient.get<any, any>(`${ENDPOINTS.HOTELS.LIST}/${hotelId}/my-review`);
+      return response?.data ?? null;
+    } catch (error) {
+      return null;
+    }
+  },
+
+  /**
+   * Xóa đánh giá của tôi
+   */
+  deleteReview: async (hotelId: string): Promise<boolean> => {
+    try {
+      const response = await axiosClient.delete<any, any>(`${ENDPOINTS.HOTELS.LIST}/${hotelId}/review`);
+      return response?.success ?? false;
+    } catch (error) {
+      console.error('Error deleting review:', error);
       return false;
     }
   },

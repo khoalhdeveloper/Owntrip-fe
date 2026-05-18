@@ -20,6 +20,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Trip, TripDay, Destination, tripService } from '@/services/tripService';
 import AddPlaceModal from './AddPlaceModal';
+import PlaceDetailModal from './PlaceDetailModal';
 import { useConfirm } from '@/components/ConfirmProvider';
 
 const BRAND = '#4A7CFF';
@@ -32,7 +33,11 @@ function formatDayDate(dateStr: string): string {
   return `${d.getDate()} ${months[d.getMonth()]}`;
 }
 
-function getTimeOfDay(order: number): { label: string; color: string } {
+function getTimeOfDay(order: number, timeOfDay?: string): { label: string; color: string } {
+  if (timeOfDay === 'morning') return { label: 'Buổi sáng', color: '#F59E0B' };
+  if (timeOfDay === 'afternoon') return { label: 'Buổi chiều', color: '#3B82F6' };
+  if (timeOfDay === 'evening') return { label: 'Buổi tối', color: '#8B5CF6' };
+
   if (order <= 2) return { label: 'Buổi sáng', color: '#F59E0B' };
   if (order <= 4) return { label: 'Buổi chiều', color: '#3B82F6' };
   return { label: 'Buổi tối', color: '#8B5CF6' };
@@ -46,6 +51,8 @@ export default function ItineraryTab({ trip, days }: { trip: Trip; days: TripDay
   const [loading, setLoading] = useState(true);
   const [expandedDays, setExpandedDays] = useState<Record<number, boolean>>({});
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
+  const [selectedPlace, setSelectedPlace] = useState<any>(null);
+  const [detailVisible, setDetailVisible] = useState(false);
 
   // Add Place Modal state
   const [addModalVisible, setAddModalVisible] = useState(false);
@@ -158,6 +165,14 @@ export default function ItineraryTab({ trip, days }: { trip: Trip; days: TripDay
       return { ...d, place: { ...d.place, order: newIdx + 1 } };
     });
     setDestinations(updatedDests);
+
+    // Persist to backend
+    if (dayDests.length > 0) {
+      const newPlaceIds = reordered.map(r => r.place._id);
+      tripService.reorderPlaces(dayDests[0].dayId, newPlaceIds).catch(err => {
+        console.error("Failed to save new order:", err);
+      });
+    }
   }, [destByDay, destinations]);
 
   if (loading) {
@@ -224,6 +239,10 @@ export default function ItineraryTab({ trip, days }: { trip: Trip; days: TripDay
                       onDragEnd={handleDragEnd}
                       swipeableRefs={swipeableRefs}
                       openSwipeable={openSwipeable}
+                      onPress={(place) => {
+                        setSelectedPlace(place);
+                        setDetailVisible(true);
+                      }}
                     />
                   ))
                 )}
@@ -252,6 +271,14 @@ export default function ItineraryTab({ trip, days }: { trip: Trip; days: TripDay
         tripDestination={trip.destination}
         existingPlaceIds={getExistingPlaceIds(selectedDayNumber)}
         onPlaceAdded={handlePlaceAdded}
+      />
+
+      <PlaceDetailModal 
+        isVisible={detailVisible}
+        onClose={() => setDetailVisible(false)}
+        place={selectedPlace}
+        onAdd={() => {}} 
+        showAddButton={false}
       />
     </View>
   );
@@ -405,14 +432,15 @@ interface DraggableActivityItemProps {
   onDragEnd: (dayNum: number, fromIdx: number, dy: number) => void;
   swipeableRefs: React.MutableRefObject<Record<string, Swipeable | null>>;
   openSwipeable: React.MutableRefObject<string | null>;
+  onPress: (place: any) => void;
 }
 
 function DraggableActivityItem({
   dest, idx, isLast, dayNum, imgErrors,
   onImageError, onDelete, onDragStart, onDragEnd,
-  swipeableRefs, openSwipeable,
+  swipeableRefs, openSwipeable, onPress,
 }: DraggableActivityItemProps) {
-  const tod = getTimeOfDay(dest.place.order);
+  const tod = getTimeOfDay(dest.place.order, dest.place.timeOfDay);
   const hasPhoto = dest.place.photo && !imgErrors[dest.place._id];
 
   const translateY = useSharedValue(0);
@@ -431,7 +459,7 @@ function DraggableActivityItem({
   }, [onDragEnd, dayNum, idx]);
 
   const longPressGesture = Gesture.LongPress()
-    .minDuration(200)
+    .minDuration(150)
     .onStart(() => {
       'worklet';
       isDragging.value = true;
@@ -521,7 +549,7 @@ function DraggableActivityItem({
             activeOpacity={0.7}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              if (dest.place.mapUrl) Linking.openURL(dest.place.mapUrl);
+              onPress(dest.place);
             }}
           >
             {/* Drag Handle */}

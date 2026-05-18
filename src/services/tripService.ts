@@ -43,6 +43,7 @@ export interface AddPlaceBody {
   rating?: number;
   photo?: string;
   mapUrl?: string;
+  timeOfDay?: 'morning' | 'afternoon' | 'evening';
 }
 
 export interface TripsResponse {
@@ -72,6 +73,7 @@ export interface DestinationPlace {
   photo?: string;
   mapUrl?: string;
   order: number;
+  timeOfDay?: 'morning' | 'afternoon' | 'evening';
   createdAt?: string;
   updatedAt?: string;
 }
@@ -163,6 +165,17 @@ export const tripService = {
       return response;
     } catch (error) {
       console.error(`Error removing place from day ${dayId}:`, error);
+      throw error;
+    }
+  },
+
+  reorderPlaces: async (dayId: string, placeIds: string[]): Promise<any> => {
+    try {
+      const url = ENDPOINTS.PLANS.REORDER(dayId);
+      const response = await axiosClient.patch(url, { placeIds });
+      return response;
+    } catch (error) {
+      console.error(`Error reordering places for day ${dayId}:`, error);
       throw error;
     }
   },

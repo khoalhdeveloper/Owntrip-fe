@@ -166,22 +166,40 @@ export default function JournalTab({ trip, days, onScrollToMap }: JournalTabProp
 
   // ── Directions: get user GPS → open Google Maps ──
   const handleDirections = useCallback(async (destLat: number, destLng: number, destName: string) => {
+    let url = '';
     try {
       setNavigatingToPlace(true);
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        showAlert('Quyền bị từ chối', 'Vui lòng bật định vị để lấy chỉ đường.', 'warning');
-        setNavigatingToPlace(false);
-        return;
+      if (status === 'granted') {
+        try {
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          const { latitude: origLat, longitude: origLng } = loc.coords;
+          url = Platform.select({
+            ios: `maps://app?saddr=${origLat},${origLng}&daddr=${destLat},${destLng}`,
+            android: `https://www.google.com/maps/dir/?api=1&origin=${origLat},${origLng}&destination=${destLat},${destLng}&destination_place_id=&travelmode=driving`,
+          }) || `https://www.google.com/maps/dir/?api=1&origin=${origLat},${origLng}&destination=${destLat},${destLng}`;
+        } catch (locError) {
+          console.warn('Failed to get current location, using destination only:', locError);
+        }
       }
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      const { latitude: origLat, longitude: origLng } = loc.coords;
-      const url = Platform.select({
-        ios: `maps://app?saddr=${origLat},${origLng}&daddr=${destLat},${destLng}`,
-        android: `https://www.google.com/maps/dir/?api=1&origin=${origLat},${origLng}&destination=${destLat},${destLng}&destination_place_id=&travelmode=driving`,
-      }) || `https://www.google.com/maps/dir/?api=1&origin=${origLat},${origLng}&destination=${destLat},${destLng}`;
-      await Linking.openURL(url);
-    } catch {
+      
+      // Fallback if URL is not set (e.g. permission denied or location fetch failed)
+      if (!url) {
+        url = Platform.select({
+          ios: `maps://app?daddr=${destLat},${destLng}`,
+          android: `https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}&travelmode=driving`,
+        }) || `https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}`;
+      }
+
+      try {
+        await Linking.openURL(url);
+      } catch (openError) {
+        console.warn('Failed to open primary maps url, falling back to web maps:', openError);
+        const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}&travelmode=driving`;
+        await Linking.openURL(webUrl);
+      }
+    } catch (err) {
+      console.error('Failed to open map:', err);
       showAlert('Lỗi', 'Không thể mở chỉ đường.', 'error');
     } finally {
       setNavigatingToPlace(false);
@@ -189,22 +207,40 @@ export default function JournalTab({ trip, days, onScrollToMap }: JournalTabProp
   }, []);
 
   const handleNavigate = useCallback(async (destLat: number, destLng: number) => {
+    let url = '';
     try {
       setNavigatingToPlace(true);
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        showAlert('Quyền bị từ chối', 'Vui lòng bật định vị để dẫn đường.', 'warning');
-        setNavigatingToPlace(false);
-        return;
+      if (status === 'granted') {
+        try {
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          const { latitude: origLat, longitude: origLng } = loc.coords;
+          url = Platform.select({
+            ios: `maps://app?saddr=${origLat},${origLng}&daddr=${destLat},${destLng}&dirflg=d`,
+            android: `google.navigation:q=${destLat},${destLng}&mode=d`,
+          }) || `https://www.google.com/maps/dir/?api=1&origin=${origLat},${origLng}&destination=${destLat},${destLng}&travelmode=driving`;
+        } catch (locError) {
+          console.warn('Failed to get current location for navigation, using destination only:', locError);
+        }
       }
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      const { latitude: origLat, longitude: origLng } = loc.coords;
-      const url = Platform.select({
-        ios: `maps://app?saddr=${origLat},${origLng}&daddr=${destLat},${destLng}&dirflg=d`,
-        android: `google.navigation:q=${destLat},${destLng}&mode=d`,
-      }) || `https://www.google.com/maps/dir/?api=1&origin=${origLat},${origLng}&destination=${destLat},${destLng}&travelmode=driving`;
-      await Linking.openURL(url);
-    } catch {
+
+      // Fallback if URL is not set (e.g. permission denied or location fetch failed)
+      if (!url) {
+        url = Platform.select({
+          ios: `maps://app?daddr=${destLat},${destLng}&dirflg=d`,
+          android: `google.navigation:q=${destLat},${destLng}&mode=d`,
+        }) || `https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}&travelmode=driving`;
+      }
+
+      try {
+        await Linking.openURL(url);
+      } catch (openError) {
+        console.warn('Failed to open primary navigation url, falling back to web maps:', openError);
+        const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}&travelmode=driving`;
+        await Linking.openURL(webUrl);
+      }
+    } catch (err) {
+      console.error('Failed to open navigation:', err);
       showAlert('Lỗi', 'Không thể bắt đầu dẫn đường.', 'error');
     } finally {
       setNavigatingToPlace(false);

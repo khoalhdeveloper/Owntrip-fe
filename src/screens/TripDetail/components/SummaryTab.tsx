@@ -27,6 +27,7 @@ import { paymentService } from '@/services/paymentService';
 import PayOSWebViewModal from '@/components/PayOSWebViewModal';
 import { userService, UserProfile } from '@/services/userService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Toast from 'react-native-toast-message';
 
 const BRAND = '#4A7CFF';
 const BRAND_LIGHT = '#EBF5FF';
@@ -103,9 +104,6 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
   const [bookedRoomTypeId, setBookedRoomTypeId] = useState<string | null>(null);
   const [checkInDate, setCheckInDate] = useState<Date | null>(null);
   const [checkOutDate, setCheckOutDate] = useState<Date | null>(null);
-  const [toastVisible, setToastVisible] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const toastOpacity = useRef(new Animated.Value(0)).current;
 
   // PayOS states
   const [payosCheckoutUrl, setPayosCheckoutUrl] = useState<string | null>(null);
@@ -211,13 +209,11 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
   };
 
   const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setToastVisible(true);
-    Animated.sequence([
-      Animated.timing(toastOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
-      Animated.delay(2500),
-      Animated.timing(toastOpacity, { toValue: 0, duration: 300, useNativeDriver: true }),
-    ]).start(() => setToastVisible(false));
+    Toast.show({
+      type: 'success',
+      text1: 'Thành công',
+      text2: msg,
+    });
   };
 
   const handleWriteReview = (hotel: Accommodation) => {
@@ -475,12 +471,19 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
   // Open booked hotel detail for viewing
   const handleViewBookedHotel = async () => {
     if (!bookedHotel) return;
+    
+    const hotelIdToFetch = bookedHotel.id || (bookedHotel as any).hotelId;
+    if (!hotelIdToFetch) {
+      alert('Lỗi dữ liệu: Không tìm thấy ID khách sạn đã đặt. Vui lòng thử xóa và đặt lại chỗ ở.');
+      return;
+    }
+    
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     
     try {
       // Tải dữ liệu thật từ Server, kèm theo ngày đã đặt
       const fullHotel = await accommodationService.getById(
-        bookedHotel.id || (bookedHotel as any).hotelId,
+        hotelIdToFetch,
         checkInDate?.toISOString(),
         checkOutDate?.toISOString()
       );
@@ -567,12 +570,12 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
         />
 
         {bookedHotel && checkInDate && checkOutDate ? (
-          /* Booked hotel card — tappable to view detail */
-          <TouchableOpacity
-            style={styles.bookedCard}
-            activeOpacity={0.7}
-            onPress={handleViewBookedHotel}
-          >
+          <>
+            <TouchableOpacity
+              style={styles.bookedCard}
+              activeOpacity={0.7}
+              onPress={handleViewBookedHotel}
+            >
             {bookedHotel.primaryImage && !imgErrors[`hotel-${bookedHotel.hotelId}`] ? (
               <Image
                 source={{ uri: bookedHotel.primaryImage }}
@@ -599,6 +602,18 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
             </View>
             <Feather name="chevron-right" size={18} color="#D1D5DB" />
           </TouchableOpacity>
+
+          {getTripStatus(trip.startDate, trip.endDate) === 'Đã hoàn thành' && (
+            <TouchableOpacity
+              style={[styles.actionBtn, { marginTop: 12, backgroundColor: BRAND_LIGHT }]}
+              activeOpacity={0.7}
+              onPress={() => handleWriteReview(bookedHotel)}
+            >
+              <Feather name="edit-3" size={14} color={BRAND} />
+              <Text style={[styles.actionBtnText, { color: BRAND }]}>Đánh giá chỗ ở này</Text>
+            </TouchableOpacity>
+          )}
+        </>
         ) : (
           /* Empty state */
           <View style={styles.emptyState}>
@@ -949,13 +964,7 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
         />
       )}
 
-      {/* ===== TOAST NOTIFICATION ===== */}
-      {toastVisible && (
-        <Animated.View style={[styles.toastContainer, { opacity: toastOpacity }]}>
-          <Feather name="check-circle" size={18} color="#FFF" style={{ marginRight: 8 }} />
-          <Text style={styles.toastText}>{toastMessage}</Text>
-        </Animated.View>
-      )}
+      {/* ===== CALENDAR MODAL ===== */}
 
       {/* ===== LOADING OVERLAY ===== */}
       {isUpdating && (

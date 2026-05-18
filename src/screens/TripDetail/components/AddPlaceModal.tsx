@@ -17,6 +17,7 @@ import * as Haptics from 'expo-haptics';
 import { placesService, Place } from '@/services/placesService';
 import { tripService, AddPlaceBody } from '@/services/tripService';
 import { useConfirm } from '@/components/ConfirmProvider';
+import PlaceDetailModal from './PlaceDetailModal';
 
 const BRAND = '#4A7CFF';
 
@@ -149,6 +150,8 @@ export default function AddPlaceModal({
   const [results, setResults] = useState<Place[]>([]);
   const [searching, setSearching] = useState(false);
   const [adding, setAdding] = useState<string | null>(null);
+  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
+  const [detailVisible, setDetailVisible] = useState(false);
   const [searchError, setSearchError] = useState(false);
   const { alert: showAlert } = useConfirm();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -193,7 +196,7 @@ export default function AddPlaceModal({
     handleSearch(searchText, cat.label);
   };
 
-  const handleAddPlace = async (place: Place) => {
+  const handleAddPlace = async (place: Place, timeOfDay?: string) => {
     if (existingPlaceIds.includes(place.placeId)) return;
 
     try {
@@ -209,6 +212,7 @@ export default function AddPlaceModal({
         rating: place.rating,
         photo: place.photo || undefined,
         mapUrl: place.mapUrl,
+        timeOfDay: (timeOfDay as any) || 'morning',
       };
 
       await tripService.addPlaceToDay(dayId, body);
@@ -242,7 +246,12 @@ export default function AddPlaceModal({
         <TouchableOpacity
           style={[styles.row, isAdded && styles.rowDisabled]}
           activeOpacity={isAdded ? 1 : 0.6}
-          onPress={() => !isAdded && handleAddPlace(item)}
+          onPress={() => {
+            if (!isAdded) {
+              setSelectedPlace(item);
+              setDetailVisible(true);
+            }
+          }}
           disabled={!!adding || isAdded}
         >
           {/* Thumbnail */}
@@ -378,6 +387,13 @@ export default function AddPlaceModal({
             <Text style={styles.emptyText}>Không tìm thấy kết quả cho &quot;{query}&quot;</Text>
           </View>
         ) : null}
+        {/* ===== DETAIL MODAL ===== */}
+        <PlaceDetailModal 
+          isVisible={detailVisible}
+          onClose={() => setDetailVisible(false)}
+          place={selectedPlace}
+          onAdd={handleAddPlace}
+        />
       </KeyboardAvoidingView>
     </Modal>
   );
