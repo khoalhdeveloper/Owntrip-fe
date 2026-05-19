@@ -19,6 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { placesService, Place } from '@/services/placesService';
 import { Trip, TripDay, tripService, AddPlaceBody } from '@/services/tripService';
 import { useConfirm } from '@/components/ConfirmProvider';
+import PlaceDetailModal from './PlaceDetailModal';
 
 /* ─── Brand ─── */
 const BRAND = '#4A7CFF';
@@ -84,6 +85,7 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
   // Add to trip modal
   const [showDayPicker, setShowDayPicker] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
+  const [detailVisible, setDetailVisible] = useState(false);
   const [addingToDay, setAddingToDay] = useState<string | null>(null);
   const { alert: showAlert, confirmDelete } = useConfirm();
 
@@ -297,7 +299,15 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
       const isAdded = addedPlaceIds.has(item.placeId);
 
       return (
-        <View key={itemKey} style={styles.placeCard}>
+        <TouchableOpacity
+          key={itemKey}
+          style={styles.placeCard}
+          activeOpacity={0.85}
+          onPress={() => {
+            setSelectedPlace(item);
+            setDetailVisible(true);
+          }}
+        >
           {/* Image */}
           {hasPhoto ? (
             <Image
@@ -362,10 +372,19 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
       );
     },
-    [failedImages, savedPlaceIds, addedPlaceIds, toggleSave, handleImageError, handleAddToTrip],
+    [
+      failedImages,
+      savedPlaceIds,
+      addedPlaceIds,
+      toggleSave,
+      handleImageError,
+      handleAddToTrip,
+      setSelectedPlace,
+      setDetailVisible,
+    ],
   );
 
   /* ─── Empty state ─── */
@@ -426,7 +445,7 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
                 <TouchableOpacity
                   key={place.placeId}
                   style={[styles.savedCard, editMode && isSelected && styles.savedCardSelected]}
-                  activeOpacity={editMode ? 0.7 : 1}
+                  activeOpacity={0.7}
                   onPress={() => {
                     if (editMode) {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -436,6 +455,9 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
                         else next.add(place.placeId);
                         return next;
                       });
+                    } else {
+                      setSelectedPlace(place);
+                      setDetailVisible(true);
                     }
                   }}
                 >
@@ -679,6 +701,20 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* ═══ Place Detail Modal ═══ */}
+      <PlaceDetailModal
+        isVisible={detailVisible}
+        onClose={() => setDetailVisible(false)}
+        place={selectedPlace}
+        onAdd={(place) => {
+          setDetailVisible(false);
+          setTimeout(() => {
+            handleAddToTrip(place);
+          }, 400);
+        }}
+        showAddButton={selectedPlace ? !addedPlaceIds.has(selectedPlace.placeId) : false}
+      />
     </>
   );
 }
