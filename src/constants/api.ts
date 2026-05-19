@@ -85,4 +85,10 @@ export const ENDPOINTS = {
     SHOP: '/api/avatar-items/shop',
     GET: (id: string) => `/api/avatar-items/${id}`,
   },
+  CHECKINS: {
+    CREATE: '/api/checkins',
+    MY: '/api/checkins/my',
+    FAVORITE: (id: string) => `/api/checkins/${id}/favorite`,
+    DELETE: (id: string) => `/api/checkins/${id}`,
+  },
 };

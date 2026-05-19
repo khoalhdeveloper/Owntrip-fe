@@ -8,24 +8,6 @@ export const CHECKIN_FRAMES: CheckinFrame[] = [
     type: 'none',
   },
   {
-    id: 'classic-frame',
-    name: 'Classic Frame',
-    image: require('../../assets/frames/frame-1.png'),
-    type: 'classic',
-  },
-  {
-    id: 'modern-frame',
-    name: 'Modern Frame',
-    image: require('../../assets/frames/frame-2.png'),
-    type: 'modern',
-  },
-  {
-    id: 'film-strip-frame',
-    name: 'Film Strip',
-    image: require('../../assets/frames/frame-2.png'), // Fallback to frame-2.png for now
-    type: 'film',
-  },
-  {
     id: 'hcm-4cut-frame',
     name: 'TP.HCM 4-Cut',
     image: require('../../assets/frames/Screenshot 2026-05-17 232828.png'),

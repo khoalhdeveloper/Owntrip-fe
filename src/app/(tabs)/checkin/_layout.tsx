@@ -7,6 +7,7 @@ export default function CheckinLayout() {
       <Stack.Screen name="index" />
       <Stack.Screen name="camera" />
       <Stack.Screen name="frame" />
+      <Stack.Screen name="select" />
       <Stack.Screen name="result" />
     </Stack>
   );
