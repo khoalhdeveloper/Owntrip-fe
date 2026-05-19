@@ -17,10 +17,9 @@ export const saveImageToLibrary = async (
       return null;
     }
 
-    // Capture the preview
     const uri = await captureRef(viewShotRef, {
-      format: 'png',
-      quality: 1,
+      format: 'jpg',
+      quality: 0.8,
     });
 
     // Save to media library
