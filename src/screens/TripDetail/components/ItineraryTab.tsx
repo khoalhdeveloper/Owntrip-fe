@@ -190,15 +190,30 @@ export default function ItineraryTab({
       const [moved] = reordered.splice(fromIdx, 1);
       reordered.splice(toIdx, 0, moved);
 
-    // Update order values
-    const updatedDests = destinations.map((d) => {
-      if (d.dayId !== dayDests[0]?.dayId) return d;
-      const newIdx = reordered.findIndex((r) => r.place._id === d.place._id);
-      if (newIdx === -1) return d;
-      return { ...d, place: { ...d.place, order: newIdx + 1 } };
-    });
-    setDestinations(updatedDests);
-  }, [destByDay, destinations]);
+      // Update order values
+      const updatedDests = destinations.map((d) => {
+        if (d.dayId !== dayDests[0]?.dayId) return d;
+        const newIdx = reordered.findIndex((r) => r.place._id === d.place._id);
+        if (newIdx === -1) return d;
+        return { ...d, place: { ...d.place, order: newIdx + 1 } };
+      });
+      setDestinations(updatedDests);
+
+      // Save to backend
+      const targetDayId = dayDests[0]?.dayId;
+      if (targetDayId) {
+        try {
+          const orderedPlaceIds = reordered.map((r) => r.place._id);
+          await tripService.reorderPlacesInDay(targetDayId, orderedPlaceIds);
+          onRefresh(); // Refresh parent to synchronize across tabs!
+        } catch (error: any) {
+          const msg = error?.response?.data?.message || 'Không thể lưu thứ tự mới';
+          showAlert('Lỗi', msg, 'error');
+        }
+      }
+    },
+    [destByDay, destinations, onRefresh, showAlert],
+  );
 
   if (loading) {
     return (

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, Image, TouchableOpacity, ScrollView, Dimensions, Linking, NativeModules } from 'react-native';
+import { View, Text, StyleSheet, Modal, Image, TouchableOpacity, ScrollView, Dimensions, Linking, NativeModules, TouchableWithoutFeedback } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { MAP_CONFIG } from '@/constants/map';
 import { WebView } from 'react-native-webview';
@@ -51,8 +51,10 @@ const PlaceDetailModal: React.FC<PlaceDetailModalProps> = ({
       transparent={true}
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
-        <View style={styles.content}>
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={styles.overlay}>
+          <TouchableWithoutFeedback onPress={() => {}}>
+            <View style={styles.content}>
           {/* Header Image */}
           <View style={styles.imageContainer}>
             <Image 
@@ -127,8 +129,8 @@ const PlaceDetailModal: React.FC<PlaceDetailModalProps> = ({
             <View style={{ height: 100 }} />
           </ScrollView>
 
-          {/* Bottom Add Button */}
-          {showAddButton && (
+          {/* Bottom Footer Action */}
+          {showAddButton ? (
             <View style={styles.footer}>
               <View style={styles.timeSelector}>
                 <TouchableOpacity 
@@ -161,9 +163,20 @@ const PlaceDetailModal: React.FC<PlaceDetailModalProps> = ({
                 <Text style={styles.addButtonText}>Thêm vào lịch trình</Text>
               </TouchableOpacity>
             </View>
+          ) : (
+            <View style={styles.footer}>
+              <TouchableOpacity 
+                style={[styles.addButton, { backgroundColor: '#F3F4F6', shadowColor: 'transparent' }]}
+                onPress={onClose}
+              >
+                <Text style={[styles.addButtonText, { color: '#4B5563' }]}>Đóng</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
-      </View>
+      </TouchableWithoutFeedback>
+    </View>
+  </TouchableWithoutFeedback>
 
       {/* Embedded Map Modal */}
       {showMap && (

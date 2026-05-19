@@ -304,7 +304,7 @@ export default function JournalTab({ trip, days, onScrollToMap, onRefresh }: Jou
             .filter(t => t.dayDate === oldDayDate)
             .map(t => t.id); // In TimelineEntry, id is the place._id
             
-          await tripService.reorderPlaces(targetDay.dayId, orderedPlaceIds);
+          await tripService.reorderPlacesInDay(targetDay.dayId, orderedPlaceIds);
           console.log(`Reordered Journal timeline successfully`);
           onRefresh(); // Trigger parent refresh to sync other tabs!
         } catch (error: any) {
