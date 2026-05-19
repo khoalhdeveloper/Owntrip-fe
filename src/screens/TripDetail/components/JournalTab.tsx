@@ -304,12 +304,13 @@ export default function JournalTab({ trip, days, onScrollToMap, onRefresh }: Jou
             .filter(t => t.dayDate === oldDayDate)
             .map(t => t.id); // In TimelineEntry, id is the place._id
             
-          await tripService.reorderPlacesInDay(targetDay.dayId, orderedPlaceIds);
+          await tripService.reorderPlaces(targetDay.dayId, orderedPlaceIds);
           console.log(`Reordered Journal timeline successfully`);
           onRefresh(); // Trigger parent refresh to sync other tabs!
-        } catch (error) {
-          console.error('Failed to auto-save Journal reorder', error);
-          showAlert('Lỗi', 'Không thể lưu thứ tự mới. Vui lòng thử lại.', 'error');
+        } catch (error: any) {
+          const msg = error.response?.data?.message || error.message;
+          console.error('Failed to auto-save Journal reorder', msg);
+          showAlert('Lỗi', `Không thể lưu thứ tự mới: ${msg}`, 'error');
         }
       }
     },
@@ -689,13 +690,14 @@ export default function JournalTab({ trip, days, onScrollToMap, onRefresh }: Jou
                   const isSelected = highlightedIdx === idx;
                   const dayColor = getDayColor(entry.dayDate, uniqueDates);
                   return (
-                    <MapboxGL.PointAnnotation
+                    <MapboxGL.MarkerView
                       key={entry.id}
                       id={`marker-${entry.id}`}
                       coordinate={[entry.longitude, entry.latitude]}
-                      onSelected={() => handleMarkerTap(idx, cameraRef)}
                     >
-                      <View
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => handleMarkerTap(idx, cameraRef)}
                         style={[
                           styles.customMarkerContainer,
                           isSelected && styles.customMarkerSelected,
@@ -704,17 +706,16 @@ export default function JournalTab({ trip, days, onScrollToMap, onRefresh }: Jou
                         <View style={[styles.customMarkerPin, { backgroundColor: dayColor }]}>
                           <Text style={styles.customMarkerText}>{idx + 1}</Text>
                         </View>
-                      </View>
-                      <MapboxGL.Callout title={entry.name} />
-                    </MapboxGL.PointAnnotation>
+                      </TouchableOpacity>
+                    </MapboxGL.MarkerView>
                   );
                 })}
 
                 {/* GPS User Location Marker */}
                 {userLocation && (
-                  <MapboxGL.PointAnnotation id="userLocation" coordinate={userLocation}>
+                  <MapboxGL.MarkerView id="userLocation" coordinate={userLocation}>
                     <View style={styles.userLocationMarker} />
-                  </MapboxGL.PointAnnotation>
+                  </MapboxGL.MarkerView>
                 )}
               </MapboxGL.MapView>
 
@@ -965,13 +966,14 @@ export default function JournalTab({ trip, days, onScrollToMap, onRefresh }: Jou
                   const isSelected = highlightedIdx === idx;
                   const dayColor = getDayColor(entry.dayDate, uniqueDates);
                   return (
-                    <MapboxGL.PointAnnotation
+                    <MapboxGL.MarkerView
                       key={entry.id}
                       id={`markerFS-${entry.id}`}
                       coordinate={[entry.longitude, entry.latitude]}
-                      onSelected={() => handleMarkerTap(idx, fullscreenCameraRef)}
                     >
-                      <View
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => handleMarkerTap(idx, fullscreenCameraRef)}
                         style={[
                           styles.customMarkerContainer,
                           isSelected && styles.customMarkerSelected,
@@ -980,17 +982,16 @@ export default function JournalTab({ trip, days, onScrollToMap, onRefresh }: Jou
                         <View style={[styles.customMarkerPin, { backgroundColor: dayColor, backgroundImage: 'none' }]}>
                           <Text style={styles.customMarkerText}>{idx + 1}</Text>
                         </View>
-                      </View>
-                      <MapboxGL.Callout title={entry.name} />
-                    </MapboxGL.PointAnnotation>
+                      </TouchableOpacity>
+                    </MapboxGL.MarkerView>
                   );
                 })}
 
                 {/* GPS User Location Marker */}
                 {userLocation && (
-                  <MapboxGL.PointAnnotation id="userLocationFS" coordinate={userLocation}>
+                  <MapboxGL.MarkerView id="userLocationFS" coordinate={userLocation}>
                     <View style={styles.userLocationMarker} />
-                  </MapboxGL.PointAnnotation>
+                  </MapboxGL.MarkerView>
                 )}
               </MapboxGL.MapView>
 

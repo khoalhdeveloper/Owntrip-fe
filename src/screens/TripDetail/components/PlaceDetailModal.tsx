@@ -1,6 +1,21 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, Image, TouchableOpacity, ScrollView, Dimensions, Linking } from 'react-native';
+import { View, Text, StyleSheet, Modal, Image, TouchableOpacity, ScrollView, Dimensions, Linking, NativeModules } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
+import { MAP_CONFIG } from '@/constants/map';
+import { WebView } from 'react-native-webview';
+import { generateMapHtml } from './journal/map-html';
+
+const isMapboxAvailable = !!NativeModules.RNMBXModule || !!NativeModules.RNMBXMapView;
+let MapboxGL: any = null;
+if (isMapboxAvailable) {
+  try {
+    MapboxGL = require('@rnmapbox/maps').default || require('@rnmapbox/maps');
+    MapboxGL.setAccessToken(MAP_CONFIG.MAPBOX_ACCESS_TOKEN || '');
+    MapboxGL.setConnected(true);
+  } catch (e) {
+    console.warn('Failed to load @rnmapbox/maps:', e);
+  }
+}
 
 const BRAND = '#4A7CFF';
 const GRAY_LIGHT = '#F3F4F6';
@@ -21,16 +36,12 @@ const PlaceDetailModal: React.FC<PlaceDetailModalProps> = ({
   isVisible, onClose, place, onAdd, showAddButton = true 
 }) => {
   const [selectedTime, setSelectedTime] = useState<'morning' | 'afternoon' | 'evening'>('morning');
+  const [showMap, setShowMap] = useState(false);
 
   if (!place) return null;
 
   const handleOpenMap = () => {
-    if (place.mapUrl) {
-      Linking.openURL(place.mapUrl);
-    } else {
-      const url = `https://www.google.com/maps/search/?api=1&query=${place.latitude},${place.longitude}`;
-      Linking.openURL(url);
-    }
+    setShowMap(true);
   };
 
   return (
@@ -153,11 +164,123 @@ const PlaceDetailModal: React.FC<PlaceDetailModalProps> = ({
           )}
         </View>
       </View>
+
+      {/* Embedded Map Modal */}
+      {showMap && (
+        <Modal
+          visible={showMap}
+          animationType="slide"
+          transparent={false}
+          onRequestClose={() => setShowMap(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: 'white' }}>
+            {isMapboxAvailable ? (
+              <MapboxGL.MapView 
+                style={{ flex: 1 }} 
+                logoEnabled={false} 
+                attributionEnabled={false}
+              >
+                <MapboxGL.Camera 
+                  zoomLevel={15} 
+                  centerCoordinate={[place.longitude, place.latitude]} 
+                />
+                <MapboxGL.MarkerView coordinate={[place.longitude, place.latitude]} id="placeMarker">
+                  <View style={{ width: 40, height: 40, backgroundColor: 'rgba(74, 124, 255, 0.2)', borderRadius: 20, justifyContent: 'center', alignItems: 'center' }}>
+                    <View style={{ width: 16, height: 16, backgroundColor: BRAND, borderRadius: 8, borderWidth: 2, borderColor: 'white' }} />
+                  </View>
+                </MapboxGL.MarkerView>
+              </MapboxGL.MapView>
+            ) : (
+              <WebView
+                style={{ flex: 1 }}
+                originWhitelist={['*']}
+                source={{
+                  html: generateMapHtml(
+                    [{
+                      id: place._id || '1',
+                      name: place.name || '',
+                      photo: place.photo || '',
+                      latitude: place.latitude,
+                      longitude: place.longitude,
+                      dayDate: new Date().toISOString(),
+                      mockTime: '',
+                      mockMemory: '',
+                      rating: place.rating,
+                      totalReviews: place.totalReviews,
+                      address: place.address,
+                      types: place.types || []
+                    }],
+                    BRAND,
+                    MAP_CONFIG.MAPBOX_ACCESS_TOKEN || '',
+                    MAP_CONFIG.GOONG_MAPTILES_KEY || '',
+                    [new Date().toISOString()],
+                    []
+                  ),
+                  baseUrl: 'https://localhost',
+                }}
+              />
+            )}
+
+            <TouchableOpacity 
+              style={styles.mapBackButton}
+              onPress={() => setShowMap(false)}
+            >
+              <Feather name="arrow-left" size={24} color={TEXT_MAIN} />
+            </TouchableOpacity>
+
+            <View style={styles.mapInfoCard}>
+              <Text style={styles.placeName} numberOfLines={1}>{place.name}</Text>
+              <Text style={styles.addressText} numberOfLines={2}>{place.address}</Text>
+              
+              <TouchableOpacity 
+                style={[styles.addButton, { marginTop: 16, flexDirection: 'row' }]}
+                onPress={() => {
+                  const url = `https://www.google.com/maps/dir/?api=1&destination=${place.latitude},${place.longitude}`;
+                  Linking.openURL(url);
+                }}
+              >
+                <Feather name="navigation" size={18} color="white" style={{ marginRight: 8 }} />
+                <Text style={styles.addButtonText}>Dẫn đường bằng Google Maps</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
+  mapBackButton: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    backgroundColor: 'white',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  mapInfoCard: {
+    position: 'absolute',
+    bottom: 30,
+    left: 20,
+    right: 20,
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 8,
+  },
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
