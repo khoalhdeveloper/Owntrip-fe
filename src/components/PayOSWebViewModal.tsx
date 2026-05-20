@@ -16,9 +16,9 @@ import { paymentService } from '@/services/paymentService';
 interface PayOSWebViewModalProps {
   visible: boolean;
   checkoutUrl: string | null;
-  bookingId: string | null;
+  bookingId?: string | null;
   /** Được gọi khi thanh toán thành công (status = 'paid') */
-  onPaymentSuccess: (bookingId: string) => void;
+  onPaymentSuccess: (bookingId: string, data?: any) => void;
   /** Được gọi khi người dùng hủy hoặc đóng modal */
   onPaymentCancel: () => void;
   /** Label hiển thị trên modal header */
@@ -43,6 +43,7 @@ export default function PayOSWebViewModal({
   const pollCountRef = useRef(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const hasSucceededRef = useRef(false);
+  const resultDataRef = useRef<any>(null);
 
   const stopPolling = useCallback(() => {
     if (intervalRef.current) {
@@ -80,6 +81,7 @@ export default function PayOSWebViewModal({
 
         if (result?.data?.paymentStatus === 'paid') {
           hasSucceededRef.current = true;
+          resultDataRef.current = result.data;
           stopPolling();
           setPollingStatus('success');
         }
@@ -91,7 +93,7 @@ export default function PayOSWebViewModal({
 
   // Reset state mỗi lần modal mở
   useEffect(() => {
-    if (visible && checkoutUrl && bookingId) {
+    if (visible && checkoutUrl) {
       hasSucceededRef.current = false;
       setLoading(true);
       setPollingStatus('idle');
@@ -100,7 +102,7 @@ export default function PayOSWebViewModal({
     return () => {
       stopPolling();
     };
-  }, [visible, checkoutUrl, bookingId]);
+  }, [visible, checkoutUrl, bookingId, startPolling, stopPolling]);
 
   // Detect nếu PayOS redirect về returnUrl/cancelUrl (bắt URL thay đổi)
   const handleNavigationChange = useCallback(
@@ -113,8 +115,18 @@ export default function PayOSWebViewModal({
         url.includes('success=true') ||
         (url.includes('cancel=false') && url.includes('code=00'))
       ) {
-        stopPolling();
-        setPollingStatus('success');
+        // Force an immediate backend check rather than assuming success right away
+        // This ensures the webhook/polling logic has completed on the backend
+        if (bookingId && !hasSucceededRef.current) {
+          paymentService.checkPaymentStatus(bookingId).then((result) => {
+            if (result?.data?.paymentStatus === 'paid') {
+              hasSucceededRef.current = true;
+              resultDataRef.current = result.data;
+              stopPolling();
+              setPollingStatus('success');
+            }
+          }).catch(() => {});
+        }
         return;
       }
 
@@ -143,7 +155,7 @@ export default function PayOSWebViewModal({
     );
   };
 
-  if (!checkoutUrl || !bookingId) return null;
+  if (!checkoutUrl) return null;
 
   return (
     <Modal
@@ -184,7 +196,7 @@ export default function PayOSWebViewModal({
               </Text>
               <TouchableOpacity
                 style={styles.successBtn}
-                onPress={() => onPaymentSuccess(bookingId!)}
+                onPress={() => onPaymentSuccess(bookingId!, resultDataRef.current)}
               >
                 <Text style={styles.successBtnText}>Hoàn tất</Text>
               </TouchableOpacity>

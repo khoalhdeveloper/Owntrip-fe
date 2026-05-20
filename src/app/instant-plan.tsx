@@ -96,7 +96,7 @@ export default function InstantPlanScreen() {
         </TouchableOpacity>
 
         {/* Create travel guideline card */}
-        <TouchableOpacity style={[styles.cardContainer, { marginTop: 30 }]} activeOpacity={0.85}>
+        <TouchableOpacity style={[styles.cardContainer, { marginTop: 30 }]} activeOpacity={0.85} onPress={() => router.push('/create-guide')}>
           <LinearGradient
             colors={['#00A3FF', '#62C2FF']}
             start={{ x: 0, y: 0 }}

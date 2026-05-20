@@ -9,6 +9,7 @@ import {
   StatusBar,
   Dimensions,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -21,6 +22,7 @@ import ItineraryTab from './components/ItineraryTab';
 import ExploreTab from './components/ExploreTab';
 import JournalTab from './components/JournalTab';
 import EditTripModal from './components/EditTripModal';
+import SellTripModal from './components/SellTripModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const HEADER_HEIGHT = 260;
@@ -74,6 +76,7 @@ export default function TripDetailScreen({ tripId }: { tripId: string }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
+  const [sellVisible, setSellVisible] = useState(false);
 
   const fetchTrip = useCallback(async () => {
     try {
@@ -219,6 +222,17 @@ export default function TripDetailScreen({ tripId }: { tripId: string }) {
             <TouchableOpacity style={styles.topBarBtn}>
               <Feather name="share-2" size={18} color="#FFF" />
             </TouchableOpacity>
+            {(!trip.isPurchasedClone && !trip.title?.endsWith('(Mua)') && !trip.title?.endsWith('(Đã mua)')) && (
+              <TouchableOpacity 
+                style={[styles.topBarBtn, { backgroundColor: '#FFD700', marginLeft: 8 }]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  setSellVisible(true);
+                }}
+              >
+                <Feather name="dollar-sign" size={18} color="#1A1A1A" />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -295,6 +309,19 @@ export default function TripDetailScreen({ tripId }: { tripId: string }) {
         onUpdated={(updated) => {
           setTrip(updated);
           fetchTrip(); // refresh days too
+        }}
+      />
+
+      {/* ===== Sell Trip Modal ===== */}
+      <SellTripModal
+        visible={sellVisible}
+        tripId={tripId}
+        tripTitle={trip?.title || ''}
+        initialPrice={trip?.price || 49000}
+        isForSale={trip?.isForSale || false}
+        onClose={() => setSellVisible(false)}
+        onSuccess={() => {
+          fetchTrip(); // refresh to get new price & publish status
         }}
       />
     </View>
