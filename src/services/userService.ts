@@ -21,7 +21,8 @@ export interface UserProfile {
   phone?: string;
   balance: number;
   points: number;
-  role: 'user' | 'admin' | 'hotel_owner';
+  role: 'user' | 'admin' | 'hotel_owner' | 'creator';
+  creatorSubscriptionEndsAt?: string;
   isVerified: boolean;
   inventory?: InventoryItem[];
   createdAt?: string;
@@ -49,6 +50,7 @@ export const userService = {
         balance: data.balance ?? 0,
         points: data.points ?? 0,
         role: data.role || 'user',
+        creatorSubscriptionEndsAt: data.creatorSubscriptionEndsAt,
         isVerified: data.isVerified ?? false,
         inventory: data.inventory || [],
         createdAt: data.createdAt,

@@ -643,6 +643,19 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             )}
 
+            {(profile?.role === 'user' || profile?.role === 'creator') && (
+              <TouchableOpacity 
+                style={styles.settingItem}
+                onPress={() => router.push('/creator-upgrade')}
+              >
+                <View style={[styles.settingIcon, { backgroundColor: '#FEF3C7' }]}>
+                  <Feather name="star" size={16} color="#F59E0B" />
+                </View>
+                <Text style={styles.settingLabel}>{profile?.role === 'creator' ? 'Gia hạn gói Creator' : 'Trở thành Creator'}</Text>
+                <Feather name="chevron-right" size={20} color="#CBD5E0" />
+              </TouchableOpacity>
+            )}
+
             {profile?.role === 'user' && (
               <TouchableOpacity 
                 style={styles.settingItem}
