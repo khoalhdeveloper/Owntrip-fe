@@ -25,6 +25,8 @@ import { useConfirm } from '@/components/ConfirmProvider';
 import { bookingService } from '@/services/bookingService';
 import { paymentService } from '@/services/paymentService';
 import PayOSWebViewModal from '@/components/PayOSWebViewModal';
+import NotesModal from './NotesModal';
+import BudgetModal from './BudgetModal';
 import { userService, UserProfile } from '@/services/userService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
@@ -139,6 +141,42 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
   const [payosCheckoutUrl, setPayosCheckoutUrl] = useState<string | null>(null);
   const [payosBookingId, setPayosBookingId] = useState<string | null>(null);
   const [payosModalVisible, setPayosModalVisible] = useState(false);
+
+  // Notes and Budget states
+  const [notesModalVisible, setNotesModalVisible] = useState(false);
+  const [budgetModalVisible, setBudgetModalVisible] = useState(false);
+  const [tripNotes, setTripNotes] = useState<string[]>(trip.notes || []);
+  const [tripBudget, setTripBudget] = useState(trip.budget || {
+    accommodation: 0,
+    food: 0,
+    transport: 0,
+    activities: 0
+  });
+
+  const hotelBookedCost = bookedHotel && checkInDate && checkOutDate ?
+    Math.round((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24) || 1) * bookedHotel.pricePerNight : undefined;
+
+  const handleSaveNotes = async (newNotes: string[]) => {
+    setNotesModalVisible(false);
+    try {
+      await tripService.updateTrip(trip._id, { notes: newNotes });
+      setTripNotes(newNotes);
+      showToast('Đã lưu ghi chú thành công!');
+    } catch (e) {
+      showToast('Lỗi khi lưu ghi chú');
+    }
+  };
+
+  const handleSaveBudget = async (newBudget: any) => {
+    setBudgetModalVisible(false);
+    try {
+      await tripService.updateTrip(trip._id, { budget: newBudget });
+      setTripBudget(newBudget);
+      showToast('Đã lưu ngân sách thành công!');
+    } catch (e) {
+      showToast('Lỗi khi lưu ngân sách');
+    }
+  };
   const [pendingTripUpdate, setPendingTripUpdate] = useState<any>(null);
 
   // Filter & Sort state
@@ -479,6 +517,11 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
         }
         setSelectedHotel(null);
         setSelectedRoom(null);
+        
+        // Cập nhật lại ngân sách chỗ ở nếu có
+        const updatedBudget = { ...tripBudget, accommodation: newTotalPrice };
+        setTripBudget(updatedBudget);
+        tripService.updateTrip(trip._id, { budget: updatedBudget }).catch(() => {});
       }
     } catch (error) {
       console.error('Error saving accommodation:', error);
@@ -840,14 +883,17 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
         )}
       </View>
 
-      {/* ===== 3. NOTES (individual cards like reference) ===== */}
+      {/* ===== 3. NOTES ===== */}
       <View style={styles.card}>
         <SectionHeader
           icon="file-text"
           title="Ghi chú"
           right={
             <TouchableOpacity
-              onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setNotesModalVisible(true);
+              }}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <Feather name="plus" size={18} color="#9CA3AF" />
@@ -856,18 +902,18 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
         />
 
         <View style={styles.notesList}>
-          {(trip.description
-            ? trip.description.split('\n').filter(Boolean)
-            : [
-                'Đừng quên mang theo áo mưa 🌧️',
-                'Thử các món ăn địa phương tại chợ!',
-                'Đặt vé bảo tàng trước 🎟️',
-              ]
-          ).map((line, i) => (
-            <View key={i} style={styles.noteItem}>
-              <Text style={styles.noteText}>{line}</Text>
+          {tripNotes.length > 0 ? (
+            tripNotes.map((line, i) => (
+              <View key={i} style={styles.noteItem}>
+                <Text style={styles.noteText}>{line}</Text>
+              </View>
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              <Feather name="file-text" size={24} color="#D1D5DB" />
+              <Text style={styles.emptyHint}>Chưa có ghi chú nào</Text>
             </View>
-          ))}
+          )}
         </View>
       </View>
 
@@ -876,45 +922,67 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
         <SectionHeader
           icon="credit-card"
           title="Ngân sách"
-          right={<Text style={styles.budgetTotal}>${(trip.budget || 180).toLocaleString()}</Text>}
+          right={
+            ((tripBudget.accommodation || 0) + (tripBudget.food || 0) + (tripBudget.transport || 0) + (tripBudget.activities || 0)) > 0 ? (
+              <TouchableOpacity
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setBudgetModalVisible(true);
+                }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+              >
+                <Text style={styles.budgetTotal}>{formatCurrency((tripBudget.accommodation || 0) + (tripBudget.food || 0) + (tripBudget.transport || 0) + (tripBudget.activities || 0))}</Text>
+                <Feather name="edit-3" size={14} color={BRAND} />
+              </TouchableOpacity>
+            ) : undefined
+          }
         />
 
-        <View style={styles.budgetRows}>
-          {trip.budget ? (
-            // User set a budget, but we don't have accurate actual spent tracking yet
-            // Use fallback proportions to make it look active, or you can implement real calc here
-            <>
+        {((tripBudget.accommodation || 0) + (tripBudget.food || 0) + (tripBudget.transport || 0) + (tripBudget.activities || 0)) > 0 ? (
+          <TouchableOpacity activeOpacity={0.7} onPress={() => setBudgetModalVisible(true)}>
+            <View style={styles.budgetRows}>
               <BudgetRow
                 label="Chỗ ở"
-                amount={Math.round(trip.budget * 0.45)}
-                total={trip.budget}
+                amount={tripBudget.accommodation || 0}
+                total={(tripBudget.accommodation || 0) + (tripBudget.food || 0) + (tripBudget.transport || 0) + (tripBudget.activities || 0)}
               />
               <BudgetRow
                 label="Ăn uống"
-                amount={Math.round(trip.budget * 0.25)}
-                total={trip.budget}
+                amount={tripBudget.food || 0}
+                total={(tripBudget.accommodation || 0) + (tripBudget.food || 0) + (tripBudget.transport || 0) + (tripBudget.activities || 0)}
               />
               <BudgetRow
                 label="Di chuyển"
-                amount={Math.round(trip.budget * 0.15)}
-                total={trip.budget}
+                amount={tripBudget.transport || 0}
+                total={(tripBudget.accommodation || 0) + (tripBudget.food || 0) + (tripBudget.transport || 0) + (tripBudget.activities || 0)}
               />
               <BudgetRow
                 label="Hoạt động"
-                amount={Math.round(trip.budget * 0.1)}
-                total={trip.budget}
+                amount={tripBudget.activities || 0}
+                total={(tripBudget.accommodation || 0) + (tripBudget.food || 0) + (tripBudget.transport || 0) + (tripBudget.activities || 0)}
               />
-            </>
-          ) : (
-            // No budget set, use completely mock values
-            <>
-              <BudgetRow label="Chỗ ở" amount={85} total={180} />
-              <BudgetRow label="Ăn uống" amount={45} total={180} />
-              <BudgetRow label="Di chuyển" amount={30} total={180} />
-              <BudgetRow label="Hoạt động" amount={20} total={180} />
-            </>
-          )}
-        </View>
+            </View>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIcon}>
+              <Feather name="credit-card" size={24} color="#D1D5DB" />
+            </View>
+            <Text style={styles.emptyTitle}>Chưa lập ngân sách</Text>
+            <Text style={styles.emptyHint}>Lên kế hoạch chi phí cho chuyến đi</Text>
+            <TouchableOpacity
+              style={styles.actionBtn}
+              activeOpacity={0.7}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setBudgetModalVisible(true);
+              }}
+            >
+              <Feather name="plus" size={14} color="#FFF" />
+              <Text style={styles.actionBtnText}>Lập ngân sách</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {/* ===== HOTEL LIST MODAL ===== */}
@@ -1125,6 +1193,21 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
       )}
 
       {/* ===== CALENDAR MODAL ===== */}
+
+      {/* ===== NOTES & BUDGET MODALS ===== */}
+      <NotesModal
+        visible={notesModalVisible}
+        initialNotes={tripNotes}
+        onClose={() => setNotesModalVisible(false)}
+        onSave={handleSaveNotes}
+      />
+      <BudgetModal
+        visible={budgetModalVisible}
+        initialBudget={tripBudget}
+        hotelBookedCost={hotelBookedCost}
+        onClose={() => setBudgetModalVisible(false)}
+        onSave={handleSaveBudget}
+      />
 
       {/* ===== LOADING OVERLAY ===== */}
       {isUpdating && (

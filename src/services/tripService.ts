@@ -13,7 +13,13 @@ export interface Trip {
   totalDays: number;
   description?: string;
   isPublished: boolean;
-  budget?: number;
+  notes?: string[];
+  budget?: {
+    accommodation: number;
+    food: number;
+    transport: number;
+    activities: number;
+  };
   createdAt?: string;
   updatedAt?: string;
   accommodation?: {
