@@ -225,9 +225,31 @@ export default function TripDetailScreen({ tripId }: { tripId: string }) {
             {(!trip.isPurchasedClone && !trip.title?.endsWith('(Mua)') && !trip.title?.endsWith('(Đã mua)')) && (
               <TouchableOpacity 
                 style={[styles.topBarBtn, { backgroundColor: '#FFD700', marginLeft: 8 }]}
-                onPress={() => {
+                onPress={async () => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  setSellVisible(true);
+                  
+                  // Check creator role
+                  const profile = await tripService.getTripById(tripId).then(() => {
+                      // We can just use userService.getMyProfile directly
+                  }).catch(() => null);
+
+                  const userProfile = require('@/services/userService').userService.getMyProfile();
+                  userProfile.then((user: any) => {
+                    const now = new Date();
+                    const endsAt = user?.creatorSubscriptionEndsAt ? new Date(user.creatorSubscriptionEndsAt) : null;
+                    if (!user || user.role !== 'creator' || !endsAt || endsAt < now) {
+                      Alert.alert(
+                        'Dành riêng cho Creator',
+                        'Bạn cần đăng ký hoặc gia hạn gói Creator để được phép đăng bán lịch trình của mình.',
+                        [
+                          { text: 'Hủy', style: 'cancel' },
+                          { text: 'Nâng cấp ngay', onPress: () => router.push('/creator-upgrade') }
+                        ]
+                      );
+                      return;
+                    }
+                    setSellVisible(true);
+                  });
                 }}
               >
                 <Feather name="dollar-sign" size={18} color="#1A1A1A" />
