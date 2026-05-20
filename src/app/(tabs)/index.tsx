@@ -26,6 +26,9 @@ import { tripService, Trip, TripDetailResponse } from '../../services/tripServic
 import { userService, UserProfile } from '../../services/userService';
 import { notificationService, Notification } from '../../services/notificationService';
 import { getImageSource } from '../../utils/imageUtils';
+import * as Haptics from 'expo-haptics';
+import Toast from 'react-native-toast-message';
+import PayOSWebViewModal from '../../components/PayOSWebViewModal';
 
 const MOCK_TRIP_REVIEWS = [
   {
@@ -90,6 +93,11 @@ export default function HomeScreen() {
   const [isNotifModalVisible, setIsNotifModalVisible] = useState(false);
   const [selectedNotifForDetail, setSelectedNotifForDetail] = useState<Notification | null>(null);
 
+  const [payosModalVisible, setPayosModalVisible] = useState(false);
+  const [payosCheckoutUrl, setPayosCheckoutUrl] = useState('');
+  const [payosTripId, setPayosTripId] = useState('');
+  const [payosOrderCode, setPayosOrderCode] = useState('');
+
   const { width } = Dimensions.get('window');
 
   const scrollX = useRef(new Animated.Value(0)).current;
@@ -132,7 +140,7 @@ export default function HomeScreen() {
       const fetchTrips = async () => {
         try {
           setLoadingTrips(true);
-          const trips = await tripService.getPublishedTrips(1, 10);
+          const trips = await tripService.getMarketplaceTrips(1, 10);
           // Strictly filter: Only keep trips with images
           const tripsWithImages = (trips || []).filter(
             (t) => getImageSource(t.provinceImage) !== null,
@@ -176,8 +184,14 @@ export default function HomeScreen() {
   const handleTripPress = async (id: string) => {
     setLoadingTripDetail(true);
     try {
-      const detail = await tripService.getTripById(id);
+      const detail = await tripService.getTripPreview(id);
       if (detail) {
+        const userId = await AsyncStorage.getItem('userId');
+        if (detail.trip.userId === userId) {
+          // If own trip, go straight to editable details
+          router.push(`/trip/${id}` as any);
+          return;
+        }
         setSelectedTripDetail(detail);
       }
     } finally {
@@ -420,7 +434,7 @@ export default function HomeScreen() {
 
         {/* Lịch trình gợi ý */}
         <View style={[styles.sectionHeader, { marginTop: 32 }]}>
-          <Text style={styles.sectionTitle}>Lịch trình gợi ý</Text>
+          <Text style={styles.sectionTitle}>Lịch trình nổi bật (Marketplace)</Text>
           <Text style={styles.viewAll}>Xem tất cả &gt;</Text>
         </View>
 
@@ -440,7 +454,7 @@ export default function HomeScreen() {
                 <ExpoImage
                   source={getImageSource(
                     trip.provinceImage ||
-                      'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?auto=format&fit=crop&q=80&w=800',
+                    'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?auto=format&fit=crop&q=80&w=800',
                   )}
                   style={styles.tripImage}
                   contentFit="cover"
@@ -449,8 +463,15 @@ export default function HomeScreen() {
 
                 {/* Gradient-like Overlay for text legibility */}
                 <View style={styles.tripOverlay}>
-                  <View style={styles.tripBadge}>
-                    <Text style={styles.tripBadgeText}>{trip.totalDays} Ngày</Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
+                    <View style={styles.tripBadge}>
+                      <Text style={styles.tripBadgeText}>{trip.totalDays} Ngày</Text>
+                    </View>
+                    {trip.isTrusted ? (
+                      <View style={styles.trustedBadge}>
+                        <Text style={styles.trustedBadgeText}>🛡️ Trusted</Text>
+                      </View>
+                    ) : null}
                   </View>
 
                   <View style={styles.tripInfo}>
@@ -462,6 +483,17 @@ export default function HomeScreen() {
                       <Text style={styles.tripLocationText} numberOfLines={1}>
                         {trip.destination}
                       </Text>
+                    </View>
+                    <View style={styles.tripMarketplaceRow}>
+                      <Text style={styles.tripPriceText}>
+                        {trip.price ? `${trip.price.toLocaleString('vi-VN')}đ` : 'Miễn phí'}
+                      </Text>
+                      <View style={styles.tripRatingBox}>
+                        <Feather name="star" size={12} color="#FFD700" fill="#FFD700" />
+                        <Text style={styles.tripRatingText}>
+                          {trip.averageRating ? trip.averageRating.toFixed(1) : '5.0'} ({trip.soldCount || 0} đã bán)
+                        </Text>
+                      </View>
                     </View>
                   </View>
                 </View>
@@ -675,380 +707,530 @@ export default function HomeScreen() {
               </View>
             ) : (
               selectedTripDetail && (
-                <ScrollView
-                  showsVerticalScrollIndicator={false}
-                  contentContainerStyle={{ paddingBottom: 40 }}
-                >
-                  {/* Header Image */}
-                  <View style={[styles.modalGallery, { height: 260 }]}>
-                    <ExpoImage
-                      source={getImageSource(
-                        selectedTripDetail.trip.provinceImage ||
+                <>
+                  <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingBottom: 40 }}
+                  >
+                    {/* Header Image */}
+                    <View style={[styles.modalGallery, { height: 260 }]}>
+                      <ExpoImage
+                        source={getImageSource(
+                          selectedTripDetail.trip.provinceImage ||
                           'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?auto=format&fit=crop&q=80&w=800',
-                      )}
-                      style={[styles.modalImage, { width, height: 260 }]}
-                      contentFit="cover"
-                    />
-                    <TouchableOpacity
-                      style={styles.modalCloseButton}
-                      onPress={() => setSelectedTripDetail(null)}
-                    >
-                      <Feather name="x" size={24} color="#FFF" />
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Body Details */}
-                  <View style={[styles.modalInfoContent, { paddingTop: 28 }]}>
-                    <View style={styles.tripDetailHeader}>
-                      <Text style={styles.tripDetailTitle}>{selectedTripDetail.trip.title}</Text>
-                      <View style={styles.tripDetailMeta}>
-                        <View style={styles.metaBadge}>
-                          <Feather name="map-pin" size={12} color="#4A7CFF" />
-                          <Text style={styles.metaBadgeText}>
-                            {selectedTripDetail.trip.destination}
-                          </Text>
-                        </View>
-                        <View style={[styles.metaBadge, { backgroundColor: '#FFF5F5' }]}>
-                          <Feather name="clock" size={12} color="#FF4D4D" />
-                          <Text style={[styles.metaBadgeText, { color: '#FF4D4D' }]}>
-                            {selectedTripDetail.trip.totalDays} Ngày
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-
-                    <View style={styles.modalSection}>
-                      <View style={styles.sectionHeaderRow}>
-                        <View style={styles.sectionIconBox}>
-                          <Feather name="align-left" size={16} color="#4A7CFF" />
-                        </View>
-                        <Text style={styles.modalSectionTitle}>Giới thiệu</Text>
-                      </View>
-                      <Text style={styles.modalSectionText}>
-                        {selectedTripDetail.trip.description ||
-                          'Khám phá hành trình tuyệt vời này với những trải nghiệm thú vị và điểm đến độc đáo.'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.modalDivider} />
-
-                    {/* Plan Itinerary */}
-                    <View style={styles.modalSection}>
-                      <View style={styles.sectionHeaderRow}>
-                        <View style={styles.sectionIconBox}>
-                          <Feather name="calendar" size={16} color="#4A7CFF" />
-                        </View>
-                        <Text style={styles.modalSectionTitle}>Lịch trình chi tiết</Text>
-                      </View>
-
-                      {selectedTripDetail.days.length === 0 ? (
-                        <View style={styles.emptyStateContainer}>
-                          <Feather name="info" size={24} color="#A0AEC0" />
-                          <Text style={styles.emptyStateText}>Chưa có lịch trình cụ thể.</Text>
-                        </View>
-                      ) : (
-                        <View style={styles.timelineContainer}>
-                          {selectedTripDetail.days.map((dayPlan, index) => (
-                            <View key={index} style={styles.timelineItem}>
-                              <View style={styles.timelineLeft}>
-                                <View style={styles.timelineDot} />
-                                {index < selectedTripDetail.days.length - 1 && (
-                                  <View style={styles.timelineLine} />
-                                )}
-                              </View>
-                              <View style={styles.timelineRight}>
-                                <View style={styles.dayCard}>
-                                  <View style={styles.dayCardHeader}>
-                                    <Text style={styles.dayNumberText}>NGÀY {dayPlan.day}</Text>
-                                    <Text style={styles.dayStatusText}>
-                                      {dayPlan.places && dayPlan.places.length > 0
-                                        ? `${dayPlan.places.length} địa điểm`
-                                        : 'Ngày tự do'}
-                                    </Text>
-                                  </View>
-                                  {dayPlan.places && dayPlan.places.length > 0 && (
-                                    <View style={styles.dayPlacesList}>
-                                      {dayPlan.places.map((p, pIdx) => (
-                                        <View
-                                          key={pIdx}
-                                          style={
-                                            pIdx === 0 ? styles.firstPlaceItem : styles.placeItem
-                                          }
-                                        >
-                                          <View style={styles.placeDot} />
-                                          <Text style={styles.placeNameText}>
-                                            {p.name || 'Địa điểm tham quan'}
-                                          </Text>
-                                        </View>
-                                      ))}
-                                    </View>
-                                  )}
-                                </View>
-                              </View>
-                            </View>
-                          ))}
-                        </View>
-                      )}
-                    </View>
-
-                    <View style={styles.modalDivider} />
-
-                    {/* Trip Reviews Section */}
-                    <View style={styles.reviewsSection}>
-                      <View style={styles.reviewsHeader}>
-                        <Text style={styles.reviewsTitle}>Đánh giá lịch trình</Text>
-                        <View style={styles.tripRatingSummary}>
-                          <Feather name="star" size={14} color="#ECC94B" fill="#ECC94B" />
-                          <Text style={styles.tripRatingScore}>5.0</Text>
-                          <Text style={styles.tripRatingCount}>(24)</Text>
-                        </View>
-                      </View>
-
-                      {MOCK_TRIP_REVIEWS.map((review) => (
-                        <View key={review.id} style={styles.reviewItem}>
-                          <View style={styles.reviewUserRow}>
-                            <ExpoImage
-                              source={getImageSource(review.userAvatar)}
-                              style={styles.reviewAvatar}
-                              contentFit="cover"
-                            />
-                            <View style={styles.reviewUserInfo}>
-                              <Text style={styles.reviewUserName}>{review.userName}</Text>
-                              <Text style={styles.reviewDate}>{review.date}</Text>
-                            </View>
-                            <View style={styles.reviewRatingBadge}>
-                              <Feather name="star" size={10} color="#FFF" fill="#FFF" />
-                              <Text style={styles.reviewRatingText}>{review.rating}</Text>
-                            </View>
-                          </View>
-                          <Text style={styles.reviewContent}>{review.content}</Text>
-                        </View>
-                      ))}
-
-                      <TouchableOpacity style={styles.viewAllReviewsButton}>
-                        <Text style={styles.viewAllReviewsText}>Xem tất cả đánh giá</Text>
+                        )}
+                        style={[styles.modalImage, { width, height: 260 }]}
+                        contentFit="cover"
+                      />
+                      <TouchableOpacity
+                        style={styles.modalCloseButton}
+                        onPress={() => setSelectedTripDetail(null)}
+                      >
+                        <Feather name="x" size={24} color="#FFF" />
                       </TouchableOpacity>
                     </View>
-                  </View>
-                </ScrollView>
-              )
-            )}
-          </View>
-        </View>
-      </Modal>
 
-      {/* Search Modal */}
-      <Modal
-        visible={isSearchModalVisible}
-        animationType="fade"
-        transparent={false}
-        onRequestClose={() => setIsSearchModalVisible(false)}
-      >
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#FAFBFC' }}>
-          <View style={styles.searchModalHeader}>
+                    {/* Body Details */}
+                    <View style={[styles.modalInfoContent, { paddingTop: 28 }]}>
+                      <View style={styles.tripDetailHeader}>
+                        <Text style={styles.tripDetailTitle}>{selectedTripDetail.trip.title}</Text>
+                        <View style={styles.tripDetailMeta}>
+                          <View style={styles.metaBadge}>
+                            <Feather name="map-pin" size={12} color="#4A7CFF" />
+                            <Text style={styles.metaBadgeText}>
+                              {selectedTripDetail.trip.destination}
+                            </Text>
+                          </View>
+                          <View style={[styles.metaBadge, { backgroundColor: '#FFF5F5' }]}>
+                            <Feather name="clock" size={12} color="#FF4D4D" />
+                            <Text style={[styles.metaBadgeText, { color: '#FF4D4D' }]}>
+                              {selectedTripDetail.trip.totalDays} Ngày
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      <View style={styles.modalSection}>
+                        <View style={styles.sectionHeaderRow}>
+                          <View style={styles.sectionIconBox}>
+                            <Feather name="align-left" size={16} color="#4A7CFF" />
+                          </View>
+                          <Text style={styles.modalSectionTitle}>Giới thiệu</Text>
+                        </View>
+                        <Text style={styles.modalSectionText}>
+                          {selectedTripDetail.trip.description ||
+                            'Khám phá hành trình tuyệt vời này với những trải nghiệm thú vị và điểm đến độc đáo.'}
+                        </Text>
+                      </View>
+
+                      <View style={styles.modalDivider} />
+
+                      {/* Plan Itinerary */}
+                      <View style={styles.modalSection}>
+                        <View style={styles.sectionHeaderRow}>
+                          <View style={styles.sectionIconBox}>
+                            <Feather name="calendar" size={16} color="#4A7CFF" />
+                          </View>
+                          <Text style={styles.modalSectionTitle}>Lịch trình chi tiết</Text>
+                        </View>
+
+                        {selectedTripDetail.days.length === 0 ? (
+                          <View style={styles.emptyStateContainer}>
+                            <Feather name="info" size={24} color="#A0AEC0" />
+                            <Text style={styles.emptyStateText}>Chưa có lịch trình cụ thể.</Text>
+                          </View>
+                        ) : (
+                          <View style={styles.timelineContainer}>
+                            {selectedTripDetail.days.map((dayPlan, index) => (
+                              <View key={index} style={styles.timelineItem}>
+                                <View style={styles.timelineLeft}>
+                                  <View style={styles.timelineDot} />
+                                  {index < selectedTripDetail.days.length - 1 && (
+                                    <View style={styles.timelineLine} />
+                                  )}
+                                </View>
+                                <View style={styles.timelineRight}>
+                                  <View style={styles.dayCard}>
+                                    <View style={styles.dayCardHeader}>
+                                      <Text style={styles.dayNumberText}>NGÀY {dayPlan.day}</Text>
+                                      <View style={styles.premiumBadge}>
+                                        <Text style={styles.premiumBadgeText}>
+                                          {dayPlan.places && dayPlan.places.length > 0
+                                            ? `${dayPlan.places.length} điểm đến`
+                                            : 'Tự do khám phá'}
+                                        </Text>
+                                      </View>
+                                    </View>
+                                    {dayPlan.places && dayPlan.places.length > 0 && (
+                                      <View style={styles.premiumPlacesContainer}>
+                                        {dayPlan.places.map((p, pIdx) => {
+                                          let timeStr = "Hoạt động";
+                                          let timeIcon = "activity";
+                                          if (p.timeOfDay === 'morning') {
+                                            timeStr = "Buổi sáng 🌅";
+                                            timeIcon = "sun";
+                                          } else if (p.timeOfDay === 'afternoon') {
+                                            timeStr = "Buổi chiều ☀️";
+                                            timeIcon = "sun";
+                                          } else if (p.timeOfDay === 'evening') {
+                                            timeStr = "Buổi tối 🌙";
+                                            timeIcon = "moon";
+                                          }
+
+                                          return (
+                                            <View key={pIdx} style={styles.premiumTeaserCard}>
+                                              <View style={styles.teaserHeader}>
+                                                <View style={styles.timeTag}>
+                                                  <Feather name={timeIcon as any} size={12} color="#0D9488" style={{ marginRight: 4 }} />
+                                                  <Text style={styles.timeTagText}>{timeStr}</Text>
+                                                </View>
+                                                <View style={styles.copyrightBadge}>
+                                                  <Text style={styles.copyrightText}>Bản quyền độc quyền ✨</Text>
+                                                </View>
+                                              </View>
+
+                                              <View style={styles.teaserBody}>
+                                                <View style={styles.teaserBlurredTextContainer}>
+                                                  <Feather name="map-pin" size={14} color="#D97706" style={{ marginRight: 8 }} />
+                                                  <Text style={styles.teaserPlaceName}>
+                                                    {p.name.includes("khoá") || p.name.includes("🔒") ? "••••••••••••••••••••••••" : p.name}
+                                                  </Text>
+                                                </View>
+                                                <View style={styles.goldPadlockWrapper}>
+                                                  <Feather name="lock" size={12} color="#D97706" />
+                                                </View>
+                                              </View>
+                                            </View>
+                                          );
+                                        })}
+                                      </View>
+                                    )}
+                                  </View>
+                                </View>
+                              </View>
+                            ))}
+                          </View>
+                        )}
+                      </View>
+
+                      <View style={styles.modalDivider} />
+
+                      {/* Trip Reviews Section */}
+                      <View style={styles.reviewsSection}>
+                        <View style={styles.reviewsHeader}>
+                          <Text style={styles.reviewsTitle}>Đánh giá lịch trình</Text>
+                          {selectedTripDetail.reviews && selectedTripDetail.reviews.length > 0 && (
+                            <View style={styles.tripRatingSummary}>
+                              <Feather name="star" size={14} color="#ECC94B" fill="#ECC94B" />
+                              <Text style={styles.tripRatingScore}>
+                                {selectedTripDetail.trip.averageRating ? selectedTripDetail.trip.averageRating.toFixed(1) : '5.0'}
+                              </Text>
+                              <Text style={styles.tripRatingCount}>
+                                ({selectedTripDetail.reviews.length})
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+
+                        {selectedTripDetail.reviews && selectedTripDetail.reviews.length > 0 ? (
+                          selectedTripDetail.reviews.map((r: any) => {
+                            const id = r._id || r.reviewId;
+                            const userName = r.userId?.displayName || 'Thành viên OwnTrip';
+                            const rating = r.rating || 5;
+                            const content = r.comment || '';
+                            const date = new Date(r.createdAt).toLocaleDateString('vi-VN');
+                            const userAvatar = r.userId?.image || 'https://i.pravatar.cc/150?u=' + id;
+
+                            return (
+                              <View key={id} style={styles.reviewItem}>
+                                <View style={styles.reviewUserRow}>
+                                  <ExpoImage
+                                    source={getImageSource(userAvatar)}
+                                    style={styles.reviewAvatar}
+                                    contentFit="cover"
+                                  />
+                                  <View style={styles.reviewUserInfo}>
+                                    <Text style={styles.reviewUserName}>{userName}</Text>
+                                    <Text style={styles.reviewDate}>{date}</Text>
+                                  </View>
+                                  <View style={styles.reviewRatingBadge}>
+                                    <Feather name="star" size={10} color="#FFF" fill="#FFF" />
+                                    <Text style={styles.reviewRatingText}>{rating}</Text>
+                                  </View>
+                                </View>
+                                <Text style={styles.reviewContent}>{content}</Text>
+                              </View>
+                            );
+                          })
+                        ) : (
+                          <View style={{ paddingVertical: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC', borderRadius: 16, marginVertical: 12 }}>
+                            <Feather name="message-square" size={32} color="#A0AEC0" style={{ marginBottom: 8 }} />
+                            <Text style={{ color: '#64748B', fontSize: 14, fontWeight: '600' }}>
+                              Chưa có đánh giá nào cho lịch trình này
+                            </Text>
+                            <Text style={{ color: '#94A3B8', fontSize: 12, marginTop: 4 }}>
+                              Hãy là người đầu tiên trải nghiệm và chia sẻ cảm nhận!
+                            </Text>
+                          </View>
+                        )}
+
+                        {selectedTripDetail.reviews && selectedTripDetail.reviews.length > 0 && (
+                          <TouchableOpacity style={styles.viewAllReviewsButton}>
+                            <Text style={styles.viewAllReviewsText}>Xem tất cả đánh giá</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </View>
+                  </ScrollView>
+                  <View style={styles.purchaseBottomBar}>
+                    <TouchableOpacity
+                      style={styles.purchaseButton}
+                      activeOpacity={0.9}
+                      onPress={async () => {
+                        try {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                          const res = await tripService.purchaseTrip(selectedTripDetail.trip._id);
+                          if (res && res.success) {
+                            if (res.paymentUrl) {
+                              // If backend returns a payment link, open it in browser!
+                              const { API_CONFIG } = require('../../constants/api');
+                              const fullUrl = res.paymentUrl.startsWith('http') 
+                                ? res.paymentUrl 
+                                : `${API_CONFIG.BASE_URL}${res.paymentUrl}`;
+                              Toast.show({
+                                type: 'info',
+                                text1: 'Đang mở cổng thanh toán...',
+                                text2: 'Vui lòng hoàn tất thanh toán trên PayOS.',
+                                visibilityTime: 3000
+                              });
+                              setPayosCheckoutUrl(fullUrl);
+                              setPayosTripId(selectedTripDetail.trip._id);
+                              setPayosOrderCode(res.orderCode ? res.orderCode.toString() : '');
+                              setPayosModalVisible(true);
+                              setSelectedTripDetail(null);
+                            } else if (res.tripId) {
+                              // Already owned or instantly unlocked (free)
+                              Toast.show({
+                                type: 'success',
+                                text1: 'Thành công! 🎉',
+                                text2: res.message,
+                                visibilityTime: 3000
+                              });
+                              setSelectedTripDetail(null);
+                              setTimeout(() => {
+                                router.push(`/trip/${res.tripId}` as any);
+                            }, 500);
+                          }
+                        } else {
+                      Toast.show({
+                        type: 'error',
+                        text1: 'Thất bại',
+                        text2: res?.message || 'Không thể tạo giao dịch lúc này.'
+                      });
+                        }
+                      } catch (err) {
+                      Toast.show({
+                        type: 'error',
+                        text1: 'Lỗi hệ thống',
+                        text2: 'Đã xảy ra lỗi khi khởi tạo thanh toán VNPAY/PayOS.'
+                      });
+                      }
+                    }}
+                  >
+                    <Text style={styles.purchaseButtonText}>
+                      Mở khoá lịch trình này - {selectedTripDetail.trip.price ? `${selectedTripDetail.trip.price.toLocaleString('vi-VN')}đ` : 'Miễn phí'}
+                    </Text>
+                    <Feather name="unlock" size={18} color="#FFF" style={{ marginLeft: 8 }} />
+                  </TouchableOpacity>
+                </View>
+          </>
+          )
+            )}
+        </View>
+      </View>
+    </Modal>
+
+    {/* PayOS WebView Modal */}
+    <PayOSWebViewModal
+      visible={payosModalVisible}
+      checkoutUrl={payosCheckoutUrl}
+      bookingId={payosOrderCode}
+      onPaymentSuccess={(bookingId, data) => {
+        setPayosModalVisible(false);
+        Toast.show({
+          type: 'success',
+          text1: 'Thanh toán thành công! 🎉',
+          text2: 'Lịch trình đã được mở khoá.',
+          visibilityTime: 3000
+        });
+        if (data && data.newTripId) {
+          router.push(`/trip/${data.newTripId}` as any);
+        } else if (payosTripId) {
+          router.push(`/trip/${payosTripId}` as any);
+        }
+      }}
+      onPaymentCancel={() => {
+        setPayosModalVisible(false);
+        Toast.show({
+          type: 'info',
+          text1: 'Đã huỷ thanh toán',
+          text2: 'Giao dịch chưa được thực hiện.'
+        });
+      }}
+    />
+
+      {/* Search Modal */ }
+  <Modal
+    visible={isSearchModalVisible}
+    animationType="fade"
+    transparent={false}
+    onRequestClose={() => setIsSearchModalVisible(false)}
+  >
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAFBFC' }}>
+      <View style={styles.searchModalHeader}>
+        <TouchableOpacity
+          style={styles.searchModalBack}
+          onPress={() => {
+            setIsSearchModalVisible(false);
+            setSearchQuery('');
+            setSearchResults([]);
+          }}
+        >
+          <Feather name="arrow-left" size={24} color="#1A2B4A" />
+        </TouchableOpacity>
+        <View style={styles.searchModalInputWrapper}>
+          <Feather name="search" size={18} color="#A0AEC0" style={{ marginRight: 10 }} />
+          <TextInput
+            style={styles.searchModalInput}
+            placeholder="Bạn muốn đi đâu?"
+            placeholderTextColor="#A0AEC0"
+            value={searchQuery}
+            onChangeText={handleSearch}
+            autoFocus
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => handleSearch('')}>
+              <Feather name="x-circle" size={18} color="#CBD5E0" />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      {isSearchingResults ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#4A7CFF" />
+        </View>
+      ) : searchResults.length > 0 ? (
+        <FlatList
+          data={searchResults}
+          keyExtractor={(item) => item.placeId}
+          contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+          renderItem={({ item }) => (
             <TouchableOpacity
-              style={styles.searchModalBack}
+              style={styles.searchResultCard}
+              activeOpacity={0.8}
               onPress={() => {
                 setIsSearchModalVisible(false);
-                setSearchQuery('');
-                setSearchResults([]);
+                setSelectedPlace(item);
               }}
             >
-              <Feather name="arrow-left" size={24} color="#1A2B4A" />
-            </TouchableOpacity>
-            <View style={styles.searchModalInputWrapper}>
-              <Feather name="search" size={18} color="#A0AEC0" style={{ marginRight: 10 }} />
-              <TextInput
-                style={styles.searchModalInput}
-                placeholder="Bạn muốn đi đâu?"
-                placeholderTextColor="#A0AEC0"
-                value={searchQuery}
-                onChangeText={handleSearch}
-                autoFocus
-                returnKeyType="search"
+              <ExpoImage
+                source={getImageSource(item.photo)}
+                style={styles.searchResultImage}
+                contentFit="cover"
               />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => handleSearch('')}>
-                  <Feather name="x-circle" size={18} color="#CBD5E0" />
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-
-          {isSearchingResults ? (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-              <ActivityIndicator size="large" color="#4A7CFF" />
-            </View>
-          ) : searchResults.length > 0 ? (
-            <FlatList
-              data={searchResults}
-              keyExtractor={(item) => item.placeId}
-              contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.searchResultCard}
-                  activeOpacity={0.8}
-                  onPress={() => {
-                    setIsSearchModalVisible(false);
-                    setSelectedPlace(item);
-                  }}
-                >
-                  <ExpoImage
-                    source={getImageSource(item.photo)}
-                    style={styles.searchResultImage}
-                    contentFit="cover"
-                  />
-                  <View style={styles.searchResultInfo}>
-                    <Text style={styles.searchResultName} numberOfLines={1}>
-                      {item.name}
-                    </Text>
-                    <View style={styles.searchResultLocation}>
-                      <Feather name="map-pin" size={12} color="#A0AEC0" />
-                      <Text style={styles.searchResultAddress} numberOfLines={1}>
-                        {item.address}
-                      </Text>
-                    </View>
-                    <View style={styles.searchResultFooter}>
-                      <View style={styles.searchResultRating}>
-                        <Feather name="star" size={12} color="#ECC94B" fill="#ECC94B" />
-                        <Text style={styles.searchResultRatingText}>{item.rating || 'N/A'}</Text>
-                      </View>
-                      <Text style={styles.searchResultLink}>Chi tiết →</Text>
-                    </View>
+              <View style={styles.searchResultInfo}>
+                <Text style={styles.searchResultName} numberOfLines={1}>
+                  {item.name}
+                </Text>
+                <View style={styles.searchResultLocation}>
+                  <Feather name="map-pin" size={12} color="#A0AEC0" />
+                  <Text style={styles.searchResultAddress} numberOfLines={1}>
+                    {item.address}
+                  </Text>
+                </View>
+                <View style={styles.searchResultFooter}>
+                  <View style={styles.searchResultRating}>
+                    <Feather name="star" size={12} color="#ECC94B" fill="#ECC94B" />
+                    <Text style={styles.searchResultRatingText}>{item.rating || 'N/A'}</Text>
                   </View>
-                </TouchableOpacity>
-              )}
-            />
-          ) : searchQuery.length > 0 ? (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
-              <Feather name="frown" size={48} color="#CBD5E0" />
-              <Text style={{ marginTop: 16, fontSize: 16, color: '#718096', textAlign: 'center' }}>
-                Không tìm thấy địa điểm nào khớp với &quot;{searchQuery}&quot;
-              </Text>
-            </View>
-          ) : (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
-              <Feather name="map" size={48} color="#E2E8F0" />
-              <Text style={{ marginTop: 16, fontSize: 16, color: '#A0AEC0', textAlign: 'center' }}>
-                Nhập tên địa danh bạn muốn đến...
-              </Text>
-            </View>
-          )}
-        </SafeAreaView>
-      </Modal>
-
-      {/* Notifications Modal */}
-      <Modal
-        visible={isNotifModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setIsNotifModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity
-            style={styles.modalCloseArea}
-            activeOpacity={1}
-            onPress={() => setIsNotifModalVisible(false)}
-          />
-          <View style={[styles.modalContent, { height: '80%' }]}>
-            <View style={styles.notifHeader}>
-              <Text style={styles.notifTitle}>Thông báo</Text>
-              <TouchableOpacity onPress={() => setIsNotifModalVisible(false)}>
-                <Feather name="x" size={24} color="#1A2B4A" />
-              </TouchableOpacity>
-            </View>
-
-            {notifications.length === 0 ? (
-              <View style={styles.emptyNotifContainer}>
-                <Feather name="bell-off" size={48} color="#E2E8F0" />
-                <Text style={styles.emptyNotifText}>Bạn chưa có thông báo nào</Text>
+                  <Text style={styles.searchResultLink}>Chi tiết →</Text>
+                </View>
               </View>
-            ) : (
-              <FlatList
-                data={notifications}
-                keyExtractor={(item) => item._id}
-                contentContainerStyle={{ paddingBottom: 20 }}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={[styles.notifItem, !item.isRead && styles.notifItemUnread]}
-                    onPress={() => handleNotifPress(item)}
-                  >
-                    <View
-                      style={[
-                        styles.notifIcon,
-                        { backgroundColor: item.isRead ? '#F7FAFC' : '#EBF8FF' },
-                      ]}
-                    >
-                      <Feather
-                        name={item.type === 'promotion' ? 'tag' : 'bell'}
-                        size={18}
-                        color={item.isRead ? '#718096' : '#4299E1'}
-                      />
-                    </View>
-                    <View style={styles.notifInfo}>
-                      <Text style={[styles.notifItemTitle, !item.isRead && styles.notifTextUnread]}>
-                        {item.title}
-                      </Text>
-                      <Text style={styles.notifItemMessage} numberOfLines={2}>
-                        {item.message}
-                      </Text>
-                      <Text style={styles.notifItemTime}>
-                        {new Date(item.createdAt).toLocaleDateString('vi-VN')}
-                      </Text>
-                    </View>
-                    {!item.isRead && <View style={styles.unreadDot} />}
-                  </TouchableOpacity>
-                )}
-              />
-            )}
-          </View>
-        </View>
-      </Modal>
-
-      {/* Notification Detail Modal */}
-      <Modal
-        visible={!!selectedNotifForDetail}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => setSelectedNotifForDetail(null)}
-      >
-        <View style={styles.detailNotifOverlay}>
-          <View style={styles.detailNotifContent}>
-            <View style={styles.detailNotifHeader}>
-              <View style={[styles.notifIcon, { backgroundColor: '#EBF8FF', marginBottom: 0 }]}>
-                <Feather
-                  name={selectedNotifForDetail?.type === 'promotion' ? 'tag' : 'bell'}
-                  size={24}
-                  color="#4299E1"
-                />
-              </View>
-              <TouchableOpacity onPress={() => setSelectedNotifForDetail(null)}>
-                <Feather name="x" size={20} color="#CBD5E0" />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.detailNotifTitle}>{selectedNotifForDetail?.title}</Text>
-            <Text style={styles.detailNotifTime}>
-              {selectedNotifForDetail &&
-                new Date(selectedNotifForDetail.createdAt).toLocaleString('vi-VN')}
-            </Text>
-
-            <View style={styles.detailNotifDivider} />
-
-            <ScrollView style={{ maxHeight: 200 }}>
-              <Text style={styles.detailNotifMessage}>{selectedNotifForDetail?.message}</Text>
-            </ScrollView>
-
-            <TouchableOpacity
-              style={styles.detailNotifButton}
-              onPress={() => setSelectedNotifForDetail(null)}
-            >
-              <Text style={styles.detailNotifButtonText}>Đóng</Text>
             </TouchableOpacity>
-          </View>
+          )}
+        />
+      ) : searchQuery.length > 0 ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
+          <Feather name="frown" size={48} color="#CBD5E0" />
+          <Text style={{ marginTop: 16, fontSize: 16, color: '#718096', textAlign: 'center' }}>
+            Không tìm thấy địa điểm nào khớp với &quot;{searchQuery}&quot;
+          </Text>
         </View>
-      </Modal>
+      ) : (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
+          <Feather name="map" size={48} color="#E2E8F0" />
+          <Text style={{ marginTop: 16, fontSize: 16, color: '#A0AEC0', textAlign: 'center' }}>
+            Nhập tên địa danh bạn muốn đến...
+          </Text>
+        </View>
+      )}
     </SafeAreaView>
+  </Modal>
+
+  {/* Notifications Modal */ }
+  <Modal
+    visible={isNotifModalVisible}
+    animationType="slide"
+    transparent={true}
+    onRequestClose={() => setIsNotifModalVisible(false)}
+  >
+    <View style={styles.modalOverlay}>
+      <TouchableOpacity
+        style={styles.modalCloseArea}
+        activeOpacity={1}
+        onPress={() => setIsNotifModalVisible(false)}
+      />
+      <View style={[styles.modalContent, { height: '80%' }]}>
+        <View style={styles.notifHeader}>
+          <Text style={styles.notifTitle}>Thông báo</Text>
+          <TouchableOpacity onPress={() => setIsNotifModalVisible(false)}>
+            <Feather name="x" size={24} color="#1A2B4A" />
+          </TouchableOpacity>
+        </View>
+
+        {notifications.length === 0 ? (
+          <View style={styles.emptyNotifContainer}>
+            <Feather name="bell-off" size={48} color="#E2E8F0" />
+            <Text style={styles.emptyNotifText}>Bạn chưa có thông báo nào</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={notifications}
+            keyExtractor={(item) => item._id}
+            contentContainerStyle={{ paddingBottom: 20 }}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[styles.notifItem, !item.isRead && styles.notifItemUnread]}
+                onPress={() => handleNotifPress(item)}
+              >
+                <View
+                  style={[
+                    styles.notifIcon,
+                    { backgroundColor: item.isRead ? '#F7FAFC' : '#EBF8FF' },
+                  ]}
+                >
+                  <Feather
+                    name={item.type === 'promotion' ? 'tag' : 'bell'}
+                    size={18}
+                    color={item.isRead ? '#718096' : '#4299E1'}
+                  />
+                </View>
+                <View style={styles.notifInfo}>
+                  <Text style={[styles.notifItemTitle, !item.isRead && styles.notifTextUnread]}>
+                    {item.title}
+                  </Text>
+                  <Text style={styles.notifItemMessage} numberOfLines={2}>
+                    {item.message}
+                  </Text>
+                  <Text style={styles.notifItemTime}>
+                    {new Date(item.createdAt).toLocaleDateString('vi-VN')}
+                  </Text>
+                </View>
+                {!item.isRead && <View style={styles.unreadDot} />}
+              </TouchableOpacity>
+            )}
+          />
+        )}
+      </View>
+    </View>
+  </Modal>
+
+  {/* Notification Detail Modal */ }
+  <Modal
+    visible={!!selectedNotifForDetail}
+    animationType="fade"
+    transparent={true}
+    onRequestClose={() => setSelectedNotifForDetail(null)}
+  >
+    <View style={styles.detailNotifOverlay}>
+      <View style={styles.detailNotifContent}>
+        <View style={styles.detailNotifHeader}>
+          <View style={[styles.notifIcon, { backgroundColor: '#EBF8FF', marginBottom: 0 }]}>
+            <Feather
+              name={selectedNotifForDetail?.type === 'promotion' ? 'tag' : 'bell'}
+              size={24}
+              color="#4299E1"
+            />
+          </View>
+          <TouchableOpacity onPress={() => setSelectedNotifForDetail(null)}>
+            <Feather name="x" size={20} color="#CBD5E0" />
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.detailNotifTitle}>{selectedNotifForDetail?.title}</Text>
+        <Text style={styles.detailNotifTime}>
+          {selectedNotifForDetail &&
+            new Date(selectedNotifForDetail.createdAt).toLocaleString('vi-VN')}
+        </Text>
+
+        <View style={styles.detailNotifDivider} />
+
+        <ScrollView style={{ maxHeight: 200 }}>
+          <Text style={styles.detailNotifMessage}>{selectedNotifForDetail?.message}</Text>
+        </ScrollView>
+
+        <TouchableOpacity
+          style={styles.detailNotifButton}
+          onPress={() => setSelectedNotifForDetail(null)}
+        >
+          <Text style={styles.detailNotifButtonText}>Đóng</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </Modal>
+    </SafeAreaView >
   );
 }
 
@@ -1928,5 +2110,167 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  trustedBadge: {
+    backgroundColor: 'rgba(255, 215, 0, 0.9)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  trustedBadgeText: {
+    color: '#1A2B4A',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  tripMarketplaceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  tripPriceText: {
+    color: '#48BB78',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  tripRatingBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  tripRatingText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  purchaseBottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFF',
+    padding: 20,
+    paddingBottom: 40,
+    borderTopWidth: 1,
+    borderTopColor: '#EDF2F7',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -10 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  purchaseButton: {
+    backgroundColor: '#4A7CFF',
+    borderRadius: 16,
+    height: 56,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  purchaseButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  premiumBadge: {
+    backgroundColor: 'rgba(13, 148, 136, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(13, 148, 136, 0.2)',
+  },
+  premiumBadgeText: {
+    color: '#0D9488',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  premiumPlacesContainer: {
+    marginTop: 12,
+    gap: 12,
+  },
+  premiumTeaserCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    borderWidth: 1,
+    borderColor: '#FEF3C7',
+    borderRadius: 16,
+    padding: 14,
+    shadowColor: '#D97706',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  teaserHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  timeTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(13, 148, 136, 0.08)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  timeTagText: {
+    color: '#0D9488',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  copyrightBadge: {
+    backgroundColor: 'rgba(217, 119, 6, 0.08)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  copyrightText: {
+    color: '#D97706',
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  teaserBody: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFFBEB',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 0.5,
+    borderColor: '#FEF3C7',
+  },
+  teaserBlurredTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  teaserPlaceName: {
+    color: '#D97706',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    opacity: 0.45,
+  },
+  goldPadlockWrapper: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#FEF3C7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#D97706',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 1,
   },
 });

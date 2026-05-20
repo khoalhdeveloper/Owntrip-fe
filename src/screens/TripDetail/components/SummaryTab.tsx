@@ -145,6 +145,18 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<'priceAsc' | 'priceDesc' | 'nameAsc' | 'none'>('none');
 
+  const [salesStats, setSalesStats] = useState<{ totalSales: number; totalRevenue: number } | null>(null);
+
+  useEffect(() => {
+    if (trip.isForSale) {
+      tripService.getTripSalesStats(trip._id).then(res => {
+        if (res && res.success) {
+          setSalesStats({ totalSales: res.totalSales, totalRevenue: res.totalRevenue });
+        }
+      });
+    }
+  }, [trip.isForSale, trip._id]);
+
   useEffect(() => {
     const fetch = async () => {
       try {
@@ -458,7 +470,8 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
         }
 
         // Cập nhật state ngay lập tức từ dữ liệu Server trả về
-        setBookedHotel(sHotel);
+        const actualNights = Math.round((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)) || 1;
+        setBookedHotel({ ...sHotel, pricePerNight: newTotalPrice / actualNights });
         setCheckInDate(checkIn);
         setCheckOutDate(checkOut);
         if (currentRoomTypeId && currentRoomTypeId !== 'default') {
@@ -621,6 +634,27 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
 
   return (
     <View style={styles.container}>
+      {/* ===== SALES STATS (OWNER ONLY) ===== */}
+      {trip.isForSale && salesStats && (
+        <View style={styles.card}>
+          <SectionHeader
+            icon="trending-up"
+            title="Thống kê doanh thu"
+          />
+          <View style={styles.statsRow}>
+            <View style={styles.statBox}>
+              <Text style={styles.statLabel}>Lượt bán</Text>
+              <Text style={styles.statValue}>{salesStats.totalSales}</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statBox}>
+              <Text style={styles.statLabel}>Tổng doanh thu</Text>
+              <Text style={[styles.statValue, { color: '#10B981' }]}>{formatCurrency(salesStats.totalRevenue)}</Text>
+            </View>
+          </View>
+        </View>
+      )}
+
       {/* ===== 1. ACCOMMODATION ===== */}
       <View style={styles.card}>
         <SectionHeader
@@ -1184,8 +1218,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 4,
   },
-  emptyTitle: { fontSize: 15, fontWeight: '600', color: '#4B5563' },
-  emptyHint: { fontSize: 13, color: '#9CA3AF', textAlign: 'center' },
+  emptyTitle: { fontSize: 16, fontWeight: '600', color: '#1A1A1A', marginBottom: 4 },
+  emptyHint: { fontSize: 13, color: '#9CA3AF', marginBottom: 16, textAlign: 'center' },
+
+  // Stats Card
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  statBox: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statDivider: {
+    width: 1,
+    height: '100%',
+    backgroundColor: '#E5E7EB',
+  },
+  statLabel: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 4,
+    fontWeight: '500',
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1A1A1A',
+  },
 
   // Action button
   actionBtn: {

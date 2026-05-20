@@ -25,6 +25,9 @@ export interface Trip {
     checkOut: string;
     totalPrice: number;
   };
+  isForSale?: boolean;
+  isPurchasedClone?: boolean;
+  price?: number;
 }
 
 export interface TripDay {
@@ -104,6 +107,21 @@ export const tripService = {
       return response?.trips ?? [];
     } catch (error) {
       console.error('Error fetching published trips:', error);
+      return [];
+    }
+  },
+
+  getMarketplaceTrips: async (page: number = 1, limit: number = 20, sort?: string): Promise<Trip[]> => {
+    try {
+      let url = `${ENDPOINTS.TRIPS.MARKETPLACE}?page=${page}&limit=${limit}`;
+      if (sort) {
+        url += `&sort=${sort}`;
+      }
+      const response = await axiosClient.get<any, TripsResponse>(url);
+
+      return response?.trips ?? [];
+    } catch (error) {
+      console.error('Error fetching marketplace trips:', error);
       return [];
     }
   },
@@ -235,6 +253,50 @@ export const tripService = {
     } catch (error) {
       console.error(`Error publishing trip ${id}:`, error);
       return false;
+    }
+  },
+
+  publishToMarketplace: async (tripId: string, price: number): Promise<boolean> => {
+    try {
+      const url = `/api/trips/${tripId}/marketplace`;
+      const response = await axiosClient.patch<any, any>(url, { price });
+      return response?.success ?? false;
+    } catch (error) {
+      console.error(`Error publishing to marketplace for trip ${tripId}:`, error);
+      return false;
+    }
+  },
+
+  getTripPreview: async (tripId: string): Promise<TripDetailResponse | null> => {
+    try {
+      const url = `/api/trips/marketplace/${tripId}/preview`;
+      const response = await axiosClient.get<any, TripDetailResponse>(url);
+      return response;
+    } catch (error) {
+      console.error(`Error fetching trip preview ${tripId}:`, error);
+      return null;
+    }
+  },
+
+  purchaseTrip: async (tripId: string): Promise<{ success: boolean; tripId?: string; message?: string; paymentUrl?: string; orderCode?: number } | null> => {
+    try {
+      const url = `/api/trips/marketplace/${tripId}/purchase`;
+      const response = await axiosClient.post<any, any>(url);
+      return response;
+    } catch (error) {
+      console.error(`Error purchasing trip ${tripId}:`, error);
+      return null;
+    }
+  },
+
+  getTripSalesStats: async (tripId: string): Promise<{ success: boolean; totalSales: number; totalRevenue: number } | null> => {
+    try {
+      const url = `/api/trips/${tripId}/sales-stats`;
+      const response = await axiosClient.get<any, any>(url);
+      return response;
+    } catch (error) {
+      console.error(`Error fetching sales stats for trip ${tripId}:`, error);
+      return null;
     }
   },
 };

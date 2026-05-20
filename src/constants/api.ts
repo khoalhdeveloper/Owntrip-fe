@@ -25,6 +25,7 @@ export const ENDPOINTS = {
   TRIPS: {
     LIST: '/api/trips',
     PUBLISHED: '/api/trips/published',
+    MARKETPLACE: '/api/trips/marketplace',
     MY_TRIPS: '/api/trips/my',
     DETAIL: (id: string) => `/api/trips/${id}`,
     CREATE: '/api/trips',
