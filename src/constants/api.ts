@@ -38,6 +38,7 @@ export const ENDPOINTS = {
     SEARCH: '/api/places/search',
     NEARBY: '/api/places/nearby',
     TEXT_SEARCH: '/api/places/text',
+    ADDRESS_SEARCH: '/api/places/address',
     PHOTO: '/api/places/photo',
   },
   PLANS: {

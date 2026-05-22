@@ -21,6 +21,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Trip, TripDay, Destination, tripService } from '@/services/tripService';
 import { aiService } from '@/services/aiService';
+import { placesService } from '@/services/placesService';
 import AddPlaceModal from './AddPlaceModal';
 import PlaceDetailModal from './PlaceDetailModal';
 import { useConfirm } from '@/components/ConfirmProvider';
@@ -87,6 +88,9 @@ export default function ItineraryTab({
   // Voice AI State
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
   const [aiText, setAiText] = useState('');
+  
+  // Auto Generate State
+  const [isAutoGenerating, setIsAutoGenerating] = useState(false);
 
   // Swipeable refs
   const swipeableRefs = useRef<Record<string, Swipeable | null>>({});
@@ -222,6 +226,66 @@ export default function ItineraryTab({
     [destByDay, destinations, onRefresh, showAlert],
   );
 
+  // Auto-Generate Itinerary (Offline/Local logic without AI)
+  const handleAutoGenerateItinerary = async () => {
+    try {
+      setIsAutoGenerating(true);
+      Speech.speak("Đang tự động thiết kế lịch trình...", { language: 'vi-VN' });
+      
+      // 1. Lấy danh sách địa điểm bằng API address theo yêu cầu
+      const query = trip.destination || trip.title;
+      const availablePlaces = await placesService.searchByAddress(query);
+
+      if (!availablePlaces || availablePlaces.length === 0) {
+        Speech.speak("Không tìm thấy địa điểm nào ở khu vực này.", { language: 'vi-VN' });
+        setIsAutoGenerating(false);
+        return;
+      }
+
+      // 2. Phân bổ địa điểm tự động (Mỗi ngày 3-4 địa điểm tùy theo số lượng mảng)
+      // Loại bỏ AI, dùng logic cơ bản: Cắt mảng availablePlaces chia đều cho các ngày
+      let placeIndex = 0;
+      const PLACES_PER_DAY = 3;
+
+      for (const day of days) {
+        // Lấy 3 địa điểm tiếp theo trong danh sách
+        const placesForThisDay = availablePlaces.slice(placeIndex, placeIndex + PLACES_PER_DAY);
+        placeIndex += PLACES_PER_DAY;
+
+        if (placesForThisDay.length === 0) break; // Đã hết địa điểm
+
+        let localIndex = 0;
+        for (const placeData of placesForThisDay) {
+          let timeOfDay: 'morning' | 'afternoon' | 'evening' = 'morning';
+          if (localIndex === 1) timeOfDay = 'afternoon';
+          if (localIndex >= 2) timeOfDay = 'evening';
+
+          await tripService.addPlaceToDay(day.dayId, {
+            placeId: placeData.placeId || (placeData as any)._id,
+            name: placeData.name,
+            address: placeData.address,
+            latitude: placeData.latitude || placeData.location?.lat || 0,
+            longitude: placeData.longitude || placeData.location?.lng || 0,
+            rating: placeData.rating,
+            totalReviews: placeData.totalReviews || placeData.reviewCount,
+            photo: placeData.photo || (placeData.images && placeData.images.length > 0 ? placeData.images[0] : ''),
+            mapUrl: placeData.mapUrl || '',
+            timeOfDay,
+          });
+          localIndex++;
+        }
+      }
+      
+      Speech.speak("Đã hoàn tất việc tự động lên lịch trình.", { language: 'vi-VN' });
+      onRefresh();
+    } catch (error) {
+      console.error("Lỗi khi tự động lên lịch trình:", error);
+      Speech.speak("Đã xảy ra lỗi trong quá trình tự động lên lịch trình.", { language: 'vi-VN' });
+    } finally {
+      setIsAutoGenerating(false);
+    }
+  };
+
   // Voice AI using Gemini LLM
   const handleVoiceCommand = async () => {
     try {
@@ -280,6 +344,24 @@ export default function ItineraryTab({
 
   return (
     <View style={styles.container}>
+      {/* Auto Generate Button */}
+      <View style={styles.autoGenContainer}>
+        <TouchableOpacity 
+          style={[styles.autoGenBtn, isAutoGenerating && styles.autoGenBtnDisabled]} 
+          onPress={handleAutoGenerateItinerary}
+          disabled={isAutoGenerating}
+        >
+          {isAutoGenerating ? (
+            <ActivityIndicator size="small" color="#FFF" />
+          ) : (
+            <Feather name="cpu" size={20} color="#FFF" />
+          )}
+          <Text style={styles.autoGenBtnText}>
+            {isAutoGenerating ? 'Đang thiết kế lịch trình...' : 'Tự động lên lịch trình'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {days.map((day) => {
         const dayDests = (destByDay[day.day] || []).sort((a, b) => a.place.order - b.place.order);
         const isExpanded = expandedDays[day.day] ?? false;
@@ -590,9 +672,30 @@ const styles = StyleSheet.create({
   },
   aiInput: {
     flex: 1,
+    fontSize: 16,
+    fontFamily: 'Inter-Medium',
+  },
+  autoGenContainer: {
+    paddingHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  autoGenBtn: {
+    backgroundColor: '#8B5CF6',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+  },
+  autoGenBtnDisabled: {
+    opacity: 0.7,
+  },
+  autoGenBtnText: {
+    color: '#FFF',
     fontSize: 15,
-    color: '#1A1A1A',
-    marginRight: 8,
+    fontFamily: 'Inter-SemiBold',
   },
   voiceAiBtnSmall: {
     width: 40,
