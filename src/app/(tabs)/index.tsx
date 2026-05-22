@@ -15,6 +15,7 @@ import {
   Animated,
   TextInput,
   FlatList,
+  Alert,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -216,6 +217,49 @@ export default function HomeScreen() {
   };
 
   const hasUnread = notifications.some((n) => !n.isRead);
+
+  const handleDeleteMarketplaceReview = (tripId: string) => {
+    Alert.alert(
+      'Xác nhận',
+      'Bạn có chắc chắn muốn xóa đánh giá này?',
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Xóa',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const res = await tripService.deleteItineraryReview(tripId);
+              if (res?.success) {
+                // Refresh the modal data
+                const updated = await tripService.getTripPreview(tripId);
+                if (updated) {
+                  setSelectedTripDetail(updated);
+                }
+                Toast.show({
+                  type: 'success',
+                  text1: 'Thành công',
+                  text2: 'Đã xóa đánh giá',
+                });
+              } else {
+                Toast.show({
+                  type: 'error',
+                  text1: 'Lỗi',
+                  text2: res?.message || 'Không thể xóa đánh giá',
+                });
+              }
+            } catch (error) {
+              Toast.show({
+                type: 'error',
+                text1: 'Lỗi',
+                text2: 'Lỗi khi xóa đánh giá',
+              });
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const handleSearch = async (text: string) => {
     setSearchQuery(text);
@@ -491,7 +535,7 @@ export default function HomeScreen() {
                       <View style={styles.tripRatingBox}>
                         <Feather name="star" size={12} color="#FFD700" fill="#FFD700" />
                         <Text style={styles.tripRatingText}>
-                          {trip.averageRating ? trip.averageRating.toFixed(1) : '5.0'} ({trip.soldCount || 0} đã bán)
+                          {trip.averageRating ? (trip.averageRating / 2).toFixed(1) : '5.0'} ({trip.soldCount || 0} đã bán)
                         </Text>
                       </View>
                     </View>
@@ -863,7 +907,7 @@ export default function HomeScreen() {
                             <View style={styles.tripRatingSummary}>
                               <Feather name="star" size={14} color="#ECC94B" fill="#ECC94B" />
                               <Text style={styles.tripRatingScore}>
-                                {selectedTripDetail.trip.averageRating ? selectedTripDetail.trip.averageRating.toFixed(1) : '5.0'}
+                                {selectedTripDetail.trip.averageRating ? (selectedTripDetail.trip.averageRating / 2).toFixed(1) : '5.0'}
                               </Text>
                               <Text style={styles.tripRatingCount}>
                                 ({selectedTripDetail.reviews.length})
@@ -876,7 +920,7 @@ export default function HomeScreen() {
                           selectedTripDetail.reviews.map((r: any) => {
                             const id = r._id || r.reviewId;
                             const userName = r.userId?.displayName || 'Thành viên OwnTrip';
-                            const rating = r.rating || 5;
+                            const rating = r.rating ? (r.rating / 2) : 5;
                             const content = r.comment || '';
                             const date = new Date(r.createdAt).toLocaleDateString('vi-VN');
                             const userAvatar = r.userId?.image || 'https://i.pravatar.cc/150?u=' + id;
@@ -897,6 +941,14 @@ export default function HomeScreen() {
                                     <Feather name="star" size={10} color="#FFF" fill="#FFF" />
                                     <Text style={styles.reviewRatingText}>{rating}</Text>
                                   </View>
+                                  {userProfile && r.userId && (userProfile._id === r.userId._id || userProfile.userId === r.userId.userId) && (
+                                    <TouchableOpacity 
+                                      style={{ marginLeft: 'auto', padding: 4 }}
+                                      onPress={() => handleDeleteMarketplaceReview(selectedTripDetail.trip._id)}
+                                    >
+                                      <Feather name="trash-2" size={16} color="#EF4444" />
+                                    </TouchableOpacity>
+                                  )}
                                 </View>
                                 <Text style={styles.reviewContent}>{content}</Text>
                               </View>

@@ -69,6 +69,17 @@ export interface TripDetailResponse {
   success: boolean;
   trip: Trip;
   days: TripDay[];
+  reviews?: ItineraryReview[];
+}
+
+export interface ItineraryReview {
+  _id: string;
+  userId: string | { displayName?: string; image?: string };
+  targetId: string;
+  targetType: 'itinerary';
+  rating: number;
+  comment: string;
+  createdAt?: string;
 }
 
 export interface DestinationPlace {
@@ -302,6 +313,44 @@ export const tripService = {
       return response;
     } catch (error) {
       console.error(`Error fetching sales stats for trip ${tripId}:`, error);
+      return null;
+    }
+  },
+
+  getMyItineraryReview: async (tripId: string): Promise<{ success: boolean; data?: ItineraryReview | null; message?: string } | null> => {
+    try {
+      const url = `/api/trips/${tripId}/my-review`;
+      const response = await axiosClient.get<any, any>(url);
+      return response;
+    } catch (error) {
+      console.error(`Error fetching my itinerary review for trip ${tripId}:`, error);
+      return null;
+    }
+  },
+
+  submitItineraryReview: async (
+    tripId: string,
+    payload: { rating: number; comment: string }
+  ): Promise<{ success: boolean; message?: string; data?: ItineraryReview } | null> => {
+    try {
+      const url = `/api/trips/${tripId}/review`;
+      const response = await axiosClient.post<any, any>(url, payload);
+      return response;
+    } catch (error) {
+      console.error(`Error submitting itinerary review for trip ${tripId}:`, error);
+      return null;
+    }
+  },
+
+  deleteItineraryReview: async (
+    tripId: string
+  ): Promise<{ success: boolean; message?: string } | null> => {
+    try {
+      const url = `/api/trips/${tripId}/review`;
+      const response = await axiosClient.delete<any, any>(url);
+      return response;
+    } catch (error) {
+      console.error(`Error deleting itinerary review for trip ${tripId}:`, error);
       return null;
     }
   },

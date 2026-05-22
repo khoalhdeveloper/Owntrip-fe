@@ -16,7 +16,7 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { tripService, Trip, TripDay } from '@/services/tripService';
+import { tripService, Trip, TripDay, ItineraryReview } from '@/services/tripService';
 import SummaryTab from './components/SummaryTab';
 import ItineraryTab from './components/ItineraryTab';
 import ExploreTab from './components/ExploreTab';
@@ -73,6 +73,7 @@ export default function TripDetailScreen({ tripId }: { tripId: string }) {
   const [activeTab, setActiveTab] = useState('summary');
   const [trip, setTrip] = useState<Trip | null>(null);
   const [days, setDays] = useState<TripDay[]>([]);
+  const [reviews, setReviews] = useState<ItineraryReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
@@ -84,6 +85,7 @@ export default function TripDetailScreen({ tripId }: { tripId: string }) {
       if (detail) {
         setTrip(detail.trip);
         setDays(detail.days);
+        if (detail.reviews) setReviews(detail.reviews);
       }
     } catch (error) {
       console.error('Error fetching trip:', error);
@@ -161,7 +163,7 @@ export default function TripDetailScreen({ tripId }: { tripId: string }) {
     return (
       <>
         <View style={{ display: activeTab === 'summary' ? 'flex' : 'none' }}>
-          <SummaryTab trip={trip} days={days} />
+          <SummaryTab trip={trip} days={days} reviews={reviews} />
         </View>
         <View style={{ display: activeTab === 'itinerary' ? 'flex' : 'none' }}>
           <ItineraryTab trip={trip} days={days} onRefresh={fetchTrip} />

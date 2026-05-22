@@ -60,19 +60,18 @@ export default function CreatorUpgradeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <Stack.Screen
         options={{
-          headerTitle: 'Trở thành Creator',
-          headerShadowVisible: false,
-          headerStyle: { backgroundColor: '#FFF' },
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 16 }}>
-              <Feather name="arrow-left" size={24} color="#111827" />
-            </TouchableOpacity>
-          ),
+          headerShown: false,
         }}
       />
+
+      <View style={styles.topBar}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Feather name="arrow-left" size={24} color="#111827" />
+        </TouchableOpacity>
+      </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
@@ -92,7 +91,7 @@ export default function CreatorUpgradeScreen() {
           </View>
           <View style={styles.featureItem}>
             <Feather name="check-circle" size={20} color={BRAND} />
-            <Text style={styles.featureText}>Thu nhập chuyển thẳng vào ví hệ thống</Text>
+            <Text style={styles.featureText}>Thu được 70% doanh thu từ mỗi đơn hàng</Text>
           </View>
           <View style={styles.featureItem}>
             <Feather name="check-circle" size={20} color={BRAND} />
@@ -141,6 +140,8 @@ export default function CreatorUpgradeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
+  topBar: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 10, flexDirection: 'row', alignItems: 'center' },
+  backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
   scrollContent: { padding: 20 },
   header: { alignItems: 'center', marginBottom: 30 },
   iconContainer: {

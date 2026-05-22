@@ -83,6 +83,12 @@ export const ENDPOINTS = {
     CANCEL: (orderCode: string) => `/api/payment/${orderCode}/cancel`,
     INFO: (orderCode: string) => `/api/payment/${orderCode}`,
   },
+  WITHDRAWALS: {
+    CREATE: '/api/withdrawals',
+    MY: '/api/withdrawals/my',
+    ADMIN: '/api/withdrawals/admin',
+    ADMIN_REVIEW: (id: string) => `/api/withdrawals/admin/${id}`,
+  },
   AVT_ITEMS: {
     LIST: '/api/avatar-items',
     SHOP: '/api/avatar-items/shop',

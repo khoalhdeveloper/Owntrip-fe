@@ -12,6 +12,7 @@ import {
   FlatList,
   Animated,
   TextInput,
+  Alert,
 } from 'react-native';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -115,7 +116,7 @@ function SectionHeader({
 }
 
 // ===== MAIN COMPONENT =====
-export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[] }) {
+export default function SummaryTab({ trip, days, reviews }: { trip: Trip; days: TripDay[]; reviews?: any[] }) {
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [loadingDest, setLoadingDest] = useState(true);
   const [loadingTripDetail, setLoadingTripDetail] = useState(false);
@@ -128,6 +129,11 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
   const [calendarVisible, setCalendarVisible] = useState(false);
   const [detailVisible, setDetailVisible] = useState(false);
   const [reviewVisible, setReviewVisible] = useState(false);
+  const [tripReviewVisible, setTripReviewVisible] = useState(false);
+  const [tripReviewRating, setTripReviewRating] = useState(0);
+  const [tripReviewComment, setTripReviewComment] = useState('');
+  const [hasExistingTripReview, setHasExistingTripReview] = useState(false);
+  const [submittingTripReview, setSubmittingTripReview] = useState(false);
   const [hotels, setHotels] = useState<Accommodation[]>([]);
   const [loadingHotels, setLoadingHotels] = useState(false);
   const [selectedHotel, setSelectedHotel] = useState<Accommodation | null>(null);
@@ -288,10 +294,10 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
     setTimeout(() => setCalendarVisible(true), 300);
   };
 
-  const showToast = (msg: string) => {
+  const showToast = (msg: string, isError = false) => {
     Toast.show({
-      type: 'success',
-      text1: 'Thành công',
+      type: isError ? 'error' : 'success',
+      text1: isError ? 'Lỗi' : 'Thành công',
       text2: msg,
     });
   };
@@ -300,6 +306,85 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
     setSelectedHotel(hotel);
     setDetailVisible(false);
     setTimeout(() => setReviewVisible(true), 300);
+  };
+
+  const openTripReviewModal = async () => {
+    const myReview = await tripService.getMyItineraryReview(trip._id);
+    if (myReview?.success && myReview.data) {
+      setTripReviewRating(myReview.data.rating || 0);
+      setTripReviewComment(myReview.data.comment || '');
+      setHasExistingTripReview(true);
+    } else {
+      setTripReviewRating(0);
+      setTripReviewComment('');
+      setHasExistingTripReview(false);
+    }
+    setTripReviewVisible(true);
+  };
+
+  const handleDeleteTripReview = async () => {
+    try {
+      Alert.alert(
+        'Xác nhận',
+        'Bạn có chắc chắn muốn xóa đánh giá này?',
+        [
+          { text: 'Hủy', style: 'cancel' },
+          {
+            text: 'Xóa',
+            style: 'destructive',
+            onPress: async () => {
+              setSubmittingTripReview(true);
+              const res = await tripService.deleteItineraryReview(trip._id);
+              if (res?.success) {
+                showToast('Đã xóa đánh giá');
+                setTripReviewVisible(false);
+                setTripReviewRating(0);
+                setTripReviewComment('');
+                setHasExistingTripReview(false);
+              } else {
+                showToast(res?.message || 'Không thể xóa đánh giá', true);
+              }
+              setSubmittingTripReview(false);
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      setSubmittingTripReview(false);
+      showToast('Lỗi khi xóa đánh giá', true);
+    }
+  };
+
+  const submitTripReview = async () => {
+    if (tripReviewRating < 1 || tripReviewRating > 10) {
+      showToast('Vui lòng chọn số sao đánh giá.', true);
+      return;
+    }
+
+    if (!tripReviewComment.trim()) {
+      showToast('Vui lòng nhập nội dung feedback.', true);
+      return;
+    }
+
+    try {
+      setSubmittingTripReview(true);
+      const result = await tripService.submitItineraryReview(trip._id, {
+        rating: tripReviewRating,
+        comment: tripReviewComment.trim()
+      });
+
+      if (result?.success) {
+        setTripReviewVisible(false);
+        showToast('Đã gửi feedback cho lịch trình thành công!');
+        return;
+      }
+
+      showToast(result?.message || 'Không thể gửi feedback.', true);
+    } catch {
+      showToast('Không thể gửi feedback.', true);
+    } finally {
+      setSubmittingTripReview(false);
+    }
   };
 
   const { confirm, alert, confirmDelete } = useConfirm();
@@ -691,10 +776,27 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statBox}>
-              <Text style={styles.statLabel}>Tổng doanh thu</Text>
+              <Text style={styles.statLabel}>Doanh thu thực nhận</Text>
               <Text style={[styles.statValue, { color: '#10B981' }]}>{formatCurrency(salesStats.totalRevenue)}</Text>
             </View>
           </View>
+        </View>
+      )}
+
+      {trip.isPurchasedClone && (
+        <View style={styles.card}>
+          <SectionHeader icon="message-square" title="Feedback lịch trình đã mua" />
+          <Text style={styles.feedbackHint}>
+            Chia sẻ cảm nhận của bạn để giúp Creator cải thiện chất lượng lịch trình.
+          </Text>
+          <TouchableOpacity
+            style={[styles.actionBtn, { marginTop: 10 }]}
+            activeOpacity={0.8}
+            onPress={openTripReviewModal}
+          >
+            <Feather name="edit-3" size={14} color="#FFF" />
+            <Text style={styles.actionBtnText}>Đánh giá lịch trình này</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -985,6 +1087,48 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
         )}
       </View>
 
+      {/* ===== 5. REVIEWS ===== */}
+      <View style={[styles.card, { marginTop: 16, marginBottom: 24 }]}>
+        <SectionHeader
+          icon="star"
+          title="Đánh giá từ cộng đồng"
+        />
+        <View style={{ marginTop: 12 }}>
+          {reviews && reviews.length > 0 ? (
+            reviews.map((r: any) => {
+              const id = r._id || r.reviewId;
+              const userName = r.userId?.displayName || 'Thành viên OwnTrip';
+              const rating = r.rating ? (r.rating / 2) : 5;
+              const content = r.comment || '';
+              const date = new Date(r.createdAt).toLocaleDateString('vi-VN');
+              const userAvatar = r.userId?.image || 'https://i.pravatar.cc/150?u=' + id;
+
+              return (
+                <View key={id} style={{ marginBottom: 16, borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: 16 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                    <Image source={{ uri: userAvatar }} style={{ width: 36, height: 36, borderRadius: 18, marginRight: 12, backgroundColor: '#E5E7EB' }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: '#1F2937' }}>{userName}</Text>
+                      <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>{date}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F59E0B', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                      <Feather name="star" size={10} color="#FFF" fill="#FFF" />
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#FFF', marginLeft: 4 }}>{rating}</Text>
+                    </View>
+                  </View>
+                  <Text style={{ fontSize: 14, color: '#4B5563', lineHeight: 20 }}>{content}</Text>
+                </View>
+              );
+            })
+          ) : (
+            <View style={{ alignItems: 'center', paddingVertical: 24 }}>
+              <Feather name="message-square" size={32} color="#D1D5DB" />
+              <Text style={{ fontSize: 14, color: '#6B7280', marginTop: 8 }}>Chưa có đánh giá nào</Text>
+            </View>
+          )}
+        </View>
+      </View>
+
       {/* ===== HOTEL LIST MODAL ===== */}
       <Modal visible={hotelModalVisible} animationType="slide" presentationStyle="pageSheet">
         <View style={styles.modalContainer}>
@@ -1173,6 +1317,84 @@ export default function SummaryTab({ trip, days }: { trip: Trip; days: TripDay[]
           if (selectedHotel) setDetailVisible(true);
         }}
       />
+
+      <Modal
+        visible={tripReviewVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setTripReviewVisible(false)}
+      >
+        <View style={styles.tripReviewOverlay}>
+          <View style={styles.tripReviewCard}>
+            <Text style={styles.tripReviewTitle}>Feedback lịch trình</Text>
+            <Text style={styles.tripReviewSubtitle}>Đánh giá của bạn</Text>
+
+            <View style={styles.tripScoreRow}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <TouchableOpacity
+                  key={star}
+                  style={{ padding: 4, marginHorizontal: 4 }}
+                  onPress={() => setTripReviewRating(star * 2)}
+                  activeOpacity={0.7}
+                >
+                  <FontAwesome
+                    name={
+                      tripReviewRating >= star * 2
+                        ? 'star'
+                        : tripReviewRating >= star * 2 - 1
+                        ? 'star-half-o'
+                        : 'star-o'
+                    }
+                    size={40}
+                    color={tripReviewRating >= star * 2 - 1 ? '#F59E0B' : '#E5E7EB'}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TextInput
+              style={styles.tripReviewInput}
+              value={tripReviewComment}
+              onChangeText={setTripReviewComment}
+              multiline
+              numberOfLines={4}
+              maxLength={400}
+              placeholder="Viết cảm nhận của bạn về lịch trình..."
+              placeholderTextColor="#9CA3AF"
+            />
+
+            <View style={styles.tripReviewActions}>
+              {hasExistingTripReview && (
+                <TouchableOpacity
+                  style={[styles.tripReviewCancelBtn, { backgroundColor: '#FEE2E2', borderColor: '#FEE2E2', marginRight: 8 }]}
+                  onPress={handleDeleteTripReview}
+                  disabled={submittingTripReview}
+                >
+                  <Text style={[styles.tripReviewCancelText, { color: '#EF4444' }]}>Xóa</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={styles.tripReviewCancelBtn}
+                onPress={() => setTripReviewVisible(false)}
+                disabled={submittingTripReview}
+              >
+                <Text style={styles.tripReviewCancelText}>Hủy</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.tripReviewSubmitBtn}
+                onPress={submitTripReview}
+                disabled={submittingTripReview}
+              >
+                {submittingTripReview ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Text style={styles.tripReviewSubmitText}>{hasExistingTripReview ? 'Lưu cập nhật' : 'Gửi feedback'}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* ===== CALENDAR MODAL ===== */}
       {selectedHotel && (
@@ -1630,5 +1852,131 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#1A1A1A',
+  },
+
+  // ===== TRIP REVIEW MODAL STYLES =====
+  tripReviewOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  tripReviewCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 24,
+      },
+      android: { elevation: 12 },
+    }),
+  },
+  tripReviewTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1A1A1A',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  tripReviewSubtitle: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    marginBottom: 20,
+    fontWeight: '500',
+  },
+  tripScoreRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 20,
+  },
+  tripScoreChip: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  tripScoreChipActive: {
+    backgroundColor: BRAND_LIGHT,
+    borderColor: BRAND,
+  },
+  tripScoreText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  tripScoreTextActive: {
+    color: BRAND,
+  },
+  tripReviewInput: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#1A1A1A',
+    textAlignVertical: 'top',
+    minHeight: 100,
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  tripReviewActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  tripReviewCancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tripReviewCancelText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  tripReviewSubmitBtn: {
+    flex: 2,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: BRAND,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: BRAND,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.35,
+        shadowRadius: 8,
+      },
+      android: { elevation: 4 },
+    }),
+  },
+  tripReviewSubmitText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  feedbackHint: {
+    fontSize: 13,
+    color: '#6B7280',
+    lineHeight: 20,
+    marginBottom: 4,
   },
 });
