@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
+import { checkinService } from '../../services/checkinService';
 
 const { width } = Dimensions.get('window');
 const PREVIEW_SIZE = width - 40;
@@ -37,8 +38,110 @@ export const CheckinResultScreen = () => {
   const params = useLocalSearchParams();
   const rawImageUri = params.finalImageUri;
   const finalImageUri = normalizeFilePath(rawImageUri);
+  const fromGallery = params.fromGallery === 'true';
+
   const [isFavorite, setIsFavorite] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [dbId, setDbId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (fromGallery && params.id) {
+      setDbId(String(params.id));
+      setIsFavorite(params.isFavorite === 'true');
+    }
+  }, [fromGallery, params.id, params.isFavorite]);
+
+  useEffect(() => {
+    const saveToBackend = async () => {
+      if (fromGallery || !finalImageUri) return;
+
+      // Prevent double-saving if effect triggers multiple times
+      if ((global as any).lastSavedCheckinUri === finalImageUri) {
+        return;
+      }
+      (global as any).lastSavedCheckinUri = finalImageUri;
+
+      setIsSaving(true);
+      let uploadUrl = finalImageUri;
+
+      const isLocalUri =
+        uploadUrl.startsWith('file:/') ||
+        uploadUrl.startsWith('content:/') ||
+        uploadUrl.startsWith('ph:/');
+
+      if (isLocalUri) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
+        try {
+          console.log('☁️ Uploading composed check-in image to Cloudinary...', uploadUrl);
+          const formData = new FormData();
+          formData.append('file', {
+            uri: uploadUrl,
+            type: 'image/jpeg',
+            name: 'checkin.jpg',
+          } as any);
+          formData.append('upload_preset', 'owntrip');
+
+          const cloudResponse = await fetch('https://api.cloudinary.com/v1_1/djm9x06oh/image/upload', {
+            method: 'POST',
+            body: formData,
+            signal: controller.signal,
+          });
+          clearTimeout(timeoutId);
+
+          const cloudData = await cloudResponse.json();
+          if (cloudData.secure_url) {
+            uploadUrl = cloudData.secure_url;
+            console.log('✅ Composed check-in uploaded to Cloudinary:', uploadUrl);
+          } else {
+            console.warn('⚠️ Cloudinary composed image upload failed, falling back to local URI:', cloudData);
+          }
+        } catch (err: any) {
+          clearTimeout(timeoutId);
+          console.warn('⚠️ Cloudinary Upload Failed, falling back to local URI:', err);
+        }
+      }
+
+      // Save to backend database
+      try {
+        console.log('📡 Saving checkin to Backend database...', uploadUrl);
+        const title = params.title ? String(params.title) : 'Kỷ niệm Check-in';
+        const date = new Date().toLocaleDateString('vi-VN');
+        const savedMemory = await checkinService.createMemory(uploadUrl, title, date);
+
+        if (savedMemory) {
+          console.log('✅ Composed check-in saved to backend:', savedMemory);
+          setDbId(savedMemory.id);
+          setIsFavorite(savedMemory.isFavorite);
+        } else {
+          Alert.alert('Thông báo', 'Không thể lưu kỷ niệm vào máy chủ.');
+        }
+      } catch (err: any) {
+        console.error('🔥 Backend Save Failed:', err);
+        Alert.alert('Lỗi lưu máy chủ', 'Không thể lưu kỷ niệm vào máy chủ backend. Chi tiết: ' + err.message);
+      } finally {
+        setIsSaving(false);
+      }
+    };
+
+    saveToBackend();
+  }, [finalImageUri, fromGallery]);
+
+  const handleToggleFavorite = async () => {
+    if (!dbId) {
+      // Toggle locally if not synced yet
+      setIsFavorite(!isFavorite);
+      return;
+    }
+    const success = await checkinService.toggleFavorite(dbId);
+    if (success) {
+      setIsFavorite(!isFavorite);
+    } else {
+      Alert.alert('Lỗi', 'Không thể cập nhật trạng thái yêu thích.');
+    }
+  };
 
   if (!finalImageUri) {
     return (
@@ -160,7 +263,7 @@ export const CheckinResultScreen = () => {
               styles.favoriteButton,
               isFavorite && styles.activeFavoriteButton,
             ]}
-            onPress={() => setIsFavorite(!isFavorite)}
+            onPress={handleToggleFavorite}
           >
             <Feather
               name="heart"
@@ -191,9 +294,14 @@ export const CheckinResultScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {isProcessing && (
+      {(isProcessing || isSaving) && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#2F80ED" />
+          {isSaving && (
+            <Text style={{ marginTop: 12, color: '#2F80ED', fontWeight: 'bold', fontSize: 13 }}>
+              Đang lưu kỷ niệm vào tài khoản...
+            </Text>
+          )}
         </View>
       )}
     </SafeAreaView>

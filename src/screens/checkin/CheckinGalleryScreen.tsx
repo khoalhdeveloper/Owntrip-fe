@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,12 +9,13 @@ import {
   TouchableOpacity,
   Image,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { FontAwesome, Feather } from '@expo/vector-icons';
-import { MOCK_CHECKIN_MEMORIES } from '../../constants/checkinFrames';
 import { CheckinMemory } from '../../types/checkin.type';
 import { sessionCache } from './FrameSelectScreen';
+import { checkinService } from '../../services/checkinService';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 36) / 2; // Two-column grid with padding
@@ -22,12 +23,34 @@ const CARD_WIDTH = (width - 36) / 2; // Two-column grid with padding
 export const CheckinGalleryScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'recent' | 'favorites'>('all');
-  const [memories, setMemories] = useState<CheckinMemory[]>(MOCK_CHECKIN_MEMORIES);
+  const [memories, setMemories] = useState<CheckinMemory[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const toggleFavorite = (id: string) => {
-    setMemories(prev =>
-      prev.map(mem => (mem.id === id ? { ...mem, isFavorite: !mem.isFavorite } : mem))
-    );
+  const loadMemories = async () => {
+    try {
+      setLoading(true);
+      const data = await checkinService.getMyMemories();
+      setMemories(data);
+    } catch (error) {
+      console.error('Failed to load memories:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadMemories();
+    }, [])
+  );
+
+  const toggleFavorite = async (id: string) => {
+    const success = await checkinService.toggleFavorite(id);
+    if (success) {
+      setMemories(prev =>
+        prev.map(mem => (mem.id === id ? { ...mem, isFavorite: !mem.isFavorite } : mem))
+      );
+    }
   };
 
   const filteredMemories = memories.filter(mem => {
@@ -54,7 +77,7 @@ export const CheckinGalleryScreen = () => {
         onPress={() =>
           router.push({
             pathname: '/checkin/result',
-            params: { finalImageUri: item.imageUri, title: item.title, fromGallery: 'true' },
+            params: { id: item.id, finalImageUri: item.imageUri, title: item.title, fromGallery: 'true', isFavorite: item.isFavorite ? 'true' : 'false' },
           })
         }
       >
@@ -83,7 +106,7 @@ export const CheckinGalleryScreen = () => {
         onPress={() =>
           router.push({
             pathname: '/checkin/result',
-            params: { finalImageUri: item.imageUri, title: item.title, fromGallery: 'true' },
+            params: { id: item.id, finalImageUri: item.imageUri, title: item.title, fromGallery: 'true', isFavorite: item.isFavorite ? 'true' : 'false' },
           })
         }
       >
@@ -160,23 +183,29 @@ export const CheckinGalleryScreen = () => {
       </View>
 
       {/* Grid List */}
-      <FlatList
-        data={listData}
-        renderItem={renderMemoryItem}
-        keyExtractor={item => item.id}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
-        ListHeaderComponent={renderLargeHeader}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          !showLargeHeader ? (
-            <View style={styles.emptyContainer}>
-              <Feather name="image" size={48} color="#ccc" />
-              <Text style={styles.emptyText}>Chưa có ảnh kỷ niệm nào</Text>
-            </View>
-          ) : null
-        }
-      />
+      {loading && listData.length === 0 ? (
+        <View style={styles.loadingWrapper}>
+          <ActivityIndicator size="large" color="#2F80ED" />
+        </View>
+      ) : (
+        <FlatList
+          data={listData}
+          renderItem={renderMemoryItem}
+          keyExtractor={item => item.id}
+          numColumns={2}
+          columnWrapperStyle={styles.row}
+          ListHeaderComponent={renderLargeHeader}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            !showLargeHeader ? (
+              <View style={styles.emptyContainer}>
+                <Feather name="image" size={48} color="#ccc" />
+                <Text style={styles.emptyText}>Chưa có ảnh kỷ niệm nào</Text>
+              </View>
+            ) : null
+          }
+        />
+      )}
 
       {/* Floating Action Button */}
       <TouchableOpacity
@@ -362,5 +391,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     marginLeft: 6,
+  },
+  loadingWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 100,
   },
 });

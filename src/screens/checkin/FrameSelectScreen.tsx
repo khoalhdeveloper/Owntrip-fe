@@ -10,7 +10,6 @@ import {
   Alert,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
 import { Feather } from '@expo/vector-icons';
 import ViewShot from 'react-native-view-shot';
 
@@ -71,30 +70,13 @@ export const FrameSelectScreen = () => {
     setActiveSlotIndex(index);
   };
 
-  const selectImageFromLibrary = async (index: number) => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Quyền truy cập', 'Chúng tôi cần quyền truy cập thư viện ảnh của bạn.');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: false,
-      quality: 1,
+  const handleTakePhotoForSlot = (index: number) => {
+    sessionCache.activeSlotIndex = index;
+    setActiveSlotIndex(index);
+    router.push({
+      pathname: '/checkin/camera',
+      params: { slotsCount: selectedFrame?.slotsCount || 1 }
     });
-
-    if (!result.canceled && result.assets?.[0]?.uri) {
-      let cleanUri = result.assets[0].uri;
-      if (cleanUri.includes('%')) {
-        cleanUri = cleanUri.replace(/%/g, '%25');
-      }
-      if (cleanUri.startsWith('file:/') && !cleanUri.startsWith('file:///')) {
-        cleanUri = cleanUri.replace('file:/', 'file:///');
-      }
-
-      sessionCache.userImageUris[index] = cleanUri;
-      setUserImageUris([...sessionCache.userImageUris]);
-    }
   };
 
   const handleSave = async () => {
@@ -168,7 +150,7 @@ export const FrameSelectScreen = () => {
                     ) : (
                       <TouchableOpacity
                         style={styles.emptyThumbnailSlot}
-                        onPress={() => selectImageFromLibrary(index)}
+                        onPress={() => handleTakePhotoForSlot(index)}
                       >
                         <Feather name="plus" size={14} color="#718096" />
                         <Text style={styles.emptyThumbnailText}>Ô {index + 1}</Text>
@@ -193,7 +175,7 @@ export const FrameSelectScreen = () => {
 
                 <TouchableOpacity
                   style={styles.addThumbnailButton}
-                  onPress={() => selectImageFromLibrary(0)}
+                  onPress={() => handleTakePhotoForSlot(0)}
                 >
                   <Feather name="plus" size={18} color="#718096" />
                   <Text style={styles.addThumbnailText}>Chọn ảnh</Text>

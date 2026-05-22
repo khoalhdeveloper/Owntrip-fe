@@ -38,6 +38,7 @@ export const ENDPOINTS = {
     SEARCH: '/api/places/search',
     NEARBY: '/api/places/nearby',
     TEXT_SEARCH: '/api/places/text',
+    ADDRESS_SEARCH: '/api/places/address',
     PHOTO: '/api/places/photo',
   },
   PLANS: {
@@ -92,5 +93,11 @@ export const ENDPOINTS = {
     LIST: '/api/avatar-items',
     SHOP: '/api/avatar-items/shop',
     GET: (id: string) => `/api/avatar-items/${id}`,
+  },
+  CHECKINS: {
+    CREATE: '/api/checkins',
+    MY: '/api/checkins/my',
+    FAVORITE: (id: string) => `/api/checkins/${id}/favorite`,
+    DELETE: (id: string) => `/api/checkins/${id}`,
   },
 };

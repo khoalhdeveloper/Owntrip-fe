@@ -2,18 +2,23 @@ import axiosClient from './axiosClient';
 import { ENDPOINTS } from '../constants/api';
 
 export interface Place {
+  _id?: string;
   placeId: string;
   name: string;
   address: string;
   latitude: number;
   longitude: number;
+  location?: { lat: number; lng: number };
   rating?: number;
   totalReviews?: number;
+  reviewCount?: number;
   types: string[];
+  category?: string;
   mapUrl: string;
   photo: string | null;
   photos: string[];
   addedCount?: number;
+  images?: string[];
 }
 
 interface PlacesResponse {
@@ -136,7 +141,7 @@ export const placesService = {
       });
       return response?.places ?? [];
     } catch (error) {
-      console.error('Error searching nearby places:', error);
+      console.warn('Error searching nearby places:', error);
       return [];
     }
   },
@@ -161,6 +166,22 @@ export const placesService = {
       return response?.places ?? [];
     } catch (error) {
       console.error('Error searching text places:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Tìm kiếm địa điểm theo địa chỉ
+   * GET /api/places/address?address=Da Lat
+   */
+  searchByAddress: async (address: string): Promise<Place[]> => {
+    try {
+      const response = await axiosClient.get<any, PlacesResponse>(ENDPOINTS.PLACES.ADDRESS_SEARCH, {
+        params: { address },
+      });
+      return response?.places ?? [];
+    } catch (error) {
+      console.error('Error searching places by address:', error);
       return [];
     }
   },
