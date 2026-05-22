@@ -502,20 +502,32 @@ export default function ProfileScreen() {
                 <Text style={styles.assetValue} numberOfLines={1}>
                   {profile?.balance?.toLocaleString() || 0}đ
                 </Text>
-                <TouchableOpacity
-                  style={[styles.topUpMiniBtn, { marginTop: 4, alignSelf: 'flex-start' }]}
-                  onPress={() => setTopUpAmountModal(true)}
-                  disabled={isToppingUp}
-                >
-                  {isToppingUp ? (
-                    <ActivityIndicator size="small" color="#005CB8" />
-                  ) : (
-                    <>
-                      <Feather name="plus-circle" size={12} color="#005CB8" />
-                      <Text style={styles.topUpText}>Nạp tiền</Text>
-                    </>
+                <View style={{ flexDirection: 'column', gap: 6, marginTop: 8 }}>
+                  <TouchableOpacity
+                    style={[styles.topUpMiniBtn, { alignSelf: 'flex-start' }]}
+                    onPress={() => setTopUpAmountModal(true)}
+                    disabled={isToppingUp}
+                  >
+                    {isToppingUp ? (
+                      <ActivityIndicator size="small" color="#005CB8" />
+                    ) : (
+                      <>
+                        <Feather name="plus-circle" size={12} color="#005CB8" />
+                        <Text style={styles.topUpText}>Nạp tiền</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+
+                  {profile?.role === 'creator' && (
+                    <TouchableOpacity
+                      style={[styles.withdrawMiniBtn, { alignSelf: 'flex-start' }]}
+                      onPress={() => router.push('/wallet')}
+                    >
+                      <Feather name="download" size={12} color="#0A7D32" />
+                      <Text style={styles.withdrawText}>Rút tiền</Text>
+                    </TouchableOpacity>
                   )}
-                </TouchableOpacity>
+                </View>
               </View>
             </View>
 
@@ -652,6 +664,19 @@ export default function ProfileScreen() {
                   <Feather name="star" size={16} color="#F59E0B" />
                 </View>
                 <Text style={styles.settingLabel}>{profile?.role === 'creator' ? 'Gia hạn gói Creator' : 'Trở thành Creator'}</Text>
+                <Feather name="chevron-right" size={20} color="#CBD5E0" />
+              </TouchableOpacity>
+            )}
+
+            {profile?.role === 'creator' && (
+              <TouchableOpacity
+                style={styles.settingItem}
+                onPress={() => router.push('/wallet')}
+              >
+                <View style={[styles.settingIcon, { backgroundColor: '#EBF4FF' }]}>
+                  <FontAwesome5 name="wallet" size={16} color="#2563EB" />
+                </View>
+                <Text style={styles.settingLabel}>Ví Creator và rút tiền</Text>
                 <Feather name="chevron-right" size={20} color="#CBD5E0" />
               </TouchableOpacity>
             )}
@@ -1151,15 +1176,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 92, 184, 0.1)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 6,
     gap: 4,
   },
   topUpText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
     color: '#005CB8',
+  },
+  withdrawMiniBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F7EE',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 4,
+  },
+  withdrawText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0A7D32',
   },
   assetDivider: {
     width: 1,
