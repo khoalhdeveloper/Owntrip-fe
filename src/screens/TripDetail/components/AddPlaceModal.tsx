@@ -327,12 +327,20 @@ export default function AddPlaceModal({
             <Text style={styles.rowAddr} numberOfLines={1}>
               {item.address}
             </Text>
-            {item.rating ? (
-              <View style={styles.rowRating}>
-                <Feather name="star" size={10} color="#F59E0B" />
-                <Text style={styles.rowRatingVal}>{item.rating}</Text>
-              </View>
-            ) : null}
+            <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+              {item.rating ? (
+                <View style={styles.rowRating}>
+                  <Feather name="star" size={10} color="#F59E0B" />
+                  <Text style={styles.rowRatingVal}>{item.rating}</Text>
+                </View>
+              ) : null}
+              {!!item.addedCount && (
+                <View style={styles.rowAddedCount}>
+                  <Feather name="trending-up" size={10} color="#EF4444" />
+                  <Text style={styles.rowAddedCountVal}>{item.addedCount} lượt thêm</Text>
+                </View>
+              )}
+            </View>
           </View>
 
           {/* Action */}
@@ -572,6 +580,8 @@ const styles = StyleSheet.create({
   rowAddr: { fontSize: 13, color: '#9CA3AF' },
   rowRating: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 1 },
   rowRatingVal: { fontSize: 12, fontWeight: '600', color: '#D97706' },
+  rowAddedCount: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 1, marginLeft: 8 },
+  rowAddedCountVal: { fontSize: 12, fontWeight: '600', color: '#EF4444' },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: '#F3F4F6', marginLeft: 60 },
 
   // Center / empty

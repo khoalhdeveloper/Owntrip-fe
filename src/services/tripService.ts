@@ -34,6 +34,9 @@ export interface Trip {
   isForSale?: boolean;
   isPurchasedClone?: boolean;
   price?: number;
+  isTrusted?: boolean;
+  averageRating?: number;
+  soldCount?: number;
 }
 
 export interface TripDay {

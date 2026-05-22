@@ -13,6 +13,7 @@ export interface Place {
   mapUrl: string;
   photo: string | null;
   photos: string[];
+  addedCount?: number;
 }
 
 interface PlacesResponse {

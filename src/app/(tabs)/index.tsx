@@ -478,7 +478,7 @@ export default function HomeScreen() {
 
         {/* Lịch trình gợi ý */}
         <View style={[styles.sectionHeader, { marginTop: 32 }]}>
-          <Text style={styles.sectionTitle}>Lịch trình nổi bật (Marketplace)</Text>
+          <Text style={styles.sectionTitle}>Lịch trình nổi bật</Text>
           <Text style={styles.viewAll}>Xem tất cả &gt;</Text>
         </View>
 
