@@ -39,6 +39,8 @@ axiosClient.interceptors.response.use(
         } catch (e) {
           console.error('Error clearing token:', e);
         }
+      } else if (status === 500) {
+        console.warn(`⚠️ API Error [${status}]:`, data);
       } else {
         console.error(`API Error [${status}]:`, data);
       }

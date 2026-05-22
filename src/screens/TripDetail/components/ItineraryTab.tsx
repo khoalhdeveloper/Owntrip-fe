@@ -8,6 +8,7 @@ import {
   Platform,
   ActivityIndicator,
   Linking,
+  TextInput,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -19,10 +20,13 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { Trip, TripDay, Destination, tripService } from '@/services/tripService';
+import { aiService } from '@/services/aiService';
+import { placesService } from '@/services/placesService';
 import AddPlaceModal from './AddPlaceModal';
 import PlaceDetailModal from './PlaceDetailModal';
 import { useConfirm } from '@/components/ConfirmProvider';
 import { getDayColor } from './journal/types';
+import * as Speech from 'expo-speech';
 
 const BRAND = '#4A7CFF';
 const BRAND_LIGHT = '#EBF5FF';
@@ -80,6 +84,13 @@ export default function ItineraryTab({
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [selectedDayId, setSelectedDayId] = useState('');
   const [selectedDayNumber, setSelectedDayNumber] = useState(1);
+
+  // Voice AI State
+  const [isProcessingVoice, setIsProcessingVoice] = useState(false);
+  const [aiText, setAiText] = useState('');
+  
+  // Auto Generate State
+  const [isAutoGenerating, setIsAutoGenerating] = useState(false);
 
   // Swipeable refs
   const swipeableRefs = useRef<Record<string, Swipeable | null>>({});
@@ -215,6 +226,114 @@ export default function ItineraryTab({
     [destByDay, destinations, onRefresh, showAlert],
   );
 
+  // Auto-Generate Itinerary (Offline/Local logic without AI)
+  const handleAutoGenerateItinerary = async () => {
+    try {
+      setIsAutoGenerating(true);
+      Speech.speak("Đang tự động thiết kế lịch trình...", { language: 'vi-VN' });
+      
+      // 1. Lấy danh sách địa điểm bằng API address theo yêu cầu
+      const query = trip.destination || trip.title;
+      const availablePlaces = await placesService.searchByAddress(query);
+
+      if (!availablePlaces || availablePlaces.length === 0) {
+        Speech.speak("Không tìm thấy địa điểm nào ở khu vực này.", { language: 'vi-VN' });
+        setIsAutoGenerating(false);
+        return;
+      }
+
+      // 2. Phân bổ địa điểm tự động (Mỗi ngày 3-4 địa điểm tùy theo số lượng mảng)
+      // Loại bỏ AI, dùng logic cơ bản: Cắt mảng availablePlaces chia đều cho các ngày
+      let placeIndex = 0;
+      const PLACES_PER_DAY = 3;
+
+      for (const day of days) {
+        // Lấy 3 địa điểm tiếp theo trong danh sách
+        const placesForThisDay = availablePlaces.slice(placeIndex, placeIndex + PLACES_PER_DAY);
+        placeIndex += PLACES_PER_DAY;
+
+        if (placesForThisDay.length === 0) break; // Đã hết địa điểm
+
+        let localIndex = 0;
+        for (const placeData of placesForThisDay) {
+          let timeOfDay: 'morning' | 'afternoon' | 'evening' = 'morning';
+          if (localIndex === 1) timeOfDay = 'afternoon';
+          if (localIndex >= 2) timeOfDay = 'evening';
+
+          await tripService.addPlaceToDay(day.dayId, {
+            placeId: placeData.placeId || (placeData as any)._id,
+            name: placeData.name,
+            address: placeData.address,
+            latitude: placeData.latitude || placeData.location?.lat || 0,
+            longitude: placeData.longitude || placeData.location?.lng || 0,
+            rating: placeData.rating,
+            totalReviews: placeData.totalReviews || placeData.reviewCount,
+            photo: placeData.photo || (placeData.images && placeData.images.length > 0 ? placeData.images[0] : ''),
+            mapUrl: placeData.mapUrl || '',
+            timeOfDay,
+          });
+          localIndex++;
+        }
+      }
+      
+      Speech.speak("Đã hoàn tất việc tự động lên lịch trình.", { language: 'vi-VN' });
+      onRefresh();
+    } catch (error) {
+      console.error("Lỗi khi tự động lên lịch trình:", error);
+      Speech.speak("Đã xảy ra lỗi trong quá trình tự động lên lịch trình.", { language: 'vi-VN' });
+    } finally {
+      setIsAutoGenerating(false);
+    }
+  };
+
+  // Voice AI using Gemini LLM
+  const handleVoiceCommand = async () => {
+    try {
+      setIsProcessingVoice(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      const userInput = aiText.trim() || "Trời hôm nay mưa";
+      
+      // Simulate listening...
+      Speech.speak(`Đang nghe... Bạn vừa nói: ${userInput}. Đang nhờ AI xử lý...`, { language: 'vi-VN' });
+      
+      if (days.length === 0) {
+        Speech.speak("Không có lịch trình nào để sắp xếp.", { language: 'vi-VN' });
+        return;
+      }
+
+      // Pick the first day to mock rearrangement
+      const targetDay = days[0];
+      const dayDests = (destByDay[targetDay.day] || []).sort((a, b) => a.place.order - b.place.order);
+      
+      if (dayDests.length < 2) {
+        Speech.speak("Ngày này không đủ địa điểm để sắp xếp lại.", { language: 'vi-VN' });
+        return;
+      }
+
+      // Call the real AI Service
+      const aiResult = await aiService.rearrangeItineraryWithAI(userInput, dayDests);
+
+      if (aiResult && aiResult.orderedPlaceIds) {
+        // Call API to save new order
+        await tripService.reorderPlacesInDay(targetDay.dayId, aiResult.orderedPlaceIds);
+        
+        // Speak the AI's reply
+        Speech.speak(aiResult.replyMessage, { language: 'vi-VN' });
+        
+        setAiText(''); // Clear input after success
+        onRefresh();
+      } else {
+        Speech.speak("Xin lỗi, AI không thể phân tích được yêu cầu này.", { language: 'vi-VN' });
+      }
+    } catch (error) {
+      console.error(error);
+      Speech.speak("Đã xảy ra lỗi khi gọi AI.", { language: 'vi-VN' });
+    } finally {
+      setIsProcessingVoice(false);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingBox}>
@@ -225,6 +344,24 @@ export default function ItineraryTab({
 
   return (
     <View style={styles.container}>
+      {/* Auto Generate Button */}
+      <View style={styles.autoGenContainer}>
+        <TouchableOpacity 
+          style={[styles.autoGenBtn, isAutoGenerating && styles.autoGenBtnDisabled]} 
+          onPress={handleAutoGenerateItinerary}
+          disabled={isAutoGenerating}
+        >
+          {isAutoGenerating ? (
+            <ActivityIndicator size="small" color="#FFF" />
+          ) : (
+            <Feather name="cpu" size={20} color="#FFF" />
+          )}
+          <Text style={styles.autoGenBtnText}>
+            {isAutoGenerating ? 'Đang thiết kế lịch trình...' : 'Tự động lên lịch trình'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {days.map((day) => {
         const dayDests = (destByDay[day.day] || []).sort((a, b) => a.place.order - b.place.order);
         const isExpanded = expandedDays[day.day] ?? false;
@@ -315,6 +452,30 @@ export default function ItineraryTab({
         existingPlaceIds={getExistingPlaceIds(selectedDayNumber)}
         onPlaceAdded={handlePlaceAdded}
       />
+
+      {/* Floating Voice/Text AI Bar */}
+      <View style={styles.aiInputContainer}>
+        <TextInput
+          style={styles.aiInput}
+          placeholder="Nhập hoặc nói (VD: Trời mưa)..."
+          value={aiText}
+          onChangeText={setAiText}
+          onSubmitEditing={handleVoiceCommand}
+          returnKeyType="send"
+        />
+        <TouchableOpacity 
+          style={[styles.voiceAiBtnSmall, isProcessingVoice && styles.voiceAiBtnActive]}
+          activeOpacity={0.8}
+          onPress={handleVoiceCommand}
+          disabled={isProcessingVoice}
+        >
+          {isProcessingVoice ? (
+            <ActivityIndicator size="small" color="#FFF" />
+          ) : (
+            <Feather name={aiText.trim() ? "send" : "mic"} size={20} color="#FFF" />
+          )}
+        </TouchableOpacity>
+      </View>
 
       <PlaceDetailModal 
         isVisible={detailVisible}
@@ -484,6 +645,68 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  
+  // Voice/Text AI Bar
+  aiInputContainer: {
+    position: 'absolute',
+    bottom: 24,
+    left: 24,
+    right: 24,
+    height: 56,
+    backgroundColor: '#FFF',
+    borderRadius: 28,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingLeft: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+      },
+      android: { elevation: 6 },
+    }),
+  },
+  aiInput: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: 'Inter-Medium',
+  },
+  autoGenContainer: {
+    paddingHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  autoGenBtn: {
+    backgroundColor: '#8B5CF6',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+  },
+  autoGenBtnDisabled: {
+    opacity: 0.7,
+  },
+  autoGenBtnText: {
+    color: '#FFF',
+    fontSize: 15,
+    fontFamily: 'Inter-SemiBold',
+  },
+  voiceAiBtnSmall: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#3B82F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  voiceAiBtnActive: {
+    backgroundColor: '#EF4444',
   },
 });
 
