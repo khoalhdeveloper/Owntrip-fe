@@ -8,6 +8,7 @@ import {
   Platform,
   ActivityIndicator,
   Linking,
+  TextInput,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -19,10 +20,12 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { Trip, TripDay, Destination, tripService } from '@/services/tripService';
+import { aiService } from '@/services/aiService';
 import AddPlaceModal from './AddPlaceModal';
 import PlaceDetailModal from './PlaceDetailModal';
 import { useConfirm } from '@/components/ConfirmProvider';
 import { getDayColor } from './journal/types';
+import * as Speech from 'expo-speech';
 
 const BRAND = '#4A7CFF';
 const BRAND_LIGHT = '#EBF5FF';
@@ -80,6 +83,10 @@ export default function ItineraryTab({
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [selectedDayId, setSelectedDayId] = useState('');
   const [selectedDayNumber, setSelectedDayNumber] = useState(1);
+
+  // Voice AI State
+  const [isProcessingVoice, setIsProcessingVoice] = useState(false);
+  const [aiText, setAiText] = useState('');
 
   // Swipeable refs
   const swipeableRefs = useRef<Record<string, Swipeable | null>>({});
@@ -215,6 +222,54 @@ export default function ItineraryTab({
     [destByDay, destinations, onRefresh, showAlert],
   );
 
+  // Voice AI using Gemini LLM
+  const handleVoiceCommand = async () => {
+    try {
+      setIsProcessingVoice(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      const userInput = aiText.trim() || "Trời hôm nay mưa";
+      
+      // Simulate listening...
+      Speech.speak(`Đang nghe... Bạn vừa nói: ${userInput}. Đang nhờ AI xử lý...`, { language: 'vi-VN' });
+      
+      if (days.length === 0) {
+        Speech.speak("Không có lịch trình nào để sắp xếp.", { language: 'vi-VN' });
+        return;
+      }
+
+      // Pick the first day to mock rearrangement
+      const targetDay = days[0];
+      const dayDests = (destByDay[targetDay.day] || []).sort((a, b) => a.place.order - b.place.order);
+      
+      if (dayDests.length < 2) {
+        Speech.speak("Ngày này không đủ địa điểm để sắp xếp lại.", { language: 'vi-VN' });
+        return;
+      }
+
+      // Call the real AI Service
+      const aiResult = await aiService.rearrangeItineraryWithAI(userInput, dayDests);
+
+      if (aiResult && aiResult.orderedPlaceIds) {
+        // Call API to save new order
+        await tripService.reorderPlacesInDay(targetDay.dayId, aiResult.orderedPlaceIds);
+        
+        // Speak the AI's reply
+        Speech.speak(aiResult.replyMessage, { language: 'vi-VN' });
+        
+        setAiText(''); // Clear input after success
+        onRefresh();
+      } else {
+        Speech.speak("Xin lỗi, AI không thể phân tích được yêu cầu này.", { language: 'vi-VN' });
+      }
+    } catch (error) {
+      console.error(error);
+      Speech.speak("Đã xảy ra lỗi khi gọi AI.", { language: 'vi-VN' });
+    } finally {
+      setIsProcessingVoice(false);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingBox}>
@@ -315,6 +370,30 @@ export default function ItineraryTab({
         existingPlaceIds={getExistingPlaceIds(selectedDayNumber)}
         onPlaceAdded={handlePlaceAdded}
       />
+
+      {/* Floating Voice/Text AI Bar */}
+      <View style={styles.aiInputContainer}>
+        <TextInput
+          style={styles.aiInput}
+          placeholder="Nhập hoặc nói (VD: Trời mưa)..."
+          value={aiText}
+          onChangeText={setAiText}
+          onSubmitEditing={handleVoiceCommand}
+          returnKeyType="send"
+        />
+        <TouchableOpacity 
+          style={[styles.voiceAiBtnSmall, isProcessingVoice && styles.voiceAiBtnActive]}
+          activeOpacity={0.8}
+          onPress={handleVoiceCommand}
+          disabled={isProcessingVoice}
+        >
+          {isProcessingVoice ? (
+            <ActivityIndicator size="small" color="#FFF" />
+          ) : (
+            <Feather name={aiText.trim() ? "send" : "mic"} size={20} color="#FFF" />
+          )}
+        </TouchableOpacity>
+      </View>
 
       <PlaceDetailModal 
         isVisible={detailVisible}
@@ -484,6 +563,47 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  
+  // Voice/Text AI Bar
+  aiInputContainer: {
+    position: 'absolute',
+    bottom: 24,
+    left: 24,
+    right: 24,
+    height: 56,
+    backgroundColor: '#FFF',
+    borderRadius: 28,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingLeft: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+      },
+      android: { elevation: 6 },
+    }),
+  },
+  aiInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#1A1A1A',
+    marginRight: 8,
+  },
+  voiceAiBtnSmall: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#3B82F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  voiceAiBtnActive: {
+    backgroundColor: '#EF4444',
   },
 });
 
