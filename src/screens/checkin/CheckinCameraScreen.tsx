@@ -21,6 +21,8 @@ export const CheckinCameraScreen = () => {
   const params = useLocalSearchParams();
   const slotsCount = Number(params.slotsCount) || 1;
   const [capturedPhotos, setCapturedPhotos] = useState<string[]>([]);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [isCounting, setIsCounting] = useState(false);
 
   const [showFlash, setShowFlash] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
@@ -62,7 +64,34 @@ export const CheckinCameraScreen = () => {
     setFlash(prev => (prev === 'off' ? 'on' : 'off'));
   };
 
-      const takePicture = async () => {
+  const startCountdown = () => {
+    const limit = slotsCount === 4 ? 4 : 8;
+    if (isCounting || capturedPhotos.length >= limit) return;
+    
+    // Nếu slotsCount === 1, chụp trực tiếp không cần countdown
+    if (slotsCount === 1) {
+      takePicture();
+      return;
+    }
+    
+    setIsCounting(true);
+    let count = 3;
+    setCountdown(count);
+    
+    const interval = setInterval(() => {
+      count -= 1;
+      if (count <= 0) {
+        clearInterval(interval);
+        setCountdown(null);
+        setIsCounting(false);
+        takePicture();
+      } else {
+        setCountdown(count);
+      }
+    }, 1000);
+  };
+
+  const takePicture = async () => {
     if (cameraRef.current) {
       try {
         const photo = await cameraRef.current.takePictureAsync({
@@ -88,7 +117,23 @@ export const CheckinCameraScreen = () => {
               pathname: '/checkin/frame',
               params: { imageUri: cleanUri },
             });
+          } else if (slotsCount === 4) {
+            const newList = [...capturedPhotos, cleanUri];
+            setCapturedPhotos(newList);
+            
+            if (newList.length === 4) {
+              // Tự động lồng vào 4 slot
+              newList.forEach((uri, idx) => {
+                sessionCache.userImageUris[idx] = uri;
+              });
+              sessionCache.activeSlotIndex = 0;
+              router.push({
+                pathname: '/checkin/frame',
+                params: { multiImageLoaded: 'true' },
+              });
+            }
           } else {
+            // slotsCount là giá trị khác (VD: 8)
             if (capturedPhotos.length < 8) {
               const newList = [...capturedPhotos, cleanUri];
               setCapturedPhotos(newList);
@@ -157,21 +202,33 @@ export const CheckinCameraScreen = () => {
           {slotsCount > 1 && (
             <View style={styles.stepIndicatorContainer}>
               <Text style={styles.stepIndicatorText}>
-                {capturedPhotos.length < 8 
-                  ? `ĐÃ CHỤP: ${capturedPhotos.length}/8` 
-                  : 'ĐÃ CHỤP ĐỦ 8 ẢNH. ĐANG CHUYỂN HƯỚNG...'}
+                {slotsCount === 4 ? (
+                  capturedPhotos.length < 4
+                    ? `ĐÃ CHỤP: ${capturedPhotos.length}/4`
+                    : 'ĐÃ CHỤP ĐỦ 4 ẢNH. ĐANG CHUYỂN HƯỚNG...'
+                ) : (
+                  capturedPhotos.length < 8 
+                    ? `ĐÃ CHỤP: ${capturedPhotos.length}/8` 
+                    : 'ĐÃ CHỤP ĐỦ 8 ẢNH. ĐANG CHUYỂN HƯỚNG...'
+                )}
               </Text>
               <View style={styles.progressBarBg}>
                 <View
                   style={[
                     styles.progressBarFill,
-                    { width: `${(capturedPhotos.length / 8) * 100}%` }
+                    { width: `${(capturedPhotos.length / (slotsCount === 4 ? 4 : 8)) * 100}%` }
                   ]}
                 />
               </View>
             </View>
           )}
-          <View style={{ flex: 1 }} />
+          <View style={{ flex: 1 }}>
+            {countdown !== null && (
+              <View style={styles.countdownContainer}>
+                <Text style={styles.countdownText}>{countdown}</Text>
+              </View>
+            )}
+          </View>
           <View style={styles.bottomControlsPanel}>
 
             <View style={styles.filtersWrapper}>
@@ -211,18 +268,22 @@ export const CheckinCameraScreen = () => {
                 <TouchableOpacity
                   style={[
                     styles.captureButton,
-                    capturedPhotos.length >= 8 && styles.captureButtonDisabled
+                    (isCounting || capturedPhotos.length >= (slotsCount === 4 ? 4 : 8)) && styles.captureButtonDisabled
                   ]}
-                  onPress={takePicture}
-                  disabled={capturedPhotos.length >= 8}
+                  onPress={startCountdown}
+                  disabled={isCounting || capturedPhotos.length >= (slotsCount === 4 ? 4 : 8)}
                 >
                   <Feather name="camera" size={28} color="#fff" />
                 </TouchableOpacity>
                 <Text style={styles.captureButtonSubtext}>
-                  {capturedPhotos.length >= 8 ? 'Đủ 8 ảnh' : `Chụp ảnh ${capturedPhotos.length + 1}`}
+                  {isCounting 
+                    ? 'Đang đếm ngược...' 
+                    : capturedPhotos.length >= (slotsCount === 4 ? 4 : 8)
+                      ? 'Đã đủ ảnh' 
+                      : `Chụp ảnh ${capturedPhotos.length + 1}`}
                 </Text>
               </View>
-              {slotsCount === 4 ? (
+              {slotsCount === 8 ? (
                 <TouchableOpacity
                   style={[
                     styles.confirmButton,
@@ -563,5 +624,20 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#fff',
     zIndex: 999,
+  },
+  countdownContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    zIndex: 500,
+  },
+  countdownText: {
+    fontSize: 120,
+    fontWeight: '900',
+    color: '#fff',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10,
   },
 });

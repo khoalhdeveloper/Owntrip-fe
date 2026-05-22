@@ -14,9 +14,9 @@ const EDITOR_SIZE = width - 40; // Square size with padding
 const INNER_SIZE = EDITOR_SIZE * 0.68; // Adjust based on typical frame border thickness
 const INNER_OFFSET = (EDITOR_SIZE - INNER_SIZE) / 2;
 
-// Vertical Film Strip Dimensions
-const FILM_WIDTH = 160;
-const FILM_HEIGHT = 450;
+// Vertical Film Strip Dimensions — tỷ lệ 1:3 theo chiều rộng màn hình
+const FILM_WIDTH = (width - 80); // Để lại padding hai bên
+const FILM_HEIGHT = FILM_WIDTH * 3; // Tỷ lệ 1:3 chuẩn
 
 interface CheckinEditorProps {
   userImageUri?: string | null;
@@ -79,12 +79,13 @@ export const CheckinEditor: React.FC<CheckinEditorProps> = ({
   });
 
   const renderSingleLayout = () => {
+    const frameSource = selectedFrame?.imageUrl ? { uri: selectedFrame.imageUrl } : selectedFrame?.image;
     return (
       <View style={styles.editorArea}>
         {/* Fake Frame (Rendered underneath) */}
-        {selectedFrame && selectedFrame.image && (
+        {selectedFrame && frameSource && (
           <Image
-            source={selectedFrame.image}
+            source={frameSource}
             style={styles.frameImage}
           />
         )}
@@ -116,16 +117,23 @@ export const CheckinEditor: React.FC<CheckinEditorProps> = ({
   };
 
   const renderFilmstripLayout = () => {
-    const slotTops = [14.8, 32.8, 50.8, 68.8]; // Percentage heights for the 4 slots
-    const slotHeight = 16.5; // Percentage height of each slot
+    // Điều chỉnh tinh tế dựa theo frame thực tế Vũng Tàu:
+    // - Phần decor trên (hello from VŨNG TÀU + hoa + sò) chiếm ~17% chiều cao
+    // - Phần decor dưới (cọ + bãi biển + logo) chiếm ~22% chiều cao
+    // - 4 slot nằm gọn trong khoảng 17% → 78%
+    const slotTops = [14.5, 32, 50, 67]; 
+    const slotHeight = 17.5; 
+
+    const frameSource = selectedFrame?.imageUrl ? { uri: selectedFrame.imageUrl } : selectedFrame?.image;
 
     return (
       <View style={styles.filmstripEditorArea}>
-        {/* The Frame Background Image */}
-        {selectedFrame && selectedFrame.image && (
+        {/* The Frame overlay on top, pointerEvents="none" so user can still click slots underneath */}
+        {selectedFrame && frameSource && (
           <Image
-            source={selectedFrame.image}
+            source={frameSource}
             style={styles.filmstripFrameImage}
+            pointerEvents="none"
           />
         )}
 
@@ -144,7 +152,6 @@ export const CheckinEditor: React.FC<CheckinEditorProps> = ({
                   top: `${topPercent}%`,
                   height: `${slotHeight}%`,
                 },
-                isActive && styles.activeFilmstripSlot,
               ]}
               onPress={() => onSelectSlot && onSelectSlot(index)}
             >
@@ -249,23 +256,18 @@ const styles = StyleSheet.create({
     width: FILM_WIDTH,
     height: FILM_HEIGHT,
     resizeMode: 'stretch',
-    zIndex: 1, // Frame sits underneath, photos render on top of the white boxes
+    zIndex: 20, // Frame sits on top to create transparent overlay effect
   },
   filmstripSlot: {
     position: 'absolute',
-    left: '11%',
-    width: '78%',
-    borderRadius: 8,
+    left: '9.8%',
+    width: '80.4%',
+    borderRadius: 18,
     overflow: 'hidden',
     backgroundColor: '#EDF2F7',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: 'transparent',
-    zIndex: 10, // Sits on top of the white area
-  },
-  activeFilmstripSlot: {
-    borderColor: '#2F80ED',
-    borderWidth: 2,
-    elevation: 3,
+    zIndex: 10, // Sits underneath the transparent holes of the frame
   },
   filmstripGestureWrapper: {
     width: '100%',

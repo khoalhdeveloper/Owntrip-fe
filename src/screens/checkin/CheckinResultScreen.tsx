@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   SafeAreaView,
+  ScrollView,
   Image,
   TouchableOpacity,
   Alert,
@@ -17,7 +18,7 @@ import * as Sharing from 'expo-sharing';
 import { checkinService } from '../../services/checkinService';
 
 const { width } = Dimensions.get('window');
-const PREVIEW_SIZE = width - 40;
+const PREVIEW_WIDTH = width - 40;
 
 const normalizeFilePath = (uri: any): string | null => {
   if (!uri || typeof uri !== 'string') return null;
@@ -44,6 +45,20 @@ export const CheckinResultScreen = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [dbId, setDbId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [imageHeight, setImageHeight] = useState(PREVIEW_WIDTH); // default square
+
+  // Determine actual image aspect ratio for correct preview height
+  useEffect(() => {
+    if (!finalImageUri) return;
+    Image.getSize(
+      finalImageUri,
+      (w, h) => {
+        const ratio = h / w;
+        setImageHeight(Math.min(PREVIEW_WIDTH * ratio, PREVIEW_WIDTH * 3.2));
+      },
+      () => setImageHeight(PREVIEW_WIDTH) // fallback square
+    );
+  }, [finalImageUri]);
 
   useEffect(() => {
     if (fromGallery && params.id) {
@@ -224,16 +239,19 @@ export const CheckinResultScreen = () => {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.title}>Looking Good!</Text>
         <Text style={styles.subtitle}>Kỷ niệm hành trình của bạn đã sẵn sàng để chia sẻ.</Text>
 
         {/* Large preview */}
-        <View style={styles.previewContainer}>
+        <View style={[styles.previewContainer, { height: imageHeight }]}>
           <Image
             source={{ uri: finalImageUri as string }}
             style={styles.previewImage}
-            resizeMode="contain"
+            resizeMode="cover"
           />
         </View>
 
@@ -292,7 +310,7 @@ export const CheckinResultScreen = () => {
           <Feather name="compass" size={16} color="#718096" style={{ marginRight: 6 }} />
           <Text style={styles.exploreButtonText}>Về trang Khám phá</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
 
       {(isProcessing || isSaving) && (
         <View style={styles.loadingOverlay}>
@@ -338,10 +356,10 @@ const styles = StyleSheet.create({
     color: '#718096',
   },
   content: {
-    flex: 1,
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 20,
+    paddingBottom: 40,
   },
   title: {
     fontSize: 24,
@@ -356,8 +374,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   previewContainer: {
-    width: PREVIEW_SIZE,
-    height: PREVIEW_SIZE,
+    width: PREVIEW_WIDTH,
+    // height will be set inline from imageHeight state
     backgroundColor: '#fff',
     borderRadius: 16,
     overflow: 'hidden',
@@ -367,8 +385,6 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     shadowOffset: { width: 0, height: 2 },
     marginBottom: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   previewImage: {
     width: '100%',

@@ -95,9 +95,13 @@ export const ENDPOINTS = {
     GET: (id: string) => `/api/avatar-items/${id}`,
   },
   CHECKINS: {
-    CREATE: '/api/checkins',
-    MY: '/api/checkins/my',
+    CREATE:   '/api/checkins',
+    MY:       '/api/checkins/my',
     FAVORITE: (id: string) => `/api/checkins/${id}/favorite`,
-    DELETE: (id: string) => `/api/checkins/${id}`,
+    DELETE:   (id: string) => `/api/checkins/${id}`,
+  },
+  FRAMES: {
+    LIST: '/api/frames', // Public — lấy danh sách frame đang active
   },
 };
+

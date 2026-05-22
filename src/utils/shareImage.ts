@@ -18,8 +18,9 @@ export const shareImage = async (
     }
 
     const uri = await captureRef(viewShotRef, {
-      format: 'jpg',
-      quality: 0.8,
+      format: 'png',
+      quality: 1.0,
+      pixelRatio: 2,
     });
 
     await Sharing.shareAsync(uri);

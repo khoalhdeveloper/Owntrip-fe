@@ -6,9 +6,10 @@ import {
   StyleSheet,
   View,
   Text,
+  ActivityIndicator,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { CHECKIN_FRAMES } from '../../constants/checkinFrames';
+import { useFetchFrames } from '../../hooks/useFrames';
 import { CheckinFrame } from '../../types/checkin.type';
 
 interface FrameGalleryProps {
@@ -20,6 +21,8 @@ export const FrameGallery: React.FC<FrameGalleryProps> = ({
   selectedFrameId,
   onSelectFrame,
 }) => {
+  const { frames, loading } = useFetchFrames();
+
   const renderItem = ({ item }: { item: CheckinFrame }) => {
     const isSelected = item.id === (selectedFrameId || 'no-frame');
 
@@ -29,8 +32,12 @@ export const FrameGallery: React.FC<FrameGalleryProps> = ({
         onPress={() => onSelectFrame(item.type === 'none' ? null : item)}
         activeOpacity={0.7}
       >
-        {item.image ? (
-          <Image source={item.image} style={styles.framePreview} />
+        {/* Hiển thị ảnh: null → icon X, có URL → Image uri */}
+        {item.imageUrl ? (
+          <Image
+            source={{ uri: item.imageUrl }}
+            style={styles.framePreview}
+          />
         ) : (
           <View style={[styles.framePreview, styles.noFramePreview]}>
             <Feather name="x" size={24} color="#999" />
@@ -43,19 +50,25 @@ export const FrameGallery: React.FC<FrameGalleryProps> = ({
     );
   };
 
-  const galleryData = CHECKIN_FRAMES;
-
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Chọn khung hình</Text>
-      <FlatList
-        data={galleryData}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.listContent}
-      />
+
+      {loading ? (
+        // Hiển thị spinner khi đang fetch
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color="#007AFF" />
+        </View>
+      ) : (
+        <FlatList
+          data={frames}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+        />
+      )}
     </View>
   );
 };
@@ -70,6 +83,11 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginLeft: 20,
     color: '#333',
+  },
+  loadingContainer: {
+    height: 90,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   listContent: {
     paddingHorizontal: 15,

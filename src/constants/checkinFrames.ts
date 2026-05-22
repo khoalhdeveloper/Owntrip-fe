@@ -1,21 +1,6 @@
-import { CheckinFrame, CameraFilter, CheckinMemory } from '../types/checkin.type';
+import { CameraFilter, CheckinMemory } from '../types/checkin.type';
 
-export const CHECKIN_FRAMES: CheckinFrame[] = [
-  {
-    id: 'no-frame',
-    name: 'Không khung',
-    image: null,
-    type: 'none',
-  },
-  {
-    id: 'hcm-4cut-frame',
-    name: 'TP.HCM 4-Cut',
-    image: require('../../assets/frames/Screenshot 2026-05-17 232828.png'),
-    type: 'film',
-    layoutType: 'filmstrip-4',
-    slotsCount: 4,
-  },
-];
+// CHECKIN_FRAMES đã được chuyển sang API — xem src/hooks/useFrames.ts
 
 export const CAMERA_FILTERS: CameraFilter[] = [
   { id: 'retro', name: 'Retro', type: 'retro' },
