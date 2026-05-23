@@ -46,7 +46,8 @@ export default function HotelOwnerRegistrationScreen() {
       businessLicense: '',
       securityCertificate: '',
       pcccCertificate: '',
-      identityCard: '',
+      identityCardFront: '',
+      identityCardBack: '',
       leaseContract: '',
     },
     propertyInfo: {
@@ -140,8 +141,8 @@ export default function HotelOwnerRegistrationScreen() {
 
   const handleSubmit = async () => {
     // Basic validation
-    if (!registrationData.legalDocuments.businessLicense || !registrationData.legalDocuments.identityCard) {
-      showAlert("Thiếu hồ sơ", "Vui lòng tải lên đầy đủ giấy phép kinh doanh và CCCD.", "warning");
+    if (!registrationData.legalDocuments.businessLicense || !registrationData.legalDocuments.identityCardFront || !registrationData.legalDocuments.identityCardBack) {
+      showAlert("Thiếu hồ sơ", "Vui lòng tải lên đầy đủ giấy phép kinh doanh và CCCD (cả 2 mặt).", "warning");
       return;
     }
     if (!registrationData.propertyInfo.name || !registrationData.propertyInfo.address || !registrationData.phone) {
@@ -188,7 +189,8 @@ export default function HotelOwnerRegistrationScreen() {
           { id: 'businessLicense', label: 'GP Đăng ký kinh doanh', icon: 'file-text' },
           { id: 'securityCertificate', label: 'CN An ninh trật tự', icon: 'shield' },
           { id: 'pcccCertificate', label: 'CN PCCC', icon: 'fire' },
-          { id: 'identityCard', label: 'CCCD / Passport', icon: 'user' },
+          { id: 'identityCardFront', label: 'CCCD (Mặt trước)', icon: 'user' },
+          { id: 'identityCardBack', label: 'CCCD (Mặt sau)', icon: 'user' },
         ].map((doc) => (
           <TouchableOpacity 
             key={doc.id} 
