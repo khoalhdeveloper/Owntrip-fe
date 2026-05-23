@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useGlobalSearchParams, useRouter } from 'expo-router';
 import { inventoryService, DashboardStats } from '@/services/inventoryService';
 import { hotelManagementService } from '@/services/hotelManagementService';
 
@@ -24,7 +24,7 @@ const { width } = Dimensions.get('window');
 
 export default function InventoryManagementScreen() {
   const router = useRouter();
-  const { hotelId, hotelName } = useLocalSearchParams();
+  const { hotelId, hotelName } = useGlobalSearchParams();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

@@ -189,7 +189,7 @@ export default function HotelManagementScreen() {
             <TouchableOpacity
               key={hotel.hotelId || index}
               style={styles.hotelCard}
-              onPress={() => router.push(`/hotel-management/edit?hotelId=${hotel.hotelId}`)}
+              onPress={() => router.push({ pathname: `/hotel-management/${hotel.hotelId}/edit`, params: { hotelName: hotel.name } })}
               activeOpacity={0.85}
             >
               {/* Image with Overlay */}
@@ -275,51 +275,6 @@ export default function HotelManagementScreen() {
                   </View>
                 )}
 
-                {/* Action Row */}
-                <View style={styles.cardActions}>
-                  <TouchableOpacity
-                    style={styles.editButton}
-                    onPress={() => router.push(`/hotel-management/edit?hotelId=${hotel.hotelId}`)}
-                  >
-                    <Feather name="edit-3" size={14} color="#3B82F6" />
-                    <Text style={styles.editButtonText}>Chỉnh sửa</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.editButton,
-                      { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' },
-                    ]}
-                    onPress={() =>
-                      router.push(
-                        `/hotel-management/bookings?hotelId=${
-                          hotel.hotelId
-                        }&hotelName=${encodeURIComponent(hotel.name)}`,
-                      )
-                    }
-                  >
-                    <Feather name="calendar" size={14} color="#16A34A" />
-                    <Text style={[styles.editButtonText, { color: '#16A34A' }]}>Đặt phòng</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.editButton,
-                      { backgroundColor: '#FFF7ED', borderColor: '#FFEDD5' },
-                    ]}
-                    onPress={() =>
-                      router.push(
-                        `/hotel-management/inventory?hotelId=${
-                          hotel.hotelId
-                        }&hotelName=${encodeURIComponent(hotel.name)}`,
-                      )
-                    }
-                  >
-                    <Feather name="layers" size={14} color="#EA580C" />
-                    <Text style={[styles.editButtonText, { color: '#EA580C' }]}>Kho phòng</Text>
-                  </TouchableOpacity>
-                  <View style={styles.cardArrow}>
-                    <Feather name="chevron-right" size={18} color="#CBD5E0" />
-                  </View>
-                </View>
               </View>
             </TouchableOpacity>
           ))
@@ -506,27 +461,7 @@ const styles = StyleSheet.create({
   },
   tagText: { fontSize: 11, color: '#2563EB', fontWeight: '600' },
 
-  cardActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  editButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#EFF6FF',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: '#DBEAFE',
-  },
-  editButtonText: { fontSize: 13, fontWeight: '600', color: '#3B82F6' },
-  cardArrow: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: '#F8FAFC',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+
 
   // FAB
   fab: {
