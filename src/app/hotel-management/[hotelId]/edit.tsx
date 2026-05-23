@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useGlobalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import Toast from 'react-native-toast-message';
 import { hotelManagementService, IHotelManage, IRoomType } from '@/services/hotelManagementService';
@@ -39,7 +39,7 @@ const uploadToCloudinary = async (uri: string): Promise<string | null> => {
 
 export default function HotelEditScreen() {
   const router = useRouter();
-  const { hotelId } = useLocalSearchParams<{ hotelId?: string }>();
+  const { hotelId } = useGlobalSearchParams<{ hotelId?: string }>();
   const isEditing = !!hotelId;
 
   const [loading, setLoading] = useState(false);
@@ -347,13 +347,13 @@ export default function HotelEditScreen() {
                   <Text style={s.label}>Số sao</Text>
                   <View style={s.starRow}>
                     {[1, 2, 3, 4, 5].map((n) => (
-                      <TouchableOpacity key={n} onPress={() => setStarRating(String(n))}>
+                      <View key={n}>
                         <MaterialIcons
                           name="star"
                           size={32}
                           color={n <= Number(starRating) ? '#FFB300' : '#E2E8F0'}
                         />
-                      </TouchableOpacity>
+                      </View>
                     ))}
                   </View>
                 </View>

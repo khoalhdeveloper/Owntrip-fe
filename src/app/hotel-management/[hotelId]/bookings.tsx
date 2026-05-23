@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, FontAwesome5 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { useRouter, useGlobalSearchParams, useFocusEffect } from 'expo-router';
 import { bookingService } from '@/services/bookingService';
 
 const { width } = Dimensions.get('window');
@@ -43,7 +43,7 @@ function formatDate(dateStr: string): string {
 
 export default function HotelBookingsScreen() {
   const router = useRouter();
-  const { hotelId, hotelName } = useLocalSearchParams<{ hotelId: string; hotelName: string }>();
+  const { hotelId, hotelName } = useGlobalSearchParams<{ hotelId: string; hotelName: string }>();
   const [activeTab, setActiveTab] = useState<'bookings' | 'transactions'>('bookings');
   const [bookings, setBookings] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
