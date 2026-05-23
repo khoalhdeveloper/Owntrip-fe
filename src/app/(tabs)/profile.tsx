@@ -1088,8 +1088,8 @@ const styles = StyleSheet.create({
   },
   avatarFrame: {
     position: 'absolute',
-    width: 120,
-    height: 120,
+    width: 130,
+    height: 130,
     zIndex: 1,
   },
   verifiedBadge: {
@@ -1438,8 +1438,8 @@ const styles = StyleSheet.create({
   },
   modalAvatarFrame: {
     position: 'absolute',
-    width: 100,
-    height: 100,
+    width: 110,
+    height: 110,
     zIndex: 1,
   },
   editInputGroup: {
