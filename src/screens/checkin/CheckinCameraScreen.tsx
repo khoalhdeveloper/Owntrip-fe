@@ -21,8 +21,6 @@ export const CheckinCameraScreen = () => {
   const params = useLocalSearchParams();
   const slotsCount = Number(params.slotsCount) || 1;
   const [capturedPhotos, setCapturedPhotos] = useState<string[]>([]);
-  const [countdown, setCountdown] = useState<number | null>(null);
-  const [isCounting, setIsCounting] = useState(false);
 
   const [showFlash, setShowFlash] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
@@ -64,31 +62,12 @@ export const CheckinCameraScreen = () => {
     setFlash(prev => (prev === 'off' ? 'on' : 'off'));
   };
 
-  const startCountdown = () => {
-    const limit = slotsCount === 4 ? 4 : 8;
-    if (isCounting || capturedPhotos.length >= limit) return;
-    
-    // Nếu slotsCount === 1, chụp trực tiếp không cần countdown
-    if (slotsCount === 1) {
-      takePicture();
-      return;
-    }
-    
-    setIsCounting(true);
-    let count = 3;
-    setCountdown(count);
-    
-    const interval = setInterval(() => {
-      count -= 1;
-      if (count <= 0) {
-        clearInterval(interval);
-        setCountdown(null);
-        setIsCounting(false);
-        takePicture();
-      } else {
-        setCountdown(count);
-      }
-    }, 1000);
+  // Frame 4-slot luôn chụp 8 ảnh, sau đó user chọn 4 tấm ưng ý
+  const CAPTURE_LIMIT = slotsCount >= 4 ? 8 : 1;
+
+  const handleCapture = () => {
+    if (capturedPhotos.length >= CAPTURE_LIMIT) return;
+    takePicture();
   };
 
   const takePicture = async () => {
@@ -112,35 +91,19 @@ export const CheckinCameraScreen = () => {
           setTimeout(() => setShowFlash(false), 150);
 
           if (slotsCount === 1) {
+            // Single-slot: chụp 1 ảnh → vào frame ngay
             sessionCache.userImageUris[sessionCache.activeSlotIndex] = cleanUri;
             router.push({
               pathname: '/checkin/frame',
               params: { imageUri: cleanUri },
             });
-          } else if (slotsCount === 4) {
+          } else {
+            // Multi-slot (filmstrip-4 hoặc khác): luôn chụp 8 ảnh → chọn 4
             const newList = [...capturedPhotos, cleanUri];
             setCapturedPhotos(newList);
-            
-            if (newList.length === 4) {
-              // Tự động lồng vào 4 slot
-              newList.forEach((uri, idx) => {
-                sessionCache.userImageUris[idx] = uri;
-              });
-              sessionCache.activeSlotIndex = 0;
-              router.push({
-                pathname: '/checkin/frame',
-                params: { multiImageLoaded: 'true' },
-              });
-            }
-          } else {
-            // slotsCount là giá trị khác (VD: 8)
-            if (capturedPhotos.length < 8) {
-              const newList = [...capturedPhotos, cleanUri];
-              setCapturedPhotos(newList);
-              if (newList.length === 8) {
-                (sessionCache as any).capturedPhotosTemp = newList;
-                router.push({ pathname: '/checkin/select' });
-              }
+            if (newList.length >= CAPTURE_LIMIT) {
+              (sessionCache as any).capturedPhotosTemp = newList;
+              router.push({ pathname: '/checkin/select' });
             }
           }
         }
@@ -202,33 +165,21 @@ export const CheckinCameraScreen = () => {
           {slotsCount > 1 && (
             <View style={styles.stepIndicatorContainer}>
               <Text style={styles.stepIndicatorText}>
-                {slotsCount === 4 ? (
-                  capturedPhotos.length < 4
-                    ? `ĐÃ CHỤP: ${capturedPhotos.length}/4`
-                    : 'ĐÃ CHỤP ĐỦ 4 ẢNH. ĐANG CHUYỂN HƯỚNG...'
-                ) : (
-                  capturedPhotos.length < 8 
-                    ? `ĐÃ CHỤP: ${capturedPhotos.length}/8` 
-                    : 'ĐÃ CHỤP ĐỦ 8 ẢNH. ĐANG CHUYỂN HƯỚNG...'
-                )}
+                {capturedPhotos.length < CAPTURE_LIMIT
+                  ? `ĐÃ CHỤP: ${capturedPhotos.length}/${CAPTURE_LIMIT}`
+                  : `ĐÃ CHỤP ĐỦ ${CAPTURE_LIMIT} ẢNH. ĐANG CHUYỂN HƯỚNG...`}
               </Text>
               <View style={styles.progressBarBg}>
                 <View
                   style={[
                     styles.progressBarFill,
-                    { width: `${(capturedPhotos.length / (slotsCount === 4 ? 4 : 8)) * 100}%` }
+                    { width: `${(capturedPhotos.length / CAPTURE_LIMIT) * 100}%` }
                   ]}
                 />
               </View>
             </View>
           )}
-          <View style={{ flex: 1 }}>
-            {countdown !== null && (
-              <View style={styles.countdownContainer}>
-                <Text style={styles.countdownText}>{countdown}</Text>
-              </View>
-            )}
-          </View>
+          <View style={{ flex: 1 }} />
           <View style={styles.bottomControlsPanel}>
 
             <View style={styles.filtersWrapper}>
@@ -268,22 +219,21 @@ export const CheckinCameraScreen = () => {
                 <TouchableOpacity
                   style={[
                     styles.captureButton,
-                    (isCounting || capturedPhotos.length >= (slotsCount === 4 ? 4 : 8)) && styles.captureButtonDisabled
+                    capturedPhotos.length >= CAPTURE_LIMIT && styles.captureButtonDisabled
                   ]}
-                  onPress={startCountdown}
-                  disabled={isCounting || capturedPhotos.length >= (slotsCount === 4 ? 4 : 8)}
+                  onPress={handleCapture}
+                  disabled={capturedPhotos.length >= CAPTURE_LIMIT}
                 >
                   <Feather name="camera" size={28} color="#fff" />
                 </TouchableOpacity>
                 <Text style={styles.captureButtonSubtext}>
-                  {isCounting 
-                    ? 'Đang đếm ngược...' 
-                    : capturedPhotos.length >= (slotsCount === 4 ? 4 : 8)
-                      ? 'Đã đủ ảnh' 
-                      : `Chụp ảnh ${capturedPhotos.length + 1}`}
+                  {capturedPhotos.length >= CAPTURE_LIMIT
+                    ? 'Đã đủ ảnh'
+                    : `Chụp ảnh ${capturedPhotos.length + 1}`}
                 </Text>
               </View>
-              {slotsCount === 8 ? (
+              {/* Nút bỏ qua: cho phép vào màn chọn ảnh sớm nếu đã có ít nhất 4 tấm */}
+              {slotsCount > 1 ? (
                 <TouchableOpacity
                   style={[
                     styles.confirmButton,
