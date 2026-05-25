@@ -258,10 +258,10 @@ export default function ProfileScreen() {
         setProfile((prev) =>
           prev
             ? {
-                ...prev,
-                displayName: newDisplayName.trim(),
-                image: finalUrl ? `${finalUrl}?t=${Date.now()}` : prev.image,
-              }
+              ...prev,
+              displayName: newDisplayName.trim(),
+              image: finalUrl ? `${finalUrl}?t=${Date.now()}` : prev.image,
+            }
             : null,
         );
 
@@ -369,7 +369,7 @@ export default function ProfileScreen() {
 
   const handleEquip = async (item: any) => {
     if (!profile?.userId) return;
-    
+
     try {
       if (item.type === 'avatar') {
         const confirmed = await showConfirm(
@@ -377,13 +377,13 @@ export default function ProfileScreen() {
           `Bạn có muốn sử dụng "${item.name}" làm ảnh đại diện không?`,
           'Đồng ý'
         );
-        
+
         if (confirmed) {
           setIsUpdating(true);
           const success = await userService.updateProfile(profile.userId, {
             image: item.image
           });
-          
+
           if (success) {
             showToast("Đã thay đổi ảnh đại diện");
             loadData();
@@ -398,13 +398,13 @@ export default function ProfileScreen() {
           isCurrentFrame ? `Bạn có muốn gỡ khung "${item.name}" không?` : `Bạn có muốn sử dụng khung "${item.name}" cho ảnh đại diện không?`,
           'Đồng ý'
         );
-        
+
         if (confirmed) {
           setIsUpdating(true);
           const success = await userService.updateProfile(profile.userId, {
             avatarFrame: isCurrentFrame ? '' : item.image
           });
-          
+
           if (success) {
             showToast(isCurrentFrame ? "Đã gỡ khung ảnh" : "Đã áp dụng khung ảnh");
             loadData();
@@ -467,9 +467,9 @@ export default function ProfileScreen() {
                   contentFit="contain"
                 />
               ) : null}
-              <ExpoImage 
-                source={getImageSource(profile?.image || 'https://i.pravatar.cc/300')} 
-                style={styles.avatar} 
+              <ExpoImage
+                source={getImageSource(profile?.image || 'https://i.pravatar.cc/300')}
+                style={styles.avatar}
                 contentFit="cover"
               />
               {profile?.isVerified && (
@@ -573,7 +573,7 @@ export default function ProfileScreen() {
                   <ExpoImage
                     source={getImageSource(
                       trip.provinceImage ||
-                        'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=800',
+                      'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=800',
                     )}
                     style={styles.tripImage}
                     contentFit="cover"
@@ -616,8 +616,8 @@ export default function ProfileScreen() {
               style={styles.inventoryScroll}
             >
               {profile.inventory.map((item, index) => (
-                <TouchableOpacity 
-                  key={index} 
+                <TouchableOpacity
+                  key={index}
                   style={styles.inventoryItemCard}
                   onPress={() => handleEquip(item)}
                   activeOpacity={0.7}
@@ -643,7 +643,7 @@ export default function ProfileScreen() {
           {/* Settings Section */}
           <View style={styles.settingsGroup}>
             {(profile?.role === 'hotel_owner' || profile?.role === 'admin') && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.settingItem}
                 onPress={() => router.push('/hotel-management')}
               >
@@ -656,7 +656,7 @@ export default function ProfileScreen() {
             )}
 
             {(profile?.role === 'user' || profile?.role === 'creator') && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.settingItem}
                 onPress={() => router.push('/creator-upgrade')}
               >
@@ -682,7 +682,7 @@ export default function ProfileScreen() {
             )}
 
             {profile?.role === 'user' && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.settingItem}
                 onPress={() => router.push('/hotel-owner-registration')}
               >
@@ -749,9 +749,9 @@ export default function ProfileScreen() {
                     contentFit="contain"
                   />
                 ) : null}
-                <Image 
-                  source={getImageSource(newImage || 'https://i.pravatar.cc/300')} 
-                  style={styles.modalAvatar} 
+                <Image
+                  source={getImageSource(newImage || 'https://i.pravatar.cc/300')}
+                  style={styles.modalAvatar}
                 />
               </View>
 
@@ -1088,8 +1088,8 @@ const styles = StyleSheet.create({
   },
   avatarFrame: {
     position: 'absolute',
-    width: 120,
-    height: 120,
+    width: 130,
+    height: 130,
     zIndex: 1,
   },
   verifiedBadge: {
@@ -1438,8 +1438,8 @@ const styles = StyleSheet.create({
   },
   modalAvatarFrame: {
     position: 'absolute',
-    width: 100,
-    height: 100,
+    width: 110,
+    height: 110,
     zIndex: 1,
   },
   editInputGroup: {

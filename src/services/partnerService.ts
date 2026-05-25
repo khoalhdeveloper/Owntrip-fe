@@ -5,7 +5,8 @@ export interface ILegalDocuments {
   businessLicense: string;
   securityCertificate: string;
   pcccCertificate: string;
-  identityCard: string;
+  identityCardFront: string;
+  identityCardBack: string;
   leaseContract?: string; // For Homestay/Apartment
 }
 
