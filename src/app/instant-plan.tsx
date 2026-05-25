@@ -95,34 +95,7 @@ export default function InstantPlanScreen() {
           </LinearGradient>
         </TouchableOpacity>
 
-        {/* Create travel guideline card */}
-        <TouchableOpacity style={[styles.cardContainer, { marginTop: 30 }]} activeOpacity={0.85} onPress={() => router.push('/create-guide')}>
-          <LinearGradient
-            colors={['#00A3FF', '#62C2FF']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.cardGradient}
-          >
-            <View style={styles.cardGlow_2} />
-            <View style={styles.glassInner} />
-            <View style={styles.cardContent}>
-              <View style={styles.textSection}>
-                <Text style={styles.cardTitle}>Cẩm nang du lịch</Text>
-                <Text style={styles.cardDescription}>
-                  Viết hướng dẫn bỏ túi và chia sẻ khoảnh khắc đẹp.
-                </Text>
-              </View>
-              <View style={styles.cardRight}>
-                <View style={styles.iconContainerMain}>
-                  <Image
-                    source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2666/2666505.png' }}
-                    style={styles.cardIconLarge}
-                  />
-                </View>
-              </View>
-            </View>
-          </LinearGradient>
-        </TouchableOpacity>
+
       </ScrollView>
 
       {/* Footer Back Button */}
