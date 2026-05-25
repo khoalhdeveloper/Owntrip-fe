@@ -119,7 +119,7 @@ export default function HomeScreen() {
       const fetchTrending = async () => {
         try {
           setLoading(true);
-          const places = await placesService.searchTrending();
+          const places = await placesService.getTopPlaces();
 
           // Strictly filter: Must have BOTH 'photo' AND 'photos' array populated
           const placesWithPhotos = (places || []).filter(

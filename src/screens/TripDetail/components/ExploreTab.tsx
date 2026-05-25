@@ -29,11 +29,12 @@ interface Category {
   key: string;
   label: string;
   emoji: string;
-  apiType: string; // sent to API as `type` param
+  apiType?: string; // sent to API as `type` param
+  apiTypes?: string[];
 }
 
 const CATEGORIES: Category[] = [
-  { key: 'all', label: 'Tất cả', emoji: '📍', apiType: '' },
+  { key: 'all', label: 'Tất cả', emoji: '📍', apiTypes: ['tourist_attraction', 'cafe', 'restaurant'] },
   { key: 'restaurant', label: 'Nhà hàng', emoji: '🍽️', apiType: 'restaurant' },
   { key: 'cafe', label: 'Cà phê', emoji: '☕', apiType: 'cafe' },
   { key: 'attraction', label: 'Tham quan', emoji: '🏛️', apiType: 'tourist_attraction' },
@@ -150,27 +151,47 @@ export default function ExploreTab({ trip, days }: ExploreTabProps) {
       if (!coords) return;
       setLoading(true);
       try {
-        let result: Place[];
+        let result: Place[] = [];
+        const cat = CATEGORIES.find((c) => c.key === (category || activeCategory));
+        const typesToFetch = cat?.apiTypes || (cat?.apiType ? [cat.apiType] : ['']);
+
         if (query && query.trim().length > 0) {
           // Text search with location bias
-          result = await placesService.searchText({
-            q: query,
-            lat: coords.lat,
-            lng: coords.lng,
-            radius: 5000,
-            limit: 30,
-          });
+          const fetchPromises = typesToFetch.map(t => 
+            placesService.searchText({
+              q: query,
+              lat: coords.lat,
+              lng: coords.lng,
+              radius: 5000,
+              limit: 30,
+              type: t || undefined, // send undefined if empty string
+            })
+          );
+          const resultsArray = await Promise.all(fetchPromises);
+          result = resultsArray.flat();
         } else {
           // Category-specific API call
-          const cat = CATEGORIES.find((c) => c.key === (category || activeCategory));
-          const typeParam = cat?.apiType || '';
-          result = await placesService.searchNearby({
-            lat: coords.lat,
-            lng: coords.lng,
-            radius: 5000,
-            ...(typeParam ? { type: typeParam } : {}),
-          });
+          const fetchPromises = typesToFetch.map(t => 
+            placesService.searchNearby({
+              lat: coords.lat,
+              lng: coords.lng,
+              radius: 5000,
+              ...(t ? { type: t } : {}),
+            })
+          );
+          const resultsArray = await Promise.all(fetchPromises);
+          result = resultsArray.flat();
         }
+        
+        // Deduplicate results
+        const uniquePlaces = new Map<string, Place>();
+        result.forEach(p => {
+          if (!uniquePlaces.has(p.placeId)) {
+            uniquePlaces.set(p.placeId, p);
+          }
+        });
+        result = Array.from(uniquePlaces.values());
+        
         setPlaces(result);
       } catch (error) {
         console.error('Error fetching explore places:', error);

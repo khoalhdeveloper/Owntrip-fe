@@ -174,14 +174,28 @@ export const placesService = {
    * Tìm kiếm địa điểm theo địa chỉ
    * GET /api/places/address?address=Da Lat
    */
-  searchByAddress: async (address: string): Promise<Place[]> => {
+  searchByAddress: async (address: string, type?: string): Promise<Place[]> => {
     try {
       const response = await axiosClient.get<any, PlacesResponse>(ENDPOINTS.PLACES.ADDRESS_SEARCH, {
-        params: { address },
+        params: { address, ...(type ? { type } : {}) },
       });
       return response?.places ?? [];
     } catch (error) {
       console.error('Error searching places by address:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Lấy danh sách địa điểm nổi bật (Top places)
+   * GET /api/places/gettopplaces
+   */
+  getTopPlaces: async (): Promise<Place[]> => {
+    try {
+      const response = await axiosClient.get<any, any>(ENDPOINTS.PLACES.GET_TOP);
+      return response?.places ?? response?.data ?? [];
+    } catch (error) {
+      console.error('Error getting top places:', error);
       return [];
     }
   },

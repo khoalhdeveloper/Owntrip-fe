@@ -40,6 +40,7 @@ export const ENDPOINTS = {
     TEXT_SEARCH: '/api/places/text',
     ADDRESS_SEARCH: '/api/places/address',
     PHOTO: '/api/places/photo',
+    GET_TOP: '/api/places/gettopplaces',
   },
   PLANS: {
     ADD_PLACE: (dayId: string) => `/api/plans/day/${dayId}/place`,
