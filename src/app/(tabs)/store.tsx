@@ -12,6 +12,7 @@ import {
   Modal,
   Alert,
   Linking,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
@@ -24,6 +25,8 @@ import { userService, UserProfile } from '@/services/userService';
 import { souvenirsService, Souvenir } from '@/services/souvenirsService';
 import { decorationsService, Decoration } from '@/services/decorationsService';
 import { useConfirm } from '@/components/ConfirmProvider';
+import axiosClient from '@/services/axiosClient';
+import { ENDPOINTS } from '@/constants/api';
 
 const { width } = Dimensions.get('window');
 const CARD_GAP = 12;
@@ -52,6 +55,9 @@ export default function StoreScreen() {
   const [selectedDecoration, setSelectedDecoration] = useState<Decoration | null>(null);
   const [selectedSouvenir, setSelectedSouvenir] = useState<Souvenir | null>(null);
   const [buying, setBuying] = useState(false);
+  const [pointsTopupVisible, setPointsTopupVisible] = useState(false);
+  const [pointsAmount, setPointsAmount] = useState('');
+  const [pollingIntervalId, setPollingIntervalId] = useState<NodeJS.Timeout | null>(null);
   const { alert: showAlert, confirm: showConfirm, show: customShow } = useConfirm();
   // Sử dụng 'points' làm 'coins' trong Store vì balance thường là tiền mặt/ví
   const coinBalance = profile?.points ?? 0;
@@ -194,27 +200,9 @@ export default function StoreScreen() {
               <TouchableOpacity
                 style={styles.topUpBtnWrap}
                 activeOpacity={0.85}
-                onPress={async () => {
-                  const methodIdx = await customShow({
-                    title: 'Nạp điểm',
-                    message: 'Chọn phương thức nạp điểm:',
-                    icon: 'question',
-                    buttons: [
-                      { text: 'Huỷ', style: 'cancel' },
-                      { text: 'Simulate (50k)', style: 'default' },
-                    ],
-                  });
-
-                  if (methodIdx === 1) {
-                    // Simulate
-                    const res = await userService.topUpPoints(50000);
-                    if (res.success) {
-                      showAlert('Thành công', `Đã nhận được ${res.pointsEarned} điểm!`, 'success');
-                      loadProfile();
-                    } else {
-                      showAlert('Lỗi', res.message, 'error');
-                    }
-                  }
+                onPress={() => {
+                  setPointsTopupVisible(true);
+                  setPointsAmount('');
                 }}
               >
                 <LinearGradient
@@ -483,6 +471,91 @@ export default function StoreScreen() {
               </SafeAreaView>
             </View>
           )}
+        </Modal>
+
+        {/* Modal Nạp Điểm bằng PayOS */}
+        <Modal
+          visible={pointsTopupVisible}
+          animationType="fade"
+          transparent
+          onRequestClose={() => setPointsTopupVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Nạp điểm</Text>
+                <TouchableOpacity onPress={() => setPointsTopupVisible(false)}>
+                  <Feather name="x" size={24} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.modalSubtitle}>
+                Nhập số điểm bạn muốn nạp (1 điểm = 1,000 VND)
+              </Text>
+              <TextInput
+                style={styles.pointsInput}
+                keyboardType="number-pad"
+                placeholder="Ví dụ: 50"
+                value={pointsAmount}
+                onChangeText={setPointsAmount}
+              />
+              <TouchableOpacity
+                style={styles.confirmTopUpBtn}
+                onPress={async () => {
+                  const pts = parseInt(pointsAmount, 10);
+                  if (isNaN(pts) || pts <= 0) {
+                    showAlert('Lỗi', 'Vui lòng nhập số điểm hợp lệ', 'error');
+                    return;
+                  }
+                  
+                  const amountVND = pts * 1000;
+                  setPointsTopupVisible(false);
+                  
+                  try {
+                    const bookingId = `topup_points_${Date.now()}`;
+                    const res = await axiosClient.post<any, any>(ENDPOINTS.PAYMENT.CREATE_PAYMENT_LINK, {
+                      bookingId,
+                      amount: amountVND,
+                      description: `Nap ${pts} diem`,
+                    });
+                    
+                    if (res.success && res.data?.checkoutUrl) {
+                      await WebBrowser.openBrowserAsync(res.data.checkoutUrl);
+                      
+                      // Bắt đầu polling
+                      const intervalId = setInterval(async () => {
+                        try {
+                          const statusRes = await axiosClient.get<any, any>(ENDPOINTS.PAYMENT.STATUS(bookingId));
+                          if (statusRes.success && statusRes.data?.paymentStatus === 'paid') {
+                            clearInterval(intervalId);
+                            setPollingIntervalId(null);
+                            WebBrowser.dismissBrowser();
+                            showAlert('Thành công', `Nạp thành công ${pts} điểm!`, 'success');
+                            loadProfile();
+                          }
+                        } catch (e) {
+                          // Ignore polling errors
+                        }
+                      }, 3000);
+                      
+                      setPollingIntervalId(intervalId);
+                      
+                      // Dọn dẹp interval sau 5 phút nếu không thanh toán
+                      setTimeout(() => {
+                        clearInterval(intervalId);
+                        setPollingIntervalId(null);
+                      }, 5 * 60 * 1000);
+                    } else {
+                      showAlert('Lỗi', 'Không thể tạo link thanh toán', 'error');
+                    }
+                  } catch (e: any) {
+                    showAlert('Lỗi', e.message || 'Có lỗi xảy ra', 'error');
+                  }
+                }}
+              >
+                <Text style={styles.confirmTopUpBtnText}>Tiếp tục thanh toán</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </Modal>
 
         {/* Trang chi tiết Souvenir (full-screen tương tự Decoration) */}
@@ -839,5 +912,60 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: width * 0.85,
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1E293B',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    marginBottom: 20,
+  },
+  pointsInput: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#1E293B',
+    marginBottom: 24,
+    backgroundColor: '#F8FAFC',
+  },
+  confirmTopUpBtn: {
+    backgroundColor: '#0D9488',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  confirmTopUpBtnText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '700',
   }
 });
