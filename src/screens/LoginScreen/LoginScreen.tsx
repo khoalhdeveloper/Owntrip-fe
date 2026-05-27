@@ -24,22 +24,14 @@ export default function LoginScreen() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const loginCalled = useRef(false);
   const router = useRouter();
-
-  // ===== GOOGLE SIGN-IN CONFIG =====
   const isExpoGo = Constants.appOwnership === 'expo';
-  const owner = Constants.expoConfig?.owner ?? 'khoale3004';
-  const slug = Constants.expoConfig?.slug ?? 'owntrip';
-  const projectFullName = `@${owner.replace(/^@/, '')}/${slug}`;
-  const redirectUri = isExpoGo
-    ? `https://auth.expo.io/${projectFullName}/oauthredirect`
-    : AuthSession.makeRedirectUri({
-        scheme: 'owntrip',
-        path: 'oauthredirect',
-      });
+  const redirectUri = AuthSession.makeRedirectUri({
+    scheme: 'owntrip',
+  });
 
-  const webClientId = '524802175661-62nri3lt2vkio173e1imnt375qt9kjc5.apps.googleusercontent.com';
+  const webClientId = '1077908035428-qea7lvnkopbd3o7jspukhs919jhaqct5.apps.googleusercontent.com';
   const androidClientId =
-    '524802175661-smom6nhj2khdc5lq2ng15ovph3vgj28o.apps.googleusercontent.com';
+    '1077908035428-qea7lvnkopbd3o7jspukhs919jhaqct5.apps.googleusercontent.com';
   const effectiveAndroidClientId = isExpoGo ? webClientId : androidClientId;
 
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({

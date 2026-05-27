@@ -27,7 +27,7 @@ interface AuthModalProps {
   onGoogleLogin: () => void;
 }
 
-type TabType = 'login' | 'register';
+type TabType = 'login' | 'register' | 'forgot_password_email' | 'forgot_password_otp';
 
 export default function AuthModal({
   visible,
@@ -39,6 +39,8 @@ export default function AuthModal({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [otp, setOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -46,12 +48,24 @@ export default function AuthModal({
     setEmail('');
     setPassword('');
     setDisplayName('');
+    setOtp('');
+    setNewPassword('');
     setShowPassword(false);
   };
 
   const handleTabSwitch = (tab: TabType) => {
     setActiveTab(tab);
     resetForm();
+  };
+
+  const handleBack = () => {
+    if (activeTab === 'forgot_password_otp') {
+      setActiveTab('forgot_password_email');
+    } else if (activeTab === 'forgot_password_email') {
+      setActiveTab('login');
+    } else {
+      onClose();
+    }
   };
 
   const handleLogin = async () => {
@@ -100,6 +114,61 @@ export default function AuthModal({
     }
   };
 
+  const handleSendOTP = async () => {
+    if (!email.trim()) {
+      Toast.show({ type: 'info', text1: 'Thông báo', text2: 'Vui lòng nhập email' });
+      return;
+    }
+    setLoading(true);
+    try {
+      await authService.forgotPasswordSendOTP(email.trim());
+      Toast.show({ type: 'success', text1: 'Thành công', text2: 'Mã OTP đã được gửi đến email của bạn' });
+      setActiveTab('forgot_password_otp');
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || 'Gửi OTP thất bại';
+      Toast.show({ type: 'error', text1: 'Thất bại', text2: msg });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!email.trim() || !otp.trim() || !newPassword.trim()) {
+      Toast.show({ type: 'info', text1: 'Thông báo', text2: 'Vui lòng điền đầy đủ thông tin' });
+      return;
+    }
+    setLoading(true);
+    try {
+      await authService.forgotPasswordReset(email.trim(), otp.trim(), newPassword);
+      Toast.show({ type: 'success', text1: 'Thành công', text2: 'Đặt lại mật khẩu thành công. Hãy đăng nhập.' });
+      setActiveTab('login');
+      resetForm();
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || 'Đặt lại mật khẩu thất bại';
+      Toast.show({ type: 'error', text1: 'Thất bại', text2: msg });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderHeaderTitle = () => {
+    if (activeTab === 'login') return 'Chào mừng quay lại với\nOwnTrip';
+    if (activeTab === 'register') return 'Tạo tài khoản\ncủa bạn';
+    if (activeTab === 'forgot_password_email') return 'Khôi phục mật khẩu';
+    if (activeTab === 'forgot_password_otp') return 'Tạo mật khẩu mới';
+    return '';
+  };
+
+  const renderHeaderSubtitle = () => {
+    if (activeTab === 'login') return 'Đăng nhập để tiếp tục hành trình';
+    if (activeTab === 'register') return 'Đăng ký để tận hưởng trải nghiệm tốt nhất';
+    if (activeTab === 'forgot_password_email') return 'Nhập email để nhận mã xác nhận OTP';
+    if (activeTab === 'forgot_password_otp') return 'Nhập mã OTP và mật khẩu mới của bạn';
+    return '';
+  };
+
+  const isForgotPassword = activeTab === 'forgot_password_email' || activeTab === 'forgot_password_otp';
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -111,21 +180,13 @@ export default function AuthModal({
             resizeMode="cover"
           >
             <View style={styles.headerOverlay} />
-            <TouchableOpacity style={styles.backButton} onPress={onClose} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.backButton} onPress={handleBack} activeOpacity={0.7}>
               <Feather name="arrow-left" size={22} color="#FFFFFF" />
             </TouchableOpacity>
 
             <View style={styles.headerTextContainer}>
-              <Text style={styles.headerTitle}>
-                {activeTab === 'login'
-                  ? 'Chào mừng quay lại với\nOwnTrip'
-                  : 'Tạo tài khoản\ncủa bạn'}
-              </Text>
-              <Text style={styles.headerSubtitle}>
-                {activeTab === 'login'
-                  ? 'Đăng nhập để tiếp tục hành trình'
-                  : 'Đăng ký để tận hưởng trải nghiệm tốt nhất'}
-              </Text>
+              <Text style={styles.headerTitle}>{renderHeaderTitle()}</Text>
+              <Text style={styles.headerSubtitle}>{renderHeaderSubtitle()}</Text>
             </View>
           </ImageBackground>
 
@@ -142,24 +203,26 @@ export default function AuthModal({
               keyboardShouldPersistTaps="handled"
             >
               {/* Tab Switcher */}
-              <View style={styles.tabContainer}>
-                <TouchableOpacity
-                  style={[styles.tab, activeTab === 'login' && styles.tabActive]}
-                  onPress={() => handleTabSwitch('login')}
-                >
-                  <Text style={[styles.tabText, activeTab === 'login' && styles.tabTextActive]}>
-                    Đăng nhập
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.tab, activeTab === 'register' && styles.tabActive]}
-                  onPress={() => handleTabSwitch('register')}
-                >
-                  <Text style={[styles.tabText, activeTab === 'register' && styles.tabTextActive]}>
-                    Đăng ký
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              {!isForgotPassword && (
+                <View style={styles.tabContainer}>
+                  <TouchableOpacity
+                    style={[styles.tab, activeTab === 'login' && styles.tabActive]}
+                    onPress={() => handleTabSwitch('login')}
+                  >
+                    <Text style={[styles.tabText, activeTab === 'login' && styles.tabTextActive]}>
+                      Đăng nhập
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.tab, activeTab === 'register' && styles.tabActive]}
+                    onPress={() => handleTabSwitch('register')}
+                  >
+                    <Text style={[styles.tabText, activeTab === 'register' && styles.tabTextActive]}>
+                      Đăng ký
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
 
               {/* Form */}
               <View style={styles.form}>
@@ -178,54 +241,105 @@ export default function AuthModal({
                   </View>
                 )}
 
-                {/* Email */}
-                <View style={styles.inputContainer}>
-                  <MaterialIcons
-                    name="mail-outline"
-                    size={20}
-                    color="#A0AEC0"
-                    style={styles.inputIcon}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Địa chỉ Email"
-                    placeholderTextColor="#A0AEC0"
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                  />
-                </View>
+                {/* Email - Hiện ở đăng ký, đăng nhập, forgot_email */}
+                {activeTab !== 'forgot_password_otp' && (
+                  <View style={styles.inputContainer}>
+                    <MaterialIcons
+                      name="mail-outline"
+                      size={20}
+                      color="#A0AEC0"
+                      style={styles.inputIcon}
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Địa chỉ Email"
+                      placeholderTextColor="#A0AEC0"
+                      value={email}
+                      onChangeText={setEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                    />
+                  </View>
+                )}
 
-                {/* Password */}
-                <View style={styles.inputContainer}>
-                  <MaterialIcons
-                    name="lock-outline"
-                    size={20}
-                    color="#A0AEC0"
-                    style={styles.inputIcon}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Mật khẩu"
-                    placeholderTextColor="#A0AEC0"
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry={!showPassword}
-                  />
-                  <TouchableOpacity
-                    onPress={() => setShowPassword(!showPassword)}
-                    style={styles.eyeButton}
-                  >
-                    <Feather name={showPassword ? 'eye' : 'eye-off'} size={20} color="#A0AEC0" />
-                  </TouchableOpacity>
-                </View>
+                {/* OTP - Chỉ hiện ở forgot_otp */}
+                {activeTab === 'forgot_password_otp' && (
+                  <View style={styles.inputContainer}>
+                    <MaterialIcons
+                      name="lock-outline"
+                      size={20}
+                      color="#A0AEC0"
+                      style={styles.inputIcon}
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Nhập mã OTP (6 số)"
+                      placeholderTextColor="#A0AEC0"
+                      value={otp}
+                      onChangeText={setOtp}
+                      keyboardType="numeric"
+                      maxLength={6}
+                    />
+                  </View>
+                )}
+
+                {/* Password - Đăng ký, đăng nhập */}
+                {(activeTab === 'login' || activeTab === 'register') && (
+                  <View style={styles.inputContainer}>
+                    <MaterialIcons
+                      name="lock-outline"
+                      size={20}
+                      color="#A0AEC0"
+                      style={styles.inputIcon}
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Mật khẩu"
+                      placeholderTextColor="#A0AEC0"
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry={!showPassword}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowPassword(!showPassword)}
+                      style={styles.eyeButton}
+                    >
+                      <Feather name={showPassword ? 'eye' : 'eye-off'} size={20} color="#A0AEC0" />
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {/* New Password - Chỉ hiện ở forgot_otp */}
+                {activeTab === 'forgot_password_otp' && (
+                  <View style={styles.inputContainer}>
+                    <MaterialIcons
+                      name="lock-outline"
+                      size={20}
+                      color="#A0AEC0"
+                      style={styles.inputIcon}
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Mật khẩu mới"
+                      placeholderTextColor="#A0AEC0"
+                      value={newPassword}
+                      onChangeText={setNewPassword}
+                      secureTextEntry={!showPassword}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowPassword(!showPassword)}
+                      style={styles.eyeButton}
+                    >
+                      <Feather name={showPassword ? 'eye' : 'eye-off'} size={20} color="#A0AEC0" />
+                    </TouchableOpacity>
+                  </View>
+                )}
 
                 {/* Remember me + Forget Password */}
                 {activeTab === 'login' && (
                   <View style={styles.optionsRow}>
                     <Text style={styles.optionText}>Ghi nhớ tôi</Text>
-                    <TouchableOpacity>
+                    <TouchableOpacity onPress={() => setActiveTab('forgot_password_email')}>
                       <Text style={styles.forgotText}>Quên mật khẩu?</Text>
                     </TouchableOpacity>
                   </View>
@@ -234,7 +348,12 @@ export default function AuthModal({
                 {/* Submit Button */}
                 <TouchableOpacity
                   style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-                  onPress={activeTab === 'login' ? handleLogin : handleRegister}
+                  onPress={
+                    activeTab === 'login' ? handleLogin :
+                    activeTab === 'register' ? handleRegister :
+                    activeTab === 'forgot_password_email' ? handleSendOTP :
+                    handleResetPassword
+                  }
                   disabled={loading}
                   activeOpacity={0.8}
                 >
@@ -242,30 +361,36 @@ export default function AuthModal({
                     <ActivityIndicator color="#FFFFFF" />
                   ) : (
                     <Text style={styles.submitText}>
-                      {activeTab === 'login' ? 'Đăng nhập' : 'Đăng ký'}
+                      {activeTab === 'login' ? 'Đăng nhập' : 
+                       activeTab === 'register' ? 'Đăng ký' :
+                       activeTab === 'forgot_password_email' ? 'Gửi mã OTP' :
+                       'Xác nhận đặt lại'}
                     </Text>
                   )}
                 </TouchableOpacity>
 
-                {/* Divider */}
-                <View style={styles.dividerRow}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>Hoặc đăng nhập bằng</Text>
-                  <View style={styles.dividerLine} />
-                </View>
+                {/* Divider & Google - hide in forgot password */}
+                {!isForgotPassword && (
+                  <>
+                    <View style={styles.dividerRow}>
+                      <View style={styles.dividerLine} />
+                      <Text style={styles.dividerText}>Hoặc đăng nhập bằng</Text>
+                      <View style={styles.dividerLine} />
+                    </View>
 
-                {/* Google Button */}
-                <TouchableOpacity
-                  style={styles.socialButton}
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    onClose();
-                    setTimeout(onGoogleLogin, 300);
-                  }}
-                >
-                  <FontAwesome name="google" size={20} color="#4285F4" />
-                  <Text style={styles.socialText}>Google</Text>
-                </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.socialButton}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        onClose();
+                        setTimeout(onGoogleLogin, 300);
+                      }}
+                    >
+                      <FontAwesome name="google" size={20} color="#4285F4" />
+                      <Text style={styles.socialText}>Google</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
               </View>
             </ScrollView>
           </KeyboardAvoidingView>

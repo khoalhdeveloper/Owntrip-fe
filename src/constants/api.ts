@@ -10,6 +10,8 @@ export const ENDPOINTS = {
     GOOGLE_LOGIN: '/api/users/login/google',
     LOGOUT: '/api/users/logout',
     REFRESH_TOKEN: '/api/users/refresh-token',
+    FORGOT_PASSWORD_SEND_OTP: '/api/users/forgot-password/send-otp',
+    FORGOT_PASSWORD_RESET: '/api/users/forgot-password/reset',
   },
   USERS: {
     PROFILE: '/api/users/me',

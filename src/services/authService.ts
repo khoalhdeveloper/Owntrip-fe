@@ -13,4 +13,12 @@ export const authService = {
   googleLogin: async (idToken: string) => {
     return await axiosClient.post(ENDPOINTS.AUTH.GOOGLE_LOGIN, { idToken });
   },
+
+  forgotPasswordSendOTP: async (email: string) => {
+    return await axiosClient.post(ENDPOINTS.AUTH.FORGOT_PASSWORD_SEND_OTP, { email });
+  },
+
+  forgotPasswordReset: async (email: string, otp: string, newPassword: string) => {
+    return await axiosClient.post(ENDPOINTS.AUTH.FORGOT_PASSWORD_RESET, { email, otp, newPassword });
+  },
 };
