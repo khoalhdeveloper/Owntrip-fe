@@ -8,7 +8,11 @@
     "icon": "./assets/images/icon.png",
     "scheme": "owntrip",
     "extra": {
-      "googleWebClientId": "524802175661-62nri3lt2vkio173e1imnt375qt9kjc5.apps.googleusercontent.com"
+      "googleWebClientId": "524802175661-62nri3lt2vkio173e1imnt375qt9kjc5.apps.googleusercontent.com",
+      "router": {},
+      "eas": {
+        "projectId": "375ddeaa-4ef3-44e8-89de-e25030f322e3"
+      }
     },
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -30,7 +34,8 @@
         "googleMaps": {
           "apiKey": "AIzaSyDJe6vKECRNVew2g9EHKedjj65EimJ18FI"
         }
-      }
+      },
+      "package": "com.khoale3004.owntrip"
     },
     "web": {
       "output": "static",
