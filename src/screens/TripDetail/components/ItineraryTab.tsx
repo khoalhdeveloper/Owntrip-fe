@@ -52,10 +52,6 @@ function formatDayDate(dateStr: string): string {
 }
 
 function getTimeOfDay(order: number, timeOfDay?: string): { label: string; color: string } {
-  if (timeOfDay === 'morning') return { label: 'Buổi sáng', color: '#F59E0B' };
-  if (timeOfDay === 'afternoon') return { label: 'Buổi chiều', color: '#3B82F6' };
-  if (timeOfDay === 'evening') return { label: 'Buổi tối', color: '#8B5CF6' };
-
   if (order <= 2) return { label: 'Buổi sáng', color: '#F59E0B' };
   if (order <= 4) return { label: 'Buổi chiều', color: '#3B82F6' };
   return { label: 'Buổi tối', color: '#8B5CF6' };

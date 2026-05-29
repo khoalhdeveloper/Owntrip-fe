@@ -1461,7 +1461,7 @@ function BudgetRow({ label, amount, total }: { label: string; amount: number; to
     <View style={styles.budgetRow}>
       <View style={styles.budgetRowHeader}>
         <Text style={styles.budgetLabel}>{label}</Text>
-        <Text style={styles.budgetValue}>${amount.toLocaleString()}</Text>
+        <Text style={styles.budgetValue}>{amount.toLocaleString('vi-VN')}₫</Text>
       </View>
       <View style={styles.budgetBarBg}>
         <View style={[styles.budgetBarFill, { width: `${Math.max(pct, 2)}%` }]} />
