@@ -15,7 +15,7 @@ import { styles } from './styles/login.styles';
 import { authService } from '@/services/authService';
 import { decodeJWT } from '@/utils/jwtUtils';
 
-const loginBg = require('@/assets/images/login-bg.png');
+const loginBg = require('@/assets/images/login-bg.jpg');
 const logo = require('@/assets/images/logo.png');
 
 WebBrowser.maybeCompleteAuthSession();
