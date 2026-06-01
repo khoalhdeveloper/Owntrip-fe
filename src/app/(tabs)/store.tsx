@@ -22,7 +22,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as WebBrowser from 'expo-web-browser';
 import { decodeJWT } from '@/utils/jwtUtils';
 import { userService, UserProfile } from '@/services/userService';
-import { souvenirsService, Souvenir } from '@/services/souvenirsService';
+import { tripService, Trip } from '@/services/tripService';
 import { decorationsService, Decoration } from '@/services/decorationsService';
 import { useConfirm } from '@/components/ConfirmProvider';
 import axiosClient from '@/services/axiosClient';
@@ -48,12 +48,11 @@ function getDecorationCategory(type?: string) {
 export default function StoreScreen() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [souvenirs, setSouvenirs] = useState<Souvenir[]>([]);
-  const [loadingSouvenirs, setLoadingSouvenirs] = useState(true);
+  const [marketplaceTrips, setMarketplaceTrips] = useState<Trip[]>([]);
+  const [loadingTrips, setLoadingTrips] = useState(true);
   const [decorations, setDecorations] = useState<Decoration[]>([]);
   const [loadingDecorations, setLoadingDecorations] = useState(true);
   const [selectedDecoration, setSelectedDecoration] = useState<Decoration | null>(null);
-  const [selectedSouvenir, setSelectedSouvenir] = useState<Souvenir | null>(null);
   const [buying, setBuying] = useState(false);
   const [pointsTopupVisible, setPointsTopupVisible] = useState(false);
   const [pointsAmount, setPointsAmount] = useState('');
@@ -90,15 +89,15 @@ export default function StoreScreen() {
     }
   }, []);
 
-  const loadSouvenirs = useCallback(async () => {
-    setLoadingSouvenirs(true);
+  const loadMarketplaceTrips = useCallback(async () => {
+    setLoadingTrips(true);
     try {
-      const list = await souvenirsService.getList();
-      setSouvenirs(list);
+      const list = await tripService.getMarketplaceTrips(1, 6);
+      setMarketplaceTrips(list);
     } catch {
-      setSouvenirs([]);
+      setMarketplaceTrips([]);
     } finally {
-      setLoadingSouvenirs(false);
+      setLoadingTrips(false);
     }
   }, []);
 
@@ -117,10 +116,21 @@ export default function StoreScreen() {
   useFocusEffect(
     useCallback(() => {
       loadProfile();
-      loadSouvenirs();
+      loadMarketplaceTrips();
       loadDecorations();
-    }, [loadProfile, loadSouvenirs, loadDecorations]),
+    }, [loadProfile, loadMarketplaceTrips, loadDecorations]),
   );
+
+  const getDayCount = (trip: Trip) => {
+    if (trip.totalDays) return trip.totalDays;
+    if (trip.startDate && trip.endDate) {
+      const diff = Math.round(
+        (new Date(trip.endDate).getTime() - new Date(trip.startDate).getTime()) / (1000 * 60 * 60 * 24)
+      );
+      return diff > 0 ? diff : 1;
+    }
+    return 1;
+  };
 
   const handleBuyItem = async (item: {
     id: string;
@@ -250,47 +260,80 @@ export default function StoreScreen() {
             </LinearGradient>
           </TouchableOpacity>
 
-          {/* Souvenir collections - từ MockAPI */}
+          {/* Plan đang bán của Creator */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Bộ sưu tập lưu niệm</Text>
-              <TouchableOpacity>
+              <Text style={styles.sectionTitle}>Plan đang bán</Text>
+              <TouchableOpacity onPress={() => router.push('/marketplace' as any)}>
                 <Text style={styles.viewAll}>Xem tất cả &gt;</Text>
               </TouchableOpacity>
             </View>
-            {loadingSouvenirs ? (
+            {loadingTrips ? (
               <View style={styles.loadingRow}>
                 <ActivityIndicator size="large" color="#3B82F6" />
               </View>
+            ) : marketplaceTrips.length === 0 ? (
+              <View style={styles.emptyPackages}>
+                <Feather name="map" size={32} color="#CBD5E1" />
+                <Text style={styles.emptyPackagesText}>Chưa có plan nào đang bán</Text>
+              </View>
             ) : (
-              <View style={styles.grid}>
-                {souvenirs.slice(0, 4).map((item) => (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={styles.productCard}
-                    activeOpacity={0.85}
-                    onPress={() => setSelectedSouvenir(item)}
-                  >
-                    <Image source={{ uri: item.image }} style={styles.productImage} />
-                    <Text style={styles.productName} numberOfLines={2}>
-                      {item.name}
-                    </Text>
-                    <Text style={styles.productArtist}>
-                      {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
-                    </Text>
-                    <LinearGradient
-                      colors={['#3B82F6', '#10B981']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.priceBtn}
+              <View style={styles.tripGrid}>
+                {marketplaceTrips.slice(0, 6).map((trip) => {
+                  const days = getDayCount(trip);
+                  const coverImage = trip.provinceImage || trip.accommodation?.hotelImage;
+                  return (
+                    <TouchableOpacity
+                      key={trip._id}
+                      style={styles.tripCard}
+                      activeOpacity={0.88}
+                      onPress={() => router.push(`/trip/${trip._id}` as any)}
                     >
-                      <Text style={styles.priceBtnText}>{item.amount} xu</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                ))}
+                      {/* Ảnh bìa */}
+                      <View style={styles.tripImageWrap}>
+                        {coverImage ? (
+                          <Image source={{ uri: coverImage }} style={styles.tripImage} />
+                        ) : (
+                          <View style={[styles.tripImage, styles.tripImagePlaceholder]}>
+                            <Feather name="map-pin" size={28} color="#94A3B8" />
+                          </View>
+                        )}
+                        {/* Badge số ngày */}
+                        <View style={styles.tripDayBadge}>
+                          <Text style={styles.tripDayBadgeText}>{days} NGÀY</Text>
+                        </View>
+                      </View>
+
+                      {/* Thông tin */}
+                      <View style={styles.tripCardBody}>
+                        <Text style={styles.tripCardTitle} numberOfLines={1}>
+                          {trip.title}
+                        </Text>
+                        <View style={styles.tripLocationRow}>
+                          <Feather name="map-pin" size={11} color="#64748B" />
+                          <Text style={styles.tripLocationText} numberOfLines={1}>
+                            {trip.destination || trip.province}
+                          </Text>
+                        </View>
+                        <View style={styles.tripBottomRow}>
+                          <Text style={styles.tripPrice}>
+                            {(trip.price ?? 0).toLocaleString()}đ
+                          </Text>
+                          <View style={styles.tripRatingRow}>
+                            <Feather name="star" size={11} color="#F59E0B" />
+                            <Text style={styles.tripRatingText}>
+                              {trip.averageRating?.toFixed(1) ?? '5.0'} ({trip.soldCount ?? 0} đã bán)
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             )}
           </View>
+
 
           {/* Decoration - từ MockAPI */}
           <View style={styles.decorationSection}>
@@ -558,83 +601,6 @@ export default function StoreScreen() {
           </View>
         </Modal>
 
-        {/* Trang chi tiết Souvenir (full-screen tương tự Decoration) */}
-        <Modal
-          visible={!!selectedSouvenir}
-          animationType="slide"
-          onRequestClose={() => setSelectedSouvenir(null)}
-        >
-          {selectedSouvenir && (
-            <View style={styles.detailContainer}>
-              <StatusBar barStyle="light-content" />
-              <SafeAreaView style={styles.detailSafe} edges={['top']}>
-                <View style={styles.detailHeader}>
-                  <TouchableOpacity
-                    onPress={() => setSelectedSouvenir(null)}
-                    style={styles.detailBackBtn}
-                  >
-                    <Feather name="arrow-left" size={24} color="#F8FAFC" />
-                  </TouchableOpacity>
-                  <Text style={styles.detailHeaderTitle} numberOfLines={1}>
-                    {selectedSouvenir.name}
-                  </Text>
-                  <View style={styles.detailHeaderRight} />
-                </View>
-
-                <ScrollView
-                  style={styles.detailScroll}
-                  contentContainerStyle={styles.detailScrollContent}
-                  showsVerticalScrollIndicator={false}
-                >
-                  <View style={styles.detailImageWrap}>
-                    <Image source={{ uri: selectedSouvenir.image }} style={styles.detailImage} />
-                  </View>
-
-                  <Text style={styles.detailCategory}>
-                    {selectedSouvenir.type.charAt(0).toUpperCase() + selectedSouvenir.type.slice(1)}
-                  </Text>
-                  <Text style={styles.detailName}>{selectedSouvenir.name}</Text>
-                  <View style={styles.detailPriceRow}>
-                    <Feather name="award" size={22} color="#A78BFA" />
-                    <Text style={styles.detailPrice}>{selectedSouvenir.amount} xu</Text>
-                  </View>
-                  <Text style={styles.detailDesc}>
-                    {selectedSouvenir.description ||
-                      'Quà lưu niệm từ những chuyến đi của bạn. Thanh toán bằng số dư xu để thêm vào bộ sưu tập.'}
-                  </Text>
-                </ScrollView>
-
-                <View style={styles.detailFooter}>
-                  <TouchableOpacity
-                    style={[styles.detailBuyBtn, buying && { opacity: 0.7 }]}
-                    activeOpacity={0.85}
-                    onPress={() =>
-                      handleBuyItem({
-                        id: selectedSouvenir.id,
-                        name: selectedSouvenir.name,
-                        image: selectedSouvenir.image,
-                        type: 'souvenir',
-                        price: selectedSouvenir.amount,
-                      })
-                    }
-                    disabled={buying}
-                  >
-                    {buying ? (
-                      <ActivityIndicator color="#FFF" />
-                    ) : (
-                      <>
-                        <Feather name="award" size={20} color="#FFF" />
-                        <Text style={styles.detailBuyText}>
-                          Mua với {selectedSouvenir.amount} xu
-                        </Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </SafeAreaView>
-            </View>
-          )}
-        </Modal>
       </SafeAreaView>
     </View>
   );
@@ -967,5 +933,100 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 16,
     fontWeight: '700',
-  }
+  },
+
+  // Creator Package styles
+  packageList: { gap: 14 },
+  packageCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  packageCardFeatured: {
+    borderColor: '#7C3AED',
+    borderWidth: 2,
+    shadowColor: '#7C3AED',
+    shadowOpacity: 0.15,
+    elevation: 6,
+  },
+  packageBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: '#7C3AED',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  packageBadgeText: { color: '#FFF', fontSize: 10, fontWeight: '900' },
+  packageCardTop: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
+  packageIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#F3F0FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // Trip grid styles
+  tripGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: CARD_GAP,
+  },
+  tripCard: {
+    width: CARD_WIDTH,
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  tripImageWrap: {
+    position: 'relative',
+    width: '100%',
+    height: 120,
+  },
+  tripImage: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#F1F5F9',
+  },
+  tripImagePlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tripDayBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  tripDayBadgeText: { color: '#FFF', fontSize: 11, fontWeight: '800' },
+  tripCardBody: { padding: 10 },
+  tripCardTitle: { fontSize: 14, fontWeight: '700', color: '#1E293B', marginBottom: 3 },
+  tripLocationRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 6 },
+  tripLocationText: { fontSize: 11, color: '#64748B', flex: 1 },
+  tripBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  tripPrice: { fontSize: 13, fontWeight: '800', color: '#10B981' },
+  tripRatingRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  tripRatingText: { fontSize: 10, color: '#64748B' },
+
+  emptyPackages: { alignItems: 'center' as const, paddingVertical: 32, gap: 10 },
+  emptyPackagesText: { color: '#94A3B8', fontSize: 14, fontWeight: '500' as const },
 });
