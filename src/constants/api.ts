@@ -1,5 +1,5 @@
 export const API_CONFIG = {
-  BASE_URL: 'http://10.0.2.2:3000',
+  BASE_URL: 'https://owntrip.vercel.app',
   TIMEOUT: 15000,
 };
 
@@ -105,6 +105,10 @@ export const ENDPOINTS = {
   },
   FRAMES: {
     LIST: '/api/frames', // Public — lấy danh sách frame đang active
+  },
+  AI: {
+    REARRANGE: '/api/ai/rearrange',
+    AUTO_GENERATE: '/api/ai/auto-generate',
   },
 };
 
