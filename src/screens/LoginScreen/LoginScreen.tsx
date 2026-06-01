@@ -31,7 +31,7 @@ export default function LoginScreen() {
 
   const webClientId = '1077908035428-qea7lvnkopbd3o7jspukhs919jhaqct5.apps.googleusercontent.com';
   const androidClientId =
-    '1077908035428-qea7lvnkopbd3o7jspukhs919jhaqct5.apps.googleusercontent.com';
+    '1077908035428-skkb4uncp5k6stgonoa3oba16oich6ga.apps.googleusercontent.com';
   const effectiveAndroidClientId = isExpoGo ? webClientId : androidClientId;
 
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
