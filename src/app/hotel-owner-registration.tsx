@@ -30,7 +30,16 @@ const PROPERTY_TYPES = [
 ];
 
 const AMENITIES_LIST = [
-  'Wifi', 'Máy lạnh', 'TV', 'Tủ lạnh', 'Máy giặt', 'Hồ bơi', 'Bãi đậu xe', 'Lễ tân 24h', 'Thang máy', 'Gym'
+  'Wifi',
+  'Máy lạnh',
+  'TV',
+  'Tủ lạnh',
+  'Máy giặt',
+  'Hồ bơi',
+  'Bãi đậu xe',
+  'Lễ tân 24h',
+  'Thang máy',
+  'Gym',
 ];
 
 export default function HotelOwnerRegistrationScreen() {
@@ -39,6 +48,8 @@ export default function HotelOwnerRegistrationScreen() {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
+  const [hasAgreedTerms, setHasAgreedTerms] = useState(false);
+  const [isAccepted, setIsAccepted] = useState(false);
 
   // Form State
   const [registrationData, setRegistrationData] = useState<IOwnerRegistration>({
@@ -102,21 +113,21 @@ export default function HotelOwnerRegistrationScreen() {
 
       if (data.secure_url) {
         if (isLegalDoc) {
-          setRegistrationData(prev => ({
+          setRegistrationData((prev) => ({
             ...prev,
-            legalDocuments: { ...prev.legalDocuments, [field]: data.secure_url }
+            legalDocuments: { ...prev.legalDocuments, [field]: data.secure_url },
           }));
         } else {
-          setRegistrationData(prev => ({
+          setRegistrationData((prev) => ({
             ...prev,
-            images: [...prev.images, data.secure_url]
+            images: [...prev.images, data.secure_url],
           }));
         }
       } else {
-        showAlert("Lỗi", "Không thể upload ảnh. Vui lòng thử lại.", "error");
+        showAlert('Lỗi', 'Không thể upload ảnh. Vui lòng thử lại.', 'error');
       }
     } catch (error) {
-      showAlert("Lỗi", "Lỗi kết nối khi upload ảnh.", "error");
+      showAlert('Lỗi', 'Lỗi kết nối khi upload ảnh.', 'error');
     } finally {
       setUploading(null);
     }
@@ -131,32 +142,52 @@ export default function HotelOwnerRegistrationScreen() {
   };
 
   const toggleAmenity = (amenity: string) => {
-    setRegistrationData(prev => ({
+    setRegistrationData((prev) => ({
       ...prev,
       amenities: prev.amenities.includes(amenity)
-        ? prev.amenities.filter(a => a !== amenity)
-        : [...prev.amenities, amenity]
+        ? prev.amenities.filter((a) => a !== amenity)
+        : [...prev.amenities, amenity],
     }));
   };
 
   const handleSubmit = async () => {
     // Basic validation
-    if (!registrationData.legalDocuments.businessLicense || !registrationData.legalDocuments.identityCardFront || !registrationData.legalDocuments.identityCardBack) {
-      showAlert("Thiếu hồ sơ", "Vui lòng tải lên đầy đủ giấy phép kinh doanh và CCCD (cả 2 mặt).", "warning");
+    if (
+      !registrationData.legalDocuments.businessLicense ||
+      !registrationData.legalDocuments.identityCardFront ||
+      !registrationData.legalDocuments.identityCardBack
+    ) {
+      showAlert(
+        'Thiếu hồ sơ',
+        'Vui lòng tải lên đầy đủ giấy phép kinh doanh và CCCD (cả 2 mặt).',
+        'warning',
+      );
       return;
     }
-    if (!registrationData.propertyInfo.name || !registrationData.propertyInfo.address || !registrationData.phone) {
-      showAlert("Thiếu thông tin", "Vui lòng nhập tên, địa chỉ và số điện thoại liên hệ.", "warning");
+    if (
+      !registrationData.propertyInfo.name ||
+      !registrationData.propertyInfo.address ||
+      !registrationData.phone
+    ) {
+      showAlert(
+        'Thiếu thông tin',
+        'Vui lòng nhập tên, địa chỉ và số điện thoại liên hệ.',
+        'warning',
+      );
       return;
     }
 
     try {
       setLoading(true);
       await partnerService.registerHotelOwner(registrationData);
-      await showAlert("Thành công! 🎉", "Hồ sơ của bạn đã được gửi và đang chờ duyệt. Chúng tôi sẽ phản hồi sớm nhất có thể.", "success");
+      await showAlert(
+        'Thành công! 🎉',
+        'Hồ sơ của bạn đã được gửi và đang chờ duyệt. Chúng tôi sẽ phản hồi sớm nhất có thể.',
+        'success',
+      );
       router.replace('/(tabs)/profile');
     } catch (error) {
-      showAlert("Lỗi", "Đã có lỗi xảy ra khi gửi hồ sơ. Vui lòng thử lại sau.", "error");
+      showAlert('Lỗi', 'Đã có lỗi xảy ra khi gửi hồ sơ. Vui lòng thử lại sau.', 'error');
     } finally {
       setLoading(false);
     }
@@ -170,10 +201,14 @@ export default function HotelOwnerRegistrationScreen() {
             {currentStep > step ? (
               <Feather name="check" size={16} color="#FFF" />
             ) : (
-              <Text style={[styles.stepText, currentStep >= step && styles.stepTextActive]}>{step}</Text>
+              <Text style={[styles.stepText, currentStep >= step && styles.stepTextActive]}>
+                {step}
+              </Text>
             )}
           </View>
-          {step < 4 && <View style={[styles.stepLine, currentStep > step && styles.stepLineActive]} />}
+          {step < 4 && (
+            <View style={[styles.stepLine, currentStep > step && styles.stepLineActive]} />
+          )}
         </View>
       ))}
     </View>
@@ -192,16 +227,22 @@ export default function HotelOwnerRegistrationScreen() {
           { id: 'identityCardFront', label: 'CCCD (Mặt trước)', icon: 'user' },
           { id: 'identityCardBack', label: 'CCCD (Mặt sau)', icon: 'user' },
         ].map((doc) => (
-          <TouchableOpacity 
-            key={doc.id} 
-            style={styles.uploadCard} 
+          <TouchableOpacity
+            key={doc.id}
+            style={styles.uploadCard}
             onPress={() => pickImage(doc.id)}
             disabled={!!uploading}
           >
-            {registrationData.legalDocuments[doc.id as keyof typeof registrationData.legalDocuments] ? (
-              <Image 
-                source={{ uri: registrationData.legalDocuments[doc.id as keyof typeof registrationData.legalDocuments] }} 
-                style={styles.uploadedImg} 
+            {registrationData.legalDocuments[
+              doc.id as keyof typeof registrationData.legalDocuments
+            ] ? (
+              <Image
+                source={{
+                  uri: registrationData.legalDocuments[
+                    doc.id as keyof typeof registrationData.legalDocuments
+                  ],
+                }}
+                style={styles.uploadedImg}
               />
             ) : (
               <View style={styles.uploadPlaceholder}>
@@ -210,17 +251,23 @@ export default function HotelOwnerRegistrationScreen() {
                 ) : (
                   <>
                     <View style={styles.uploadIconCircle}>
-                      {doc.id === 'pcccCertificate' ? <FontAwesome5 name="fire" size={24} color="#007AFF" /> : <Feather name={doc.icon as any} size={24} color="#007AFF" />}
+                      {doc.id === 'pcccCertificate' ? (
+                        <FontAwesome5 name="fire" size={24} color="#007AFF" />
+                      ) : (
+                        <Feather name={doc.icon as any} size={24} color="#007AFF" />
+                      )}
                     </View>
                     <Text style={styles.uploadLabel}>{doc.label}</Text>
                   </>
                 )}
               </View>
             )}
-            {registrationData.legalDocuments[doc.id as keyof typeof registrationData.legalDocuments] && (
-               <View style={styles.editBadge}>
-                 <Feather name="edit-2" size={12} color="#FFF" />
-               </View>
+            {registrationData.legalDocuments[
+              doc.id as keyof typeof registrationData.legalDocuments
+            ] && (
+              <View style={styles.editBadge}>
+                <Feather name="edit-2" size={12} color="#FFF" />
+              </View>
             )}
           </TouchableOpacity>
         ))}
@@ -228,17 +275,22 @@ export default function HotelOwnerRegistrationScreen() {
 
       {registrationData.propertyInfo.type !== 'hotel' && (
         <View style={{ marginTop: 20 }}>
-          <Text style={styles.inputLabel}>Hợp đồng thuê nhà / Sổ đỏ (Đối với Homestay/Apartment)</Text>
-          <TouchableOpacity 
-            style={[styles.uploadCard, { width: '100%', height: 120 }]} 
+          <Text style={styles.inputLabel}>
+            Hợp đồng thuê nhà / Sổ đỏ (Đối với Homestay/Apartment)
+          </Text>
+          <TouchableOpacity
+            style={[styles.uploadCard, { width: '100%', height: 120 }]}
             onPress={() => pickImage('leaseContract')}
           >
-             {registrationData.legalDocuments.leaseContract ? (
-              <Image source={{ uri: registrationData.legalDocuments.leaseContract }} style={styles.uploadedImg} />
+            {registrationData.legalDocuments.leaseContract ? (
+              <Image
+                source={{ uri: registrationData.legalDocuments.leaseContract }}
+                style={styles.uploadedImg}
+              />
             ) : (
               <View style={styles.uploadPlaceholder}>
-                 <Feather name="file-plus" size={24} color="#007AFF" />
-                 <Text style={styles.uploadLabel}>Tải lên tài liệu</Text>
+                <Feather name="file-plus" size={24} color="#007AFF" />
+                <Text style={styles.uploadLabel}>Tải lên tài liệu</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -253,14 +305,33 @@ export default function HotelOwnerRegistrationScreen() {
       <Text style={styles.stepDesc}>Cung cấp thông tin vị trí và tên cơ sở</Text>
 
       <View style={styles.typeRow}>
-        {PROPERTY_TYPES.map(type => (
-          <TouchableOpacity 
-            key={type.id} 
-            style={[styles.typeBtn, registrationData.propertyInfo.type === type.id && styles.typeBtnActive]}
-            onPress={() => setRegistrationData(prev => ({ ...prev, propertyInfo: { ...prev.propertyInfo, type: type.id as any } }))}
+        {PROPERTY_TYPES.map((type) => (
+          <TouchableOpacity
+            key={type.id}
+            style={[
+              styles.typeBtn,
+              registrationData.propertyInfo.type === type.id && styles.typeBtnActive,
+            ]}
+            onPress={() =>
+              setRegistrationData((prev) => ({
+                ...prev,
+                propertyInfo: { ...prev.propertyInfo, type: type.id as any },
+              }))
+            }
           >
-            <FontAwesome5 name={type.icon} size={20} color={registrationData.propertyInfo.type === type.id ? '#FFF' : '#718096'} />
-            <Text style={[styles.typeBtnText, registrationData.propertyInfo.type === type.id && styles.typeBtnTextActive]}>{type.label}</Text>
+            <FontAwesome5
+              name={type.icon}
+              size={20}
+              color={registrationData.propertyInfo.type === type.id ? '#FFF' : '#718096'}
+            />
+            <Text
+              style={[
+                styles.typeBtnText,
+                registrationData.propertyInfo.type === type.id && styles.typeBtnTextActive,
+              ]}
+            >
+              {type.label}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -273,7 +344,12 @@ export default function HotelOwnerRegistrationScreen() {
             style={styles.input}
             placeholder="Ví dụ: Grand Hotel"
             value={registrationData.propertyInfo.name}
-            onChangeText={(t) => setRegistrationData(prev => ({ ...prev, propertyInfo: { ...prev.propertyInfo, name: t } }))}
+            onChangeText={(t) =>
+              setRegistrationData((prev) => ({
+                ...prev,
+                propertyInfo: { ...prev.propertyInfo, name: t },
+              }))
+            }
           />
         </View>
       </View>
@@ -286,7 +362,12 @@ export default function HotelOwnerRegistrationScreen() {
             style={styles.input}
             placeholder="Số nhà, tên đường, phường/xã..."
             value={registrationData.propertyInfo.address}
-            onChangeText={(t) => setRegistrationData(prev => ({ ...prev, propertyInfo: { ...prev.propertyInfo, address: t } }))}
+            onChangeText={(t) =>
+              setRegistrationData((prev) => ({
+                ...prev,
+                propertyInfo: { ...prev.propertyInfo, address: t },
+              }))
+            }
           />
         </View>
       </View>
@@ -299,7 +380,12 @@ export default function HotelOwnerRegistrationScreen() {
             style={styles.input}
             placeholder="Ví dụ: Đà Nẵng"
             value={registrationData.propertyInfo.city}
-            onChangeText={(t) => setRegistrationData(prev => ({ ...prev, propertyInfo: { ...prev.propertyInfo, city: t } }))}
+            onChangeText={(t) =>
+              setRegistrationData((prev) => ({
+                ...prev,
+                propertyInfo: { ...prev.propertyInfo, city: t },
+              }))
+            }
           />
         </View>
       </View>
@@ -313,7 +399,7 @@ export default function HotelOwnerRegistrationScreen() {
             placeholder="Số điện thoại dùng để hỗ trợ..."
             keyboardType="phone-pad"
             value={registrationData.phone}
-            onChangeText={(t) => setRegistrationData(prev => ({ ...prev, phone: t }))}
+            onChangeText={(t) => setRegistrationData((prev) => ({ ...prev, phone: t }))}
           />
         </View>
       </View>
@@ -338,9 +424,14 @@ export default function HotelOwnerRegistrationScreen() {
         {registrationData.images.map((img, idx) => (
           <View key={idx} style={styles.imageItem}>
             <Image source={{ uri: img }} style={styles.propertyImg} />
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.removeImgBtn}
-              onPress={() => setRegistrationData(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== idx) }))}
+              onPress={() =>
+                setRegistrationData((prev) => ({
+                  ...prev,
+                  images: prev.images.filter((_, i) => i !== idx),
+                }))
+              }
             >
               <Feather name="x" size={12} color="#FFF" />
             </TouchableOpacity>
@@ -351,12 +442,22 @@ export default function HotelOwnerRegistrationScreen() {
       <Text style={[styles.inputLabel, { marginTop: 20 }]}>Tiện nghi cơ sở</Text>
       <View style={styles.amenitiesGrid}>
         {AMENITIES_LIST.map((item) => (
-          <TouchableOpacity 
-            key={item} 
-            style={[styles.amenityTag, registrationData.amenities.includes(item) && styles.amenityTagActive]}
+          <TouchableOpacity
+            key={item}
+            style={[
+              styles.amenityTag,
+              registrationData.amenities.includes(item) && styles.amenityTagActive,
+            ]}
             onPress={() => toggleAmenity(item)}
           >
-            <Text style={[styles.amenityText, registrationData.amenities.includes(item) && styles.amenityTextActive]}>{item}</Text>
+            <Text
+              style={[
+                styles.amenityText,
+                registrationData.amenities.includes(item) && styles.amenityTextActive,
+              ]}
+            >
+              {item}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -369,7 +470,7 @@ export default function HotelOwnerRegistrationScreen() {
           multiline
           numberOfLines={4}
           value={registrationData.description}
-          onChangeText={(t) => setRegistrationData(prev => ({ ...prev, description: t }))}
+          onChangeText={(t) => setRegistrationData((prev) => ({ ...prev, description: t }))}
         />
       </View>
     </View>
@@ -386,7 +487,12 @@ export default function HotelOwnerRegistrationScreen() {
           <TextInput
             style={styles.input}
             value={registrationData.businessPolicies.cancellationPolicy}
-            onChangeText={(t) => setRegistrationData(prev => ({ ...prev, businessPolicies: { ...prev.businessPolicies, cancellationPolicy: t } }))}
+            onChangeText={(t) =>
+              setRegistrationData((prev) => ({
+                ...prev,
+                businessPolicies: { ...prev.businessPolicies, cancellationPolicy: t },
+              }))
+            }
           />
         </View>
       </View>
@@ -395,23 +501,33 @@ export default function HotelOwnerRegistrationScreen() {
         <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
           <Text style={styles.inputLabel}>Giờ nhận phòng</Text>
           <View style={styles.inputWrapper}>
-             <Feather name="clock" size={18} color="#A0AEC0" style={styles.inputIcon} />
-             <TextInput
-                style={styles.input}
-                value={registrationData.businessPolicies.checkInTime}
-                onChangeText={(t) => setRegistrationData(prev => ({ ...prev, businessPolicies: { ...prev.businessPolicies, checkInTime: t } }))}
-             />
+            <Feather name="clock" size={18} color="#A0AEC0" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              value={registrationData.businessPolicies.checkInTime}
+              onChangeText={(t) =>
+                setRegistrationData((prev) => ({
+                  ...prev,
+                  businessPolicies: { ...prev.businessPolicies, checkInTime: t },
+                }))
+              }
+            />
           </View>
         </View>
         <View style={[styles.inputGroup, { flex: 1 }]}>
           <Text style={styles.inputLabel}>Giờ trả phòng</Text>
           <View style={styles.inputWrapper}>
-             <Feather name="clock" size={18} color="#A0AEC0" style={styles.inputIcon} />
-             <TextInput
-                style={styles.input}
-                value={registrationData.businessPolicies.checkOutTime}
-                onChangeText={(t) => setRegistrationData(prev => ({ ...prev, businessPolicies: { ...prev.businessPolicies, checkOutTime: t } }))}
-             />
+            <Feather name="clock" size={18} color="#A0AEC0" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              value={registrationData.businessPolicies.checkOutTime}
+              onChangeText={(t) =>
+                setRegistrationData((prev) => ({
+                  ...prev,
+                  businessPolicies: { ...prev.businessPolicies, checkOutTime: t },
+                }))
+              }
+            />
           </View>
         </View>
       </View>
@@ -422,7 +538,12 @@ export default function HotelOwnerRegistrationScreen() {
           <TextInput
             style={styles.input}
             value={registrationData.businessPolicies.childPolicy}
-            onChangeText={(t) => setRegistrationData(prev => ({ ...prev, businessPolicies: { ...prev.businessPolicies, childPolicy: t } }))}
+            onChangeText={(t) =>
+              setRegistrationData((prev) => ({
+                ...prev,
+                businessPolicies: { ...prev.businessPolicies, childPolicy: t },
+              }))
+            }
           />
         </View>
       </View>
@@ -434,30 +555,171 @@ export default function HotelOwnerRegistrationScreen() {
             style={styles.input}
             placeholder="Phí dọn dẹp, phí đưa đón..."
             value={registrationData.businessPolicies.extraCosts}
-            onChangeText={(t) => setRegistrationData(prev => ({ ...prev, businessPolicies: { ...prev.businessPolicies, extraCosts: t } }))}
+            onChangeText={(t) =>
+              setRegistrationData((prev) => ({
+                ...prev,
+                businessPolicies: { ...prev.businessPolicies, extraCosts: t },
+              }))
+            }
           />
         </View>
       </View>
 
       <View style={styles.infoBox}>
         <Feather name="info" size={18} color="#005CB8" />
-        <Text style={styles.infoBoxText}>Bằng cách nhấn gửi, bạn đồng ý với các điều khoản và chính sách đối tác của Owntrip.</Text>
+        <Text style={styles.infoBoxText}>
+          Bằng cách nhấn gửi, bạn đồng ý với các điều khoản và chính sách đối tác (bao gồm mức hoa
+          hồng 10%) của Owntrip.
+        </Text>
       </View>
     </View>
   );
 
+  if (!hasAgreedTerms) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" />
+        <View style={styles.termsHeaderBG}>
+          <LinearGradient colors={['#005CB8', '#007AFF']} style={StyleSheet.absoluteFill} />
+          <View style={styles.headerTop}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <Feather name="x" size={24} color="#FFF" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Điều khoản đối tác</Text>
+            <View style={{ width: 44 }} />
+          </View>
+        </View>
+
+        <ScrollView
+          style={styles.termsContent}
+          contentContainerStyle={styles.termsScrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.termsCard}>
+            <Text style={styles.termsTitle}>Hợp Tác Kinh Doanh Cùng Owntrip</Text>
+            <Text style={styles.termsSubtitle}>
+              Vui lòng đọc kỹ các điều khoản dưới đây trước khi đăng ký làm đối tác sở hữu khách
+              sạn/homestay.
+            </Text>
+
+            <View style={styles.termsDivider} />
+
+            {/* Commission Policy Section */}
+            <View style={styles.termSection}>
+              <View style={styles.termHeaderRow}>
+                <View style={styles.termIconCircle}>
+                  <FontAwesome5 name="percentage" size={16} color="#007AFF" />
+                </View>
+                <Text style={styles.termSectionTitle}>1. Chính sách hoa hồng (Quan trọng)</Text>
+              </View>
+              <View style={styles.highlightBox}>
+                <Feather name="alert-circle" size={18} color="#D97706" style={{ marginTop: 2 }} />
+                <Text style={styles.highlightText}>
+                  Owntrip thu{' '}
+                  <Text style={{ fontWeight: 'bold', color: '#D97706' }}>10% hoa hồng</Text> từ mỗi
+                  lượt đặt phòng thành công thông qua hệ thống của ứng dụng.
+                </Text>
+              </View>
+              <Text style={styles.termText}>
+                Phí hoa hồng này được tính dựa trên tổng giá trị đơn đặt phòng của khách hàng và sẽ
+                được tự động khấu trừ vào doanh thu của đối tác sau khi đơn hàng hoàn thành.
+              </Text>
+            </View>
+
+            {/* Other Sections */}
+            <View style={styles.termSection}>
+              <View style={styles.termHeaderRow}>
+                <View style={styles.termIconCircle}>
+                  <FontAwesome5 name="file-contract" size={16} color="#007AFF" />
+                </View>
+                <Text style={styles.termSectionTitle}>2. Trách nhiệm của Đối tác</Text>
+              </View>
+              <Text style={styles.termText}>
+                • Cung cấp thông tin chính xác về cơ sở lưu trú bao gồm tên, địa chỉ, hình ảnh thực
+                tế và các tiện nghi đi kèm.{'\n'}• Đảm bảo phòng luôn sẵn sàng đúng như mô tả khi
+                khách hàng đến nhận phòng.{'\n'}• Chịu trách nhiệm hoàn toàn về tính pháp lý của cơ
+                sở kinh doanh theo quy định pháp luật hiện hành.
+              </Text>
+            </View>
+
+            <View style={styles.termSection}>
+              <View style={styles.termHeaderRow}>
+                <View style={styles.termIconCircle}>
+                  <FontAwesome5 name="wallet" size={16} color="#007AFF" />
+                </View>
+                <Text style={styles.termSectionTitle}>3. Thanh toán & Đối soát</Text>
+              </View>
+              <Text style={styles.termText}>
+                • Doanh thu của đối tác sẽ được ghi nhận vào ví tích lũy trên hệ thống ngay sau khi
+                khách hàng hoàn tất thủ tục trả phòng.{'\n'}• Đối tác có thể thực hiện yêu cầu rút
+                tiền về tài khoản ngân hàng liên kết theo chu kỳ đối soát được thỏa thuận.
+              </Text>
+            </View>
+
+            <View style={styles.termSection}>
+              <View style={styles.termHeaderRow}>
+                <View style={styles.termIconCircle}>
+                  <FontAwesome5 name="user-shield" size={16} color="#007AFF" />
+                </View>
+                <Text style={styles.termSectionTitle}>
+                  4. Chính sách bảo mật & giải quyết khiếu nại
+                </Text>
+              </View>
+              <Text style={styles.termText}>
+                • Đối tác cam kết bảo mật tuyệt đối thông tin cá nhân của khách hàng đặt phòng.
+                {'\n'}• Mọi tranh chấp giữa đối tác và khách hàng sẽ được ưu tiên giải quyết thương
+                lượng. Owntrip sẽ đóng vai trò trung gian hỗ trợ giải quyết nếu cần thiết.
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
+
+        {/* Action Panel */}
+        <View style={styles.termsFooter}>
+          <TouchableOpacity
+            style={styles.checkboxContainer}
+            onPress={() => setIsAccepted(!isAccepted)}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.checkbox, isAccepted && styles.checkboxChecked]}>
+              {isAccepted && <Feather name="check" size={14} color="#FFF" />}
+            </View>
+            <Text style={styles.checkboxLabel}>
+              Tôi đã đọc và đồng ý với các điều khoản đối tác nêu trên.
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.agreeBtn, !isAccepted && styles.agreeBtnDisabled]}
+            onPress={() => setHasAgreedTerms(true)}
+            disabled={!isAccepted}
+          >
+            <LinearGradient
+              colors={isAccepted ? ['#005CB8', '#0084FF'] : ['#E2E8F0', '#E2E8F0']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.termsBtnGradient}
+            >
+              <Text style={[styles.agreeBtnText, !isAccepted && styles.agreeBtnTextDisabled]}>
+                Đồng ý & Tiếp tục
+              </Text>
+              <Feather name="arrow-right" size={20} color={isAccepted ? '#FFF' : '#A0AEC0'} />
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
       <StatusBar barStyle="light-content" />
-      
+
       <View style={styles.headerBG}>
-        <LinearGradient
-          colors={['#005CB8', '#007AFF']}
-          style={StyleSheet.absoluteFill}
-        />
+        <LinearGradient colors={['#005CB8', '#007AFF']} style={StyleSheet.absoluteFill} />
         <View style={styles.headerTop}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Feather name="x" size={24} color="#FFF" />
@@ -468,8 +730,8 @@ export default function HotelOwnerRegistrationScreen() {
         {renderStepIndicator()}
       </View>
 
-      <ScrollView 
-        style={styles.content} 
+      <ScrollView
+        style={styles.content}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
@@ -486,9 +748,9 @@ export default function HotelOwnerRegistrationScreen() {
               <Text style={styles.backBtnText}>Quay lại</Text>
             </TouchableOpacity>
           )}
-          
-          <TouchableOpacity 
-            style={[styles.nextBtn, currentStep === 1 && { width: '100%' }]} 
+
+          <TouchableOpacity
+            style={[styles.nextBtn, currentStep === 1 && { width: '100%' }]}
             onPress={currentStep === 4 ? handleSubmit : nextStep}
             disabled={loading}
           >
@@ -502,7 +764,9 @@ export default function HotelOwnerRegistrationScreen() {
                 <ActivityIndicator color="#FFF" />
               ) : (
                 <>
-                  <Text style={styles.nextBtnText}>{currentStep === 4 ? 'Gửi hồ sơ' : 'Tiếp theo'}</Text>
+                  <Text style={styles.nextBtnText}>
+                    {currentStep === 4 ? 'Gửi hồ sơ' : 'Tiếp theo'}
+                  </Text>
                   <Feather name="arrow-right" size={20} color="#FFF" />
                 </>
               )}
@@ -870,5 +1134,149 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '900',
     color: '#FFF',
+  },
+  termsHeaderBG: {
+    height: 120,
+    paddingTop: 50,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    overflow: 'hidden',
+  },
+  termsContent: {
+    flex: 1,
+    marginTop: -20,
+  },
+  termsScrollContent: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  termsCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 24,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 5,
+  },
+  termsTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#1A2B4A',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  termsSubtitle: {
+    fontSize: 13,
+    color: '#718096',
+    lineHeight: 18,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  termsDivider: {
+    height: 1,
+    backgroundColor: '#EDF2F7',
+    marginVertical: 16,
+  },
+  termSection: {
+    marginBottom: 24,
+  },
+  termHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 10,
+  },
+  termIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#EBF8FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  termSectionTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#2D3748',
+    flex: 1,
+  },
+  highlightBox: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    padding: 12,
+    borderRadius: 12,
+    gap: 10,
+    marginBottom: 10,
+  },
+  highlightText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#B45309',
+    lineHeight: 18,
+  },
+  termText: {
+    fontSize: 13,
+    color: '#4A5568',
+    lineHeight: 20,
+  },
+  termsFooter: {
+    padding: 20,
+    backgroundColor: '#FFF',
+    borderTopWidth: 1,
+    borderColor: '#EDF2F7',
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 10,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#CBD5E0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+  },
+  checkboxChecked: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  checkboxLabel: {
+    flex: 1,
+    fontSize: 13,
+    color: '#4A5568',
+    fontWeight: '600',
+  },
+  agreeBtn: {
+    height: 56,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  agreeBtnDisabled: {
+    backgroundColor: '#EDF2F7',
+  },
+  termsBtnGradient: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  agreeBtnText: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#FFF',
+  },
+  agreeBtnTextDisabled: {
+    color: '#A0AEC0',
   },
 });
