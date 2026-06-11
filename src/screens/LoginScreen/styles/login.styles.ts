@@ -8,8 +8,8 @@ export const styles = StyleSheet.create({
   },
   background: {
     flex: 1,
-    width: width,
-    height: height,
+    width: '100%',
+    height: '100%',
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
