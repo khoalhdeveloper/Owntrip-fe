@@ -1,5 +1,7 @@
 export const API_CONFIG = {
-  BASE_URL: 'https://owntrip.vercel.app',
+  BASE_URL: 'https://owntrip.vercel.app', // Production URL
+  
+  
   TIMEOUT: 15000,
 };
 
@@ -10,6 +12,8 @@ export const ENDPOINTS = {
     GOOGLE_LOGIN: '/api/users/login/google',
     LOGOUT: '/api/users/logout',
     REFRESH_TOKEN: '/api/users/refresh-token',
+    VERIFY_EMAIL: '/api/users/verifyEmail',
+    RESEND_OTP: '/api/users/resendOTP',
     FORGOT_PASSWORD_SEND_OTP: '/api/users/forgot-password/send-otp',
     FORGOT_PASSWORD_RESET: '/api/users/forgot-password/reset',
   },

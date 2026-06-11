@@ -27,7 +27,7 @@ interface AuthModalProps {
   onGoogleLogin: () => void;
 }
 
-type TabType = 'login' | 'register' | 'forgot_password_email' | 'forgot_password_otp';
+type TabType = 'login' | 'register' | 'verify_email_otp' | 'forgot_password_email' | 'forgot_password_otp';
 
 export default function AuthModal({
   visible,
@@ -63,6 +63,8 @@ export default function AuthModal({
       setActiveTab('forgot_password_email');
     } else if (activeTab === 'forgot_password_email') {
       setActiveTab('login');
+    } else if (activeTab === 'verify_email_otp') {
+      setActiveTab('login');
     } else {
       onClose();
     }
@@ -84,7 +86,12 @@ export default function AuthModal({
     } catch (error: any) {
       console.log('=== LOGIN ERROR ===', JSON.stringify(error?.response?.data));
       const msg = error?.response?.data?.message || 'Email hoặc mật khẩu không đúng';
-      Toast.show({ type: 'error', text1: 'Đăng nhập thất bại', text2: msg });
+      if (msg.includes('xác thực email')) {
+        Toast.show({ type: 'error', text1: 'Chưa xác thực', text2: msg });
+        setActiveTab('verify_email_otp');
+      } else {
+        Toast.show({ type: 'error', text1: 'Đăng nhập thất bại', text2: msg });
+      }
       setLoading(false);
     }
   };
@@ -100,15 +107,48 @@ export default function AuthModal({
       Toast.show({
         type: 'success',
         text1: 'Thành công',
-        text2: 'Đăng ký thành công! Hãy đăng nhập.',
+        text2: 'Đăng ký thành công! Hãy xác nhận mã OTP.',
       });
-      // Giữ email, chỉ xóa password + name, chuyển sang tab Login
+      // Giữ email, chỉ xóa password + name, chuyển sang tab verify
       setPassword('');
       setDisplayName('');
-      setActiveTab('login');
+      setActiveTab('verify_email_otp');
     } catch (error: any) {
       const msg = error?.response?.data?.message || 'Đăng ký thất bại';
       Toast.show({ type: 'error', text1: 'Đăng ký thất bại', text2: msg });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyEmail = async () => {
+    if (!email.trim() || !otp.trim()) {
+      Toast.show({ type: 'info', text1: 'Thông báo', text2: 'Vui lòng nhập mã OTP' });
+      return;
+    }
+    setLoading(true);
+    try {
+      await authService.verifyEmail(email.trim(), otp.trim());
+      Toast.show({ type: 'success', text1: 'Thành công', text2: 'Xác thực thành công. Vui lòng đăng nhập.' });
+      setOtp('');
+      setActiveTab('login');
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || 'Xác thực thất bại';
+      Toast.show({ type: 'error', text1: 'Thất bại', text2: msg });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendVerifyOTP = async () => {
+    if (!email.trim()) return;
+    setLoading(true);
+    try {
+      await authService.resendOTP(email.trim());
+      Toast.show({ type: 'success', text1: 'Thành công', text2: 'Đã gửi lại mã OTP. Vui lòng kiểm tra email.' });
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || 'Gửi lại mã OTP thất bại';
+      Toast.show({ type: 'error', text1: 'Thất bại', text2: msg });
     } finally {
       setLoading(false);
     }
@@ -154,6 +194,7 @@ export default function AuthModal({
   const renderHeaderTitle = () => {
     if (activeTab === 'login') return 'Chào mừng quay lại với\nOwnTrip';
     if (activeTab === 'register') return 'Tạo tài khoản\ncủa bạn';
+    if (activeTab === 'verify_email_otp') return 'Xác thực tài khoản';
     if (activeTab === 'forgot_password_email') return 'Khôi phục mật khẩu';
     if (activeTab === 'forgot_password_otp') return 'Tạo mật khẩu mới';
     return '';
@@ -162,12 +203,14 @@ export default function AuthModal({
   const renderHeaderSubtitle = () => {
     if (activeTab === 'login') return 'Đăng nhập để tiếp tục hành trình';
     if (activeTab === 'register') return 'Đăng ký để tận hưởng trải nghiệm tốt nhất';
+    if (activeTab === 'verify_email_otp') return 'Nhập mã OTP vừa được gửi đến email của bạn';
     if (activeTab === 'forgot_password_email') return 'Nhập email để nhận mã xác nhận OTP';
     if (activeTab === 'forgot_password_otp') return 'Nhập mã OTP và mật khẩu mới của bạn';
     return '';
   };
 
   const isForgotPassword = activeTab === 'forgot_password_email' || activeTab === 'forgot_password_otp';
+  const isVerifyEmail = activeTab === 'verify_email_otp';
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -203,7 +246,7 @@ export default function AuthModal({
               keyboardShouldPersistTaps="handled"
             >
               {/* Tab Switcher */}
-              {!isForgotPassword && (
+              {!isForgotPassword && !isVerifyEmail && (
                 <View style={styles.tabContainer}>
                   <TouchableOpacity
                     style={[styles.tab, activeTab === 'login' && styles.tabActive]}
@@ -242,7 +285,7 @@ export default function AuthModal({
                 )}
 
                 {/* Email - Hiện ở đăng ký, đăng nhập, forgot_email */}
-                {activeTab !== 'forgot_password_otp' && (
+                {(activeTab !== 'forgot_password_otp' && activeTab !== 'verify_email_otp') && (
                   <View style={styles.inputContainer}>
                     <MaterialIcons
                       name="mail-outline"
@@ -262,8 +305,8 @@ export default function AuthModal({
                   </View>
                 )}
 
-                {/* OTP - Chỉ hiện ở forgot_otp */}
-                {activeTab === 'forgot_password_otp' && (
+                {/* OTP - Chỉ hiện ở forgot_otp hoặc verify_email_otp */}
+                {(activeTab === 'forgot_password_otp' || activeTab === 'verify_email_otp') && (
                   <View style={styles.inputContainer}>
                     <MaterialIcons
                       name="lock-outline"
@@ -345,12 +388,22 @@ export default function AuthModal({
                   </View>
                 )}
 
+                {/* Resend OTP */}
+                {activeTab === 'verify_email_otp' && (
+                  <View style={[styles.optionsRow, { justifyContent: 'center', marginBottom: 15 }]}>
+                    <TouchableOpacity onPress={handleResendVerifyOTP} disabled={loading}>
+                      <Text style={[styles.forgotText, { color: '#4285F4' }]}>Gửi lại mã xác nhận</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
                 {/* Submit Button */}
                 <TouchableOpacity
                   style={[styles.submitButton, loading && styles.submitButtonDisabled]}
                   onPress={
                     activeTab === 'login' ? handleLogin :
                     activeTab === 'register' ? handleRegister :
+                    activeTab === 'verify_email_otp' ? handleVerifyEmail :
                     activeTab === 'forgot_password_email' ? handleSendOTP :
                     handleResetPassword
                   }
@@ -363,6 +416,7 @@ export default function AuthModal({
                     <Text style={styles.submitText}>
                       {activeTab === 'login' ? 'Đăng nhập' : 
                        activeTab === 'register' ? 'Đăng ký' :
+                       activeTab === 'verify_email_otp' ? 'Xác nhận' :
                        activeTab === 'forgot_password_email' ? 'Gửi mã OTP' :
                        'Xác nhận đặt lại'}
                     </Text>
@@ -370,7 +424,7 @@ export default function AuthModal({
                 </TouchableOpacity>
 
                 {/* Divider & Google - hide in forgot password */}
-                {!isForgotPassword && (
+                {!isForgotPassword && !isVerifyEmail && (
                   <>
                     <View style={styles.dividerRow}>
                       <View style={styles.dividerLine} />

@@ -10,6 +10,14 @@ export const authService = {
     return await axiosClient.post(ENDPOINTS.AUTH.REGISTER, { email, password, displayName });
   },
 
+  verifyEmail: async (email: string, otp: string) => {
+    return await axiosClient.post(ENDPOINTS.AUTH.VERIFY_EMAIL, { email, otp });
+  },
+
+  resendOTP: async (email: string) => {
+    return await axiosClient.post(ENDPOINTS.AUTH.RESEND_OTP, { email });
+  },
+
   googleLogin: async (idToken: string) => {
     return await axiosClient.post(ENDPOINTS.AUTH.GOOGLE_LOGIN, { idToken });
   },
