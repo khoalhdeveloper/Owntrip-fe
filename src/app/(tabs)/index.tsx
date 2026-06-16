@@ -26,7 +26,7 @@ import { placesService, Place } from '../../services/placesService';
 import { tripService, Trip, TripDetailResponse } from '../../services/tripService';
 import { userService, UserProfile } from '../../services/userService';
 import { notificationService, Notification } from '../../services/notificationService';
-import { getImageSource } from '../../utils/imageUtils';
+import { getImageSource, isRenderableImageUri } from '../../utils/imageUtils';
 import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
 import PayOSWebViewModal from '../../components/PayOSWebViewModal';
@@ -86,6 +86,7 @@ export default function HomeScreen() {
   const [loadingTrips, setLoadingTrips] = useState(true);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [failedPlacePhotoUris, setFailedPlacePhotoUris] = useState<string[]>([]);
 
   const [selectedTripDetail, setSelectedTripDetail] = useState<TripDetailResponse | null>(null);
   const [loadingTripDetail, setLoadingTripDetail] = useState(false);
@@ -102,6 +103,18 @@ export default function HomeScreen() {
   const { width } = Dimensions.get('window');
 
   const scrollX = useRef(new Animated.Value(0)).current;
+  const selectedPlacePhotoUris = selectedPlace
+    ? Array.from(
+        new Set(
+          [
+            ...(Array.isArray(selectedPlace.photos) ? selectedPlace.photos : []),
+            selectedPlace.photo,
+          ]
+            .filter(isRenderableImageUri)
+            .map((uri) => uri.trim()),
+        ),
+      ).filter((uri) => !failedPlacePhotoUris.includes(uri))
+    : [];
   const scrollViewRef = useRef<any>(null);
   const [isLooping, setIsLooping] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -219,46 +232,42 @@ export default function HomeScreen() {
   const hasUnread = notifications.some((n) => !n.isRead);
 
   const handleDeleteMarketplaceReview = (tripId: string) => {
-    Alert.alert(
-      'Xác nhận',
-      'Bạn có chắc chắn muốn xóa đánh giá này?',
-      [
-        { text: 'Hủy', style: 'cancel' },
-        {
-          text: 'Xóa',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const res = await tripService.deleteItineraryReview(tripId);
-              if (res?.success) {
-                // Refresh the modal data
-                const updated = await tripService.getTripPreview(tripId);
-                if (updated) {
-                  setSelectedTripDetail(updated);
-                }
-                Toast.show({
-                  type: 'success',
-                  text1: 'Thành công',
-                  text2: 'Đã xóa đánh giá',
-                });
-              } else {
-                Toast.show({
-                  type: 'error',
-                  text1: 'Lỗi',
-                  text2: res?.message || 'Không thể xóa đánh giá',
-                });
+    Alert.alert('Xác nhận', 'Bạn có chắc chắn muốn xóa đánh giá này?', [
+      { text: 'Hủy', style: 'cancel' },
+      {
+        text: 'Xóa',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const res = await tripService.deleteItineraryReview(tripId);
+            if (res?.success) {
+              // Refresh the modal data
+              const updated = await tripService.getTripPreview(tripId);
+              if (updated) {
+                setSelectedTripDetail(updated);
               }
-            } catch (error) {
+              Toast.show({
+                type: 'success',
+                text1: 'Thành công',
+                text2: 'Đã xóa đánh giá',
+              });
+            } else {
               Toast.show({
                 type: 'error',
                 text1: 'Lỗi',
-                text2: 'Lỗi khi xóa đánh giá',
+                text2: res?.message || 'Không thể xóa đánh giá',
               });
             }
-          },
+          } catch (error) {
+            Toast.show({
+              type: 'error',
+              text1: 'Lỗi',
+              text2: 'Lỗi khi xóa đánh giá',
+            });
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleSearch = async (text: string) => {
@@ -428,6 +437,7 @@ export default function HomeScreen() {
                       onPress={() => {
                         setSelectedPlace(place);
                         setCurrentPhotoIndex(0);
+                        setFailedPlacePhotoUris([]);
                       }}
                     >
                       <View style={styles.trendingImageWrapper}>
@@ -498,7 +508,7 @@ export default function HomeScreen() {
                 <ExpoImage
                   source={getImageSource(
                     trip.provinceImage ||
-                    'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?auto=format&fit=crop&q=80&w=800',
+                      'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?auto=format&fit=crop&q=80&w=800',
                   )}
                   style={styles.tripImage}
                   contentFit="cover"
@@ -507,7 +517,9 @@ export default function HomeScreen() {
 
                 {/* Gradient-like Overlay for text legibility */}
                 <View style={styles.tripOverlay}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
+                  <View
+                    style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}
+                  >
                     <View style={styles.tripBadge}>
                       <Text style={styles.tripBadgeText}>{trip.totalDays} Ngày</Text>
                     </View>
@@ -535,7 +547,8 @@ export default function HomeScreen() {
                       <View style={styles.tripRatingBox}>
                         <Feather name="star" size={12} color="#FFD700" fill="#FFD700" />
                         <Text style={styles.tripRatingText}>
-                          {trip.averageRating ? (trip.averageRating / 2).toFixed(1) : '5.0'} ({trip.soldCount || 0} đã bán)
+                          {trip.averageRating ? (trip.averageRating / 2).toFixed(1) : '5.0'} (
+                          {trip.soldCount || 0} đã bán)
                         </Text>
                       </View>
                     </View>
@@ -568,7 +581,7 @@ export default function HomeScreen() {
               >
                 {/* Image Gallery */}
                 <View style={styles.modalGallery}>
-                  {selectedPlace.photos && selectedPlace.photos.length > 0 ? (
+                  {selectedPlacePhotoUris.length > 0 ? (
                     <ScrollView
                       horizontal
                       pagingEnabled
@@ -585,21 +598,23 @@ export default function HomeScreen() {
                         }
                       }}
                     >
-                      {selectedPlace.photos.map((photoUrl, index) => (
+                      {selectedPlacePhotoUris.map((photoUrl, index) => (
                         <ExpoImage
-                          key={index}
+                          key={photoUrl}
                           source={getImageSource(photoUrl)}
                           style={[styles.modalImage, { width }]}
                           contentFit="cover"
+                          onError={() => {
+                            setFailedPlacePhotoUris((prev) =>
+                              prev.includes(photoUrl) ? prev : [...prev, photoUrl],
+                            );
+                            if (currentPhotoIndex === index) {
+                              setCurrentPhotoIndex(0);
+                            }
+                          }}
                         />
                       ))}
                     </ScrollView>
-                  ) : selectedPlace.photo ? (
-                    <ExpoImage
-                      source={getImageSource(selectedPlace.photo)}
-                      style={[styles.modalImage, { width }]}
-                      contentFit="cover"
-                    />
                   ) : (
                     <View style={[styles.modalImage, styles.modalImagePlaceholder, { width }]}>
                       <Feather name="image" size={48} color="#CBD5E0" />
@@ -612,10 +627,12 @@ export default function HomeScreen() {
                   >
                     <Feather name="x" size={24} color="#FFF" />
                   </TouchableOpacity>
-                  {selectedPlace.photos && selectedPlace.photos.length > 1 && (
+                  {selectedPlacePhotoUris.length > 1 && (
                     <View style={styles.galleryBadge}>
                       <Text style={styles.galleryBadgeText}>
-                        {currentPhotoIndex + 1}/{selectedPlace.photos.length}
+                        {`${Math.min(currentPhotoIndex + 1, selectedPlacePhotoUris.length)}/${
+                          selectedPlacePhotoUris.length
+                        }`}
                       </Text>
                     </View>
                   )}
@@ -652,7 +669,7 @@ export default function HomeScreen() {
                     <View style={styles.statDivider} />
                     <View style={styles.statItem}>
                       <Feather name="camera" size={16} color="#4A7CFF" />
-                      <Text style={styles.statValue}>{selectedPlace.photos?.length || 1}</Text>
+                      <Text style={styles.statValue}>{selectedPlacePhotoUris.length}</Text>
                       <Text style={styles.statLabel}>Ảnh</Text>
                     </View>
                   </View>
@@ -761,7 +778,7 @@ export default function HomeScreen() {
                       <ExpoImage
                         source={getImageSource(
                           selectedTripDetail.trip.provinceImage ||
-                          'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?auto=format&fit=crop&q=80&w=800',
+                            'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?auto=format&fit=crop&q=80&w=800',
                         )}
                         style={[styles.modalImage, { width, height: 260 }]}
                         contentFit="cover"
@@ -848,36 +865,51 @@ export default function HomeScreen() {
                                     {dayPlan.places && dayPlan.places.length > 0 && (
                                       <View style={styles.premiumPlacesContainer}>
                                         {dayPlan.places.map((p, pIdx) => {
-                                          let timeStr = "Hoạt động";
-                                          let timeIcon = "activity";
+                                          let timeStr = 'Hoạt động';
+                                          let timeIcon = 'activity';
                                           if (p.timeOfDay === 'morning') {
-                                            timeStr = "Buổi sáng 🌅";
-                                            timeIcon = "sun";
+                                            timeStr = 'Buổi sáng 🌅';
+                                            timeIcon = 'sun';
                                           } else if (p.timeOfDay === 'afternoon') {
-                                            timeStr = "Buổi chiều ☀️";
-                                            timeIcon = "sun";
+                                            timeStr = 'Buổi chiều ☀️';
+                                            timeIcon = 'sun';
                                           } else if (p.timeOfDay === 'evening') {
-                                            timeStr = "Buổi tối 🌙";
-                                            timeIcon = "moon";
+                                            timeStr = 'Buổi tối 🌙';
+                                            timeIcon = 'moon';
                                           }
 
                                           return (
                                             <View key={pIdx} style={styles.premiumTeaserCard}>
                                               <View style={styles.teaserHeader}>
                                                 <View style={styles.timeTag}>
-                                                  <Feather name={timeIcon as any} size={12} color="#0D9488" style={{ marginRight: 4 }} />
+                                                  <Feather
+                                                    name={timeIcon as any}
+                                                    size={12}
+                                                    color="#0D9488"
+                                                    style={{ marginRight: 4 }}
+                                                  />
                                                   <Text style={styles.timeTagText}>{timeStr}</Text>
                                                 </View>
                                                 <View style={styles.copyrightBadge}>
-                                                  <Text style={styles.copyrightText}>Bản quyền độc quyền ✨</Text>
+                                                  <Text style={styles.copyrightText}>
+                                                    Bản quyền độc quyền ✨
+                                                  </Text>
                                                 </View>
                                               </View>
 
                                               <View style={styles.teaserBody}>
                                                 <View style={styles.teaserBlurredTextContainer}>
-                                                  <Feather name="map-pin" size={14} color="#D97706" style={{ marginRight: 8 }} />
+                                                  <Feather
+                                                    name="map-pin"
+                                                    size={14}
+                                                    color="#D97706"
+                                                    style={{ marginRight: 8 }}
+                                                  />
                                                   <Text style={styles.teaserPlaceName}>
-                                                    {p.name.includes("khoá") || p.name.includes("🔒") ? "••••••••••••••••••••••••" : p.name}
+                                                    {p.name.includes('khoá') ||
+                                                    p.name.includes('🔒')
+                                                      ? '••••••••••••••••••••••••'
+                                                      : p.name}
                                                   </Text>
                                                 </View>
                                                 <View style={styles.goldPadlockWrapper}>
@@ -907,7 +939,9 @@ export default function HomeScreen() {
                             <View style={styles.tripRatingSummary}>
                               <Feather name="star" size={14} color="#ECC94B" fill="#ECC94B" />
                               <Text style={styles.tripRatingScore}>
-                                {selectedTripDetail.trip.averageRating ? (selectedTripDetail.trip.averageRating / 2).toFixed(1) : '5.0'}
+                                {selectedTripDetail.trip.averageRating
+                                  ? (selectedTripDetail.trip.averageRating / 2).toFixed(1)
+                                  : '5.0'}
                               </Text>
                               <Text style={styles.tripRatingCount}>
                                 ({selectedTripDetail.reviews.length})
@@ -920,10 +954,11 @@ export default function HomeScreen() {
                           selectedTripDetail.reviews.map((r: any) => {
                             const id = r._id || r.reviewId;
                             const userName = r.userId?.displayName || 'Thành viên OwnTrip';
-                            const rating = r.rating ? (r.rating / 2) : 5;
+                            const rating = r.rating ? r.rating / 2 : 5;
                             const content = r.comment || '';
                             const date = new Date(r.createdAt).toLocaleDateString('vi-VN');
-                            const userAvatar = r.userId?.image || 'https://i.pravatar.cc/150?u=' + id;
+                            const userAvatar =
+                              r.userId?.image || 'https://i.pravatar.cc/150?u=' + id;
 
                             return (
                               <View key={id} style={styles.reviewItem}>
@@ -941,22 +976,41 @@ export default function HomeScreen() {
                                     <Feather name="star" size={10} color="#FFF" fill="#FFF" />
                                     <Text style={styles.reviewRatingText}>{rating}</Text>
                                   </View>
-                                  {userProfile && r.userId && (userProfile._id === r.userId._id || userProfile.userId === r.userId.userId) && (
-                                    <TouchableOpacity 
-                                      style={{ marginLeft: 'auto', padding: 4 }}
-                                      onPress={() => handleDeleteMarketplaceReview(selectedTripDetail.trip._id)}
-                                    >
-                                      <Feather name="trash-2" size={16} color="#EF4444" />
-                                    </TouchableOpacity>
-                                  )}
+                                  {userProfile &&
+                                    r.userId &&
+                                    (userProfile._id === r.userId._id ||
+                                      userProfile.userId === r.userId.userId) && (
+                                      <TouchableOpacity
+                                        style={{ marginLeft: 'auto', padding: 4 }}
+                                        onPress={() =>
+                                          handleDeleteMarketplaceReview(selectedTripDetail.trip._id)
+                                        }
+                                      >
+                                        <Feather name="trash-2" size={16} color="#EF4444" />
+                                      </TouchableOpacity>
+                                    )}
                                 </View>
                                 <Text style={styles.reviewContent}>{content}</Text>
                               </View>
                             );
                           })
                         ) : (
-                          <View style={{ paddingVertical: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC', borderRadius: 16, marginVertical: 12 }}>
-                            <Feather name="message-square" size={32} color="#A0AEC0" style={{ marginBottom: 8 }} />
+                          <View
+                            style={{
+                              paddingVertical: 32,
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              backgroundColor: '#F8FAFC',
+                              borderRadius: 16,
+                              marginVertical: 12,
+                            }}
+                          >
+                            <Feather
+                              name="message-square"
+                              size={32}
+                              color="#A0AEC0"
+                              style={{ marginBottom: 8 }}
+                            />
                             <Text style={{ color: '#64748B', fontSize: 14, fontWeight: '600' }}>
                               Chưa có đánh giá nào cho lịch trình này
                             </Text>
@@ -986,14 +1040,14 @@ export default function HomeScreen() {
                             if (res.paymentUrl) {
                               // If backend returns a payment link, open it in browser!
                               const { API_CONFIG } = require('../../constants/api');
-                              const fullUrl = res.paymentUrl.startsWith('http') 
-                                ? res.paymentUrl 
+                              const fullUrl = res.paymentUrl.startsWith('http')
+                                ? res.paymentUrl
                                 : `${API_CONFIG.BASE_URL}${res.paymentUrl}`;
                               Toast.show({
                                 type: 'info',
                                 text1: 'Đang mở cổng thanh toán...',
                                 text2: 'Vui lòng hoàn tất thanh toán trên PayOS.',
-                                visibilityTime: 3000
+                                visibilityTime: 3000,
                               });
                               setPayosCheckoutUrl(fullUrl);
                               setPayosTripId(selectedTripDetail.trip._id);
@@ -1006,283 +1060,286 @@ export default function HomeScreen() {
                                 type: 'success',
                                 text1: 'Thành công! 🎉',
                                 text2: res.message,
-                                visibilityTime: 3000
+                                visibilityTime: 3000,
                               });
                               setSelectedTripDetail(null);
                               setTimeout(() => {
                                 router.push(`/trip/${res.tripId}` as any);
-                            }, 500);
+                              }, 500);
+                            }
+                          } else {
+                            Toast.show({
+                              type: 'error',
+                              text1: 'Thất bại',
+                              text2: res?.message || 'Không thể tạo giao dịch lúc này.',
+                            });
                           }
-                        } else {
-                      Toast.show({
-                        type: 'error',
-                        text1: 'Thất bại',
-                        text2: res?.message || 'Không thể tạo giao dịch lúc này.'
-                      });
+                        } catch (err) {
+                          Toast.show({
+                            type: 'error',
+                            text1: 'Lỗi hệ thống',
+                            text2: 'Đã xảy ra lỗi khi khởi tạo thanh toán VNPAY/PayOS.',
+                          });
                         }
-                      } catch (err) {
-                      Toast.show({
-                        type: 'error',
-                        text1: 'Lỗi hệ thống',
-                        text2: 'Đã xảy ra lỗi khi khởi tạo thanh toán VNPAY/PayOS.'
-                      });
-                      }
-                    }}
-                  >
-                    <Text style={styles.purchaseButtonText}>
-                      Mở khoá lịch trình này - {selectedTripDetail.trip.price ? `${selectedTripDetail.trip.price.toLocaleString('vi-VN')}đ` : 'Miễn phí'}
-                    </Text>
-                    <Feather name="unlock" size={18} color="#FFF" style={{ marginLeft: 8 }} />
-                  </TouchableOpacity>
-                </View>
-          </>
-          )
+                      }}
+                    >
+                      <Text style={styles.purchaseButtonText}>
+                        Mở khoá lịch trình này -{' '}
+                        {selectedTripDetail.trip.price
+                          ? `${selectedTripDetail.trip.price.toLocaleString('vi-VN')}đ`
+                          : 'Miễn phí'}
+                      </Text>
+                      <Feather name="unlock" size={18} color="#FFF" style={{ marginLeft: 8 }} />
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )
             )}
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
 
-    {/* PayOS WebView Modal */}
-    <PayOSWebViewModal
-      visible={payosModalVisible}
-      checkoutUrl={payosCheckoutUrl}
-      bookingId={payosOrderCode}
-      onPaymentSuccess={(bookingId, data) => {
-        setPayosModalVisible(false);
-        Toast.show({
-          type: 'success',
-          text1: 'Thanh toán thành công! 🎉',
-          text2: 'Lịch trình đã được mở khoá.',
-          visibilityTime: 3000
-        });
-        if (data && data.newTripId) {
-          router.push(`/trip/${data.newTripId}` as any);
-        } else if (payosTripId) {
-          router.push(`/trip/${payosTripId}` as any);
-        }
-      }}
-      onPaymentCancel={() => {
-        setPayosModalVisible(false);
-        Toast.show({
-          type: 'info',
-          text1: 'Đã huỷ thanh toán',
-          text2: 'Giao dịch chưa được thực hiện.'
-        });
-      }}
-    />
+      {/* PayOS WebView Modal */}
+      <PayOSWebViewModal
+        visible={payosModalVisible}
+        checkoutUrl={payosCheckoutUrl}
+        bookingId={payosOrderCode}
+        onPaymentSuccess={(bookingId, data) => {
+          setPayosModalVisible(false);
+          Toast.show({
+            type: 'success',
+            text1: 'Thanh toán thành công! 🎉',
+            text2: 'Lịch trình đã được mở khoá.',
+            visibilityTime: 3000,
+          });
+          if (data && data.newTripId) {
+            router.push(`/trip/${data.newTripId}` as any);
+          } else if (payosTripId) {
+            router.push(`/trip/${payosTripId}` as any);
+          }
+        }}
+        onPaymentCancel={() => {
+          setPayosModalVisible(false);
+          Toast.show({
+            type: 'info',
+            text1: 'Đã huỷ thanh toán',
+            text2: 'Giao dịch chưa được thực hiện.',
+          });
+        }}
+      />
 
-      {/* Search Modal */ }
-  <Modal
-    visible={isSearchModalVisible}
-    animationType="fade"
-    transparent={false}
-    onRequestClose={() => setIsSearchModalVisible(false)}
-  >
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAFBFC' }}>
-      <View style={styles.searchModalHeader}>
-        <TouchableOpacity
-          style={styles.searchModalBack}
-          onPress={() => {
-            setIsSearchModalVisible(false);
-            setSearchQuery('');
-            setSearchResults([]);
-          }}
-        >
-          <Feather name="arrow-left" size={24} color="#1A2B4A" />
-        </TouchableOpacity>
-        <View style={styles.searchModalInputWrapper}>
-          <Feather name="search" size={18} color="#A0AEC0" style={{ marginRight: 10 }} />
-          <TextInput
-            style={styles.searchModalInput}
-            placeholder="Bạn muốn đi đâu?"
-            placeholderTextColor="#A0AEC0"
-            value={searchQuery}
-            onChangeText={handleSearch}
-            autoFocus
-            returnKeyType="search"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => handleSearch('')}>
-              <Feather name="x-circle" size={18} color="#CBD5E0" />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
-      {isSearchingResults ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#4A7CFF" />
-        </View>
-      ) : searchResults.length > 0 ? (
-        <FlatList
-          data={searchResults}
-          keyExtractor={(item) => item.placeId}
-          contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
-          renderItem={({ item }) => (
+      {/* Search Modal */}
+      <Modal
+        visible={isSearchModalVisible}
+        animationType="fade"
+        transparent={false}
+        onRequestClose={() => setIsSearchModalVisible(false)}
+      >
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#FAFBFC' }}>
+          <View style={styles.searchModalHeader}>
             <TouchableOpacity
-              style={styles.searchResultCard}
-              activeOpacity={0.8}
+              style={styles.searchModalBack}
               onPress={() => {
                 setIsSearchModalVisible(false);
-                setSelectedPlace(item);
+                setSearchQuery('');
+                setSearchResults([]);
               }}
             >
-              <ExpoImage
-                source={getImageSource(item.photo)}
-                style={styles.searchResultImage}
-                contentFit="cover"
-              />
-              <View style={styles.searchResultInfo}>
-                <Text style={styles.searchResultName} numberOfLines={1}>
-                  {item.name}
-                </Text>
-                <View style={styles.searchResultLocation}>
-                  <Feather name="map-pin" size={12} color="#A0AEC0" />
-                  <Text style={styles.searchResultAddress} numberOfLines={1}>
-                    {item.address}
-                  </Text>
-                </View>
-                <View style={styles.searchResultFooter}>
-                  <View style={styles.searchResultRating}>
-                    <Feather name="star" size={12} color="#ECC94B" fill="#ECC94B" />
-                    <Text style={styles.searchResultRatingText}>{item.rating || 'N/A'}</Text>
-                  </View>
-                  <Text style={styles.searchResultLink}>Chi tiết →</Text>
-                </View>
-              </View>
+              <Feather name="arrow-left" size={24} color="#1A2B4A" />
             </TouchableOpacity>
-          )}
-        />
-      ) : searchQuery.length > 0 ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
-          <Feather name="frown" size={48} color="#CBD5E0" />
-          <Text style={{ marginTop: 16, fontSize: 16, color: '#718096', textAlign: 'center' }}>
-            Không tìm thấy địa điểm nào khớp với &quot;{searchQuery}&quot;
-          </Text>
-        </View>
-      ) : (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
-          <Feather name="map" size={48} color="#E2E8F0" />
-          <Text style={{ marginTop: 16, fontSize: 16, color: '#A0AEC0', textAlign: 'center' }}>
-            Nhập tên địa danh bạn muốn đến...
-          </Text>
-        </View>
-      )}
-    </SafeAreaView>
-  </Modal>
-
-  {/* Notifications Modal */ }
-  <Modal
-    visible={isNotifModalVisible}
-    animationType="slide"
-    transparent={true}
-    onRequestClose={() => setIsNotifModalVisible(false)}
-  >
-    <View style={styles.modalOverlay}>
-      <TouchableOpacity
-        style={styles.modalCloseArea}
-        activeOpacity={1}
-        onPress={() => setIsNotifModalVisible(false)}
-      />
-      <View style={[styles.modalContent, { height: '80%' }]}>
-        <View style={styles.notifHeader}>
-          <Text style={styles.notifTitle}>Thông báo</Text>
-          <TouchableOpacity onPress={() => setIsNotifModalVisible(false)}>
-            <Feather name="x" size={24} color="#1A2B4A" />
-          </TouchableOpacity>
-        </View>
-
-        {notifications.length === 0 ? (
-          <View style={styles.emptyNotifContainer}>
-            <Feather name="bell-off" size={48} color="#E2E8F0" />
-            <Text style={styles.emptyNotifText}>Bạn chưa có thông báo nào</Text>
+            <View style={styles.searchModalInputWrapper}>
+              <Feather name="search" size={18} color="#A0AEC0" style={{ marginRight: 10 }} />
+              <TextInput
+                style={styles.searchModalInput}
+                placeholder="Bạn muốn đi đâu?"
+                placeholderTextColor="#A0AEC0"
+                value={searchQuery}
+                onChangeText={handleSearch}
+                autoFocus
+                returnKeyType="search"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => handleSearch('')}>
+                  <Feather name="x-circle" size={18} color="#CBD5E0" />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
-        ) : (
-          <FlatList
-            data={notifications}
-            keyExtractor={(item) => item._id}
-            contentContainerStyle={{ paddingBottom: 20 }}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[styles.notifItem, !item.isRead && styles.notifItemUnread]}
-                onPress={() => handleNotifPress(item)}
-              >
-                <View
-                  style={[
-                    styles.notifIcon,
-                    { backgroundColor: item.isRead ? '#F7FAFC' : '#EBF8FF' },
-                  ]}
+
+          {isSearchingResults ? (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+              <ActivityIndicator size="large" color="#4A7CFF" />
+            </View>
+          ) : searchResults.length > 0 ? (
+            <FlatList
+              data={searchResults}
+              keyExtractor={(item) => item.placeId}
+              contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.searchResultCard}
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    setIsSearchModalVisible(false);
+                    setSelectedPlace(item);
+                  }}
                 >
-                  <Feather
-                    name={item.type === 'promotion' ? 'tag' : 'bell'}
-                    size={18}
-                    color={item.isRead ? '#718096' : '#4299E1'}
+                  <ExpoImage
+                    source={getImageSource(item.photo)}
+                    style={styles.searchResultImage}
+                    contentFit="cover"
                   />
-                </View>
-                <View style={styles.notifInfo}>
-                  <Text style={[styles.notifItemTitle, !item.isRead && styles.notifTextUnread]}>
-                    {item.title}
-                  </Text>
-                  <Text style={styles.notifItemMessage} numberOfLines={2}>
-                    {item.message}
-                  </Text>
-                  <Text style={styles.notifItemTime}>
-                    {new Date(item.createdAt).toLocaleDateString('vi-VN')}
-                  </Text>
-                </View>
-                {!item.isRead && <View style={styles.unreadDot} />}
-              </TouchableOpacity>
-            )}
-          />
-        )}
-      </View>
-    </View>
-  </Modal>
-
-  {/* Notification Detail Modal */ }
-  <Modal
-    visible={!!selectedNotifForDetail}
-    animationType="fade"
-    transparent={true}
-    onRequestClose={() => setSelectedNotifForDetail(null)}
-  >
-    <View style={styles.detailNotifOverlay}>
-      <View style={styles.detailNotifContent}>
-        <View style={styles.detailNotifHeader}>
-          <View style={[styles.notifIcon, { backgroundColor: '#EBF8FF', marginBottom: 0 }]}>
-            <Feather
-              name={selectedNotifForDetail?.type === 'promotion' ? 'tag' : 'bell'}
-              size={24}
-              color="#4299E1"
+                  <View style={styles.searchResultInfo}>
+                    <Text style={styles.searchResultName} numberOfLines={1}>
+                      {item.name}
+                    </Text>
+                    <View style={styles.searchResultLocation}>
+                      <Feather name="map-pin" size={12} color="#A0AEC0" />
+                      <Text style={styles.searchResultAddress} numberOfLines={1}>
+                        {item.address}
+                      </Text>
+                    </View>
+                    <View style={styles.searchResultFooter}>
+                      <View style={styles.searchResultRating}>
+                        <Feather name="star" size={12} color="#ECC94B" fill="#ECC94B" />
+                        <Text style={styles.searchResultRatingText}>{item.rating || 'N/A'}</Text>
+                      </View>
+                      <Text style={styles.searchResultLink}>Chi tiết →</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              )}
             />
+          ) : searchQuery.length > 0 ? (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
+              <Feather name="frown" size={48} color="#CBD5E0" />
+              <Text style={{ marginTop: 16, fontSize: 16, color: '#718096', textAlign: 'center' }}>
+                Không tìm thấy địa điểm nào khớp với &quot;{searchQuery}&quot;
+              </Text>
+            </View>
+          ) : (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
+              <Feather name="map" size={48} color="#E2E8F0" />
+              <Text style={{ marginTop: 16, fontSize: 16, color: '#A0AEC0', textAlign: 'center' }}>
+                Nhập tên địa danh bạn muốn đến...
+              </Text>
+            </View>
+          )}
+        </SafeAreaView>
+      </Modal>
+
+      {/* Notifications Modal */}
+      <Modal
+        visible={isNotifModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsNotifModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.modalCloseArea}
+            activeOpacity={1}
+            onPress={() => setIsNotifModalVisible(false)}
+          />
+          <View style={[styles.modalContent, { height: '80%' }]}>
+            <View style={styles.notifHeader}>
+              <Text style={styles.notifTitle}>Thông báo</Text>
+              <TouchableOpacity onPress={() => setIsNotifModalVisible(false)}>
+                <Feather name="x" size={24} color="#1A2B4A" />
+              </TouchableOpacity>
+            </View>
+
+            {notifications.length === 0 ? (
+              <View style={styles.emptyNotifContainer}>
+                <Feather name="bell-off" size={48} color="#E2E8F0" />
+                <Text style={styles.emptyNotifText}>Bạn chưa có thông báo nào</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={notifications}
+                keyExtractor={(item) => item._id}
+                contentContainerStyle={{ paddingBottom: 20 }}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={[styles.notifItem, !item.isRead && styles.notifItemUnread]}
+                    onPress={() => handleNotifPress(item)}
+                  >
+                    <View
+                      style={[
+                        styles.notifIcon,
+                        { backgroundColor: item.isRead ? '#F7FAFC' : '#EBF8FF' },
+                      ]}
+                    >
+                      <Feather
+                        name={item.type === 'promotion' ? 'tag' : 'bell'}
+                        size={18}
+                        color={item.isRead ? '#718096' : '#4299E1'}
+                      />
+                    </View>
+                    <View style={styles.notifInfo}>
+                      <Text style={[styles.notifItemTitle, !item.isRead && styles.notifTextUnread]}>
+                        {item.title}
+                      </Text>
+                      <Text style={styles.notifItemMessage} numberOfLines={2}>
+                        {item.message}
+                      </Text>
+                      <Text style={styles.notifItemTime}>
+                        {new Date(item.createdAt).toLocaleDateString('vi-VN')}
+                      </Text>
+                    </View>
+                    {!item.isRead && <View style={styles.unreadDot} />}
+                  </TouchableOpacity>
+                )}
+              />
+            )}
           </View>
-          <TouchableOpacity onPress={() => setSelectedNotifForDetail(null)}>
-            <Feather name="x" size={20} color="#CBD5E0" />
-          </TouchableOpacity>
         </View>
+      </Modal>
 
-        <Text style={styles.detailNotifTitle}>{selectedNotifForDetail?.title}</Text>
-        <Text style={styles.detailNotifTime}>
-          {selectedNotifForDetail &&
-            new Date(selectedNotifForDetail.createdAt).toLocaleString('vi-VN')}
-        </Text>
+      {/* Notification Detail Modal */}
+      <Modal
+        visible={!!selectedNotifForDetail}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setSelectedNotifForDetail(null)}
+      >
+        <View style={styles.detailNotifOverlay}>
+          <View style={styles.detailNotifContent}>
+            <View style={styles.detailNotifHeader}>
+              <View style={[styles.notifIcon, { backgroundColor: '#EBF8FF', marginBottom: 0 }]}>
+                <Feather
+                  name={selectedNotifForDetail?.type === 'promotion' ? 'tag' : 'bell'}
+                  size={24}
+                  color="#4299E1"
+                />
+              </View>
+              <TouchableOpacity onPress={() => setSelectedNotifForDetail(null)}>
+                <Feather name="x" size={20} color="#CBD5E0" />
+              </TouchableOpacity>
+            </View>
 
-        <View style={styles.detailNotifDivider} />
+            <Text style={styles.detailNotifTitle}>{selectedNotifForDetail?.title}</Text>
+            <Text style={styles.detailNotifTime}>
+              {selectedNotifForDetail &&
+                new Date(selectedNotifForDetail.createdAt).toLocaleString('vi-VN')}
+            </Text>
 
-        <ScrollView style={{ maxHeight: 200 }}>
-          <Text style={styles.detailNotifMessage}>{selectedNotifForDetail?.message}</Text>
-        </ScrollView>
+            <View style={styles.detailNotifDivider} />
 
-        <TouchableOpacity
-          style={styles.detailNotifButton}
-          onPress={() => setSelectedNotifForDetail(null)}
-        >
-          <Text style={styles.detailNotifButtonText}>Đóng</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </Modal>
-    </SafeAreaView >
+            <ScrollView style={{ maxHeight: 200 }}>
+              <Text style={styles.detailNotifMessage}>{selectedNotifForDetail?.message}</Text>
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.detailNotifButton}
+              onPress={() => setSelectedNotifForDetail(null)}
+            >
+              <Text style={styles.detailNotifButtonText}>Đóng</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
   );
 }
 

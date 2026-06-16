@@ -38,6 +38,7 @@ import { getImageSource } from '@/utils/imageUtils';
 import { decodeJWT } from '@/utils/jwtUtils';
 import { useConfirm } from '@/components/ConfirmProvider';
 import { paymentService } from '@/services/paymentService';
+import { CheckedInPlacesSection } from '@/components/shared/CheckedInPlacesSection';
 
 const { width } = Dimensions.get('window');
 
@@ -545,6 +546,9 @@ export default function ProfileScreen() {
               </View>
             </View>
           </View>
+
+          {/* Checked-in Places Section */}
+          <CheckedInPlacesSection />
 
           {/* Trips Section */}
           <View style={styles.sectionHeader}>
