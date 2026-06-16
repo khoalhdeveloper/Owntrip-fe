@@ -73,7 +73,7 @@ export const placesService = {
             'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?auto=format&fit=crop&q=80&w=800',
           photos: [
             'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?auto=format&fit=crop&q=80&w=800',
-            'https://images.unsplash.com/photo-1596422846543-74c6e27a01d8?auto=format&fit=crop&q=80&w=800',
+            'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=800',
           ],
         },
         {

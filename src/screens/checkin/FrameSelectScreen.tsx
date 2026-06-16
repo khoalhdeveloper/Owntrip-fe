@@ -86,7 +86,10 @@ export const FrameSelectScreen = () => {
     if (finalUri) {
       router.push({
         pathname: '/checkin/result',
-        params: { finalImageUri: finalUri, title: 'Kỷ niệm tuyệt vời!' },
+        params: {
+          finalImageUri: finalUri,
+          title: (params.title as string) || sessionCache.defaultTitle || 'Kỷ niệm tuyệt vời!',
+        },
       });
     }
   };
@@ -98,7 +101,10 @@ export const FrameSelectScreen = () => {
     if (finalUri) {
       router.push({
         pathname: '/checkin/result',
-        params: { finalImageUri: finalUri, title: 'Kỷ niệm tuyệt vời!' },
+        params: {
+          finalImageUri: finalUri,
+          title: (params.title as string) || sessionCache.defaultTitle || 'Kỷ niệm tuyệt vời!',
+        },
       });
     }
   };

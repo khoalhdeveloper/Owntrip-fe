@@ -13,14 +13,17 @@ import {
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { FontAwesome, Feather } from '@expo/vector-icons';
-import { CheckinMemory } from '../../types/checkin.type';
+import { CheckinMemory, CheckinMode } from '../../types/checkin.type';
 import { sessionCache } from './FrameSelectScreen';
 import { checkinService } from '../../services/checkinService';
+import { NearbyPlacesList } from './components/NearbyPlacesList';
+import { MissionProgressList } from './components/MissionProgressList';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 36) / 2; // Two-column grid with padding
 
 export const CheckinGalleryScreen = () => {
+  const [mode, setMode] = useState<CheckinMode>('memories');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'recent' | 'favorites'>('all');
   const [memories, setMemories] = useState<CheckinMemory[]>([]);
@@ -41,19 +44,19 @@ export const CheckinGalleryScreen = () => {
   useFocusEffect(
     useCallback(() => {
       loadMemories();
-    }, [])
+    }, []),
   );
 
   const toggleFavorite = async (id: string) => {
     const success = await checkinService.toggleFavorite(id);
     if (success) {
-      setMemories(prev =>
-        prev.map(mem => (mem.id === id ? { ...mem, isFavorite: !mem.isFavorite } : mem))
+      setMemories((prev) =>
+        prev.map((mem) => (mem.id === id ? { ...mem, isFavorite: !mem.isFavorite } : mem)),
       );
     }
   };
 
-  const filteredMemories = memories.filter(mem => {
+  const filteredMemories = memories.filter((mem) => {
     const matchesSearch = mem.title.toLowerCase().includes(searchQuery.toLowerCase());
     if (!matchesSearch) return false;
 
@@ -77,7 +80,13 @@ export const CheckinGalleryScreen = () => {
         onPress={() =>
           router.push({
             pathname: '/checkin/result',
-            params: { id: item.id, finalImageUri: item.imageUri, title: item.title, fromGallery: 'true', isFavorite: item.isFavorite ? 'true' : 'false' },
+            params: {
+              id: item.id,
+              finalImageUri: item.imageUri,
+              title: item.title,
+              fromGallery: 'true',
+              isFavorite: item.isFavorite ? 'true' : 'false',
+            },
           })
         }
       >
@@ -106,7 +115,13 @@ export const CheckinGalleryScreen = () => {
         onPress={() =>
           router.push({
             pathname: '/checkin/result',
-            params: { id: item.id, finalImageUri: item.imageUri, title: item.title, fromGallery: 'true', isFavorite: item.isFavorite ? 'true' : 'false' },
+            params: {
+              id: item.id,
+              finalImageUri: item.imageUri,
+              title: item.title,
+              fromGallery: 'true',
+              isFavorite: item.isFavorite ? 'true' : 'false',
+            },
           })
         }
       >
@@ -139,6 +154,7 @@ export const CheckinGalleryScreen = () => {
               sessionCache.userImageUris = [null, null, null, null];
               sessionCache.activeSlotIndex = 0;
               sessionCache.selectedFrame = null;
+              sessionCache.defaultTitle = undefined;
               router.push('/checkin/frame');
             }}
             style={styles.headerIconBtn}
@@ -151,75 +167,114 @@ export const CheckinGalleryScreen = () => {
         </View>
       </View>
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <Feather name="search" size={18} color="#999" style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Tìm kiếm kỷ niệm..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Feather name="x" size={18} color="#999" />
-          </TouchableOpacity>
-        )}
+      {/* Mode Tabs */}
+      <View style={styles.modeTabContainer}>
+        {(['memories', 'nearby', 'missions'] as const).map((tabMode) => {
+          const isActive = mode === tabMode;
+          const iconName =
+            tabMode === 'memories' ? 'image' : tabMode === 'nearby' ? 'map-pin' : 'target';
+
+          return (
+            <TouchableOpacity
+              key={tabMode}
+              style={[styles.modeTabBtn, isActive && styles.activeModeTabBtn]}
+              onPress={() => setMode(tabMode)}
+              activeOpacity={0.85}
+            >
+              <Feather
+                name={iconName}
+                size={14}
+                color={isActive ? '#2F80ED' : '#8A97AA'}
+                style={styles.modeTabIcon}
+              />
+              <Text style={[styles.modeTabText, isActive && styles.activeModeTabText]}>
+                {tabMode === 'memories' ? 'Kỷ niệm' : tabMode === 'nearby' ? 'Gần đây' : 'Nhiệm vụ'}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
-      {/* Filter Tabs */}
-      <View style={styles.tabContainer}>
-        {(['all', 'recent', 'favorites'] as const).map(tab => (
-          <TouchableOpacity
-            key={tab}
-            style={[styles.tabButton, activeTab === tab && styles.activeTabButton]}
-            onPress={() => setActiveTab(tab)}
-          >
-            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
-              {tab === 'all' ? 'Tất cả' : tab === 'recent' ? 'Gần đây' : 'Yêu thích'}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {mode === 'memories' && (
+        <>
+          {/* Search Bar */}
+          <View style={styles.searchContainer}>
+            <Feather name="search" size={18} color="#999" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Tìm kiếm kỷ niệm..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Feather name="x" size={18} color="#999" />
+              </TouchableOpacity>
+            )}
+          </View>
 
-      {/* Grid List */}
-      {loading && listData.length === 0 ? (
-        <View style={styles.loadingWrapper}>
-          <ActivityIndicator size="large" color="#2F80ED" />
-        </View>
-      ) : (
-        <FlatList
-          data={listData}
-          renderItem={renderMemoryItem}
-          keyExtractor={item => item.id}
-          numColumns={2}
-          columnWrapperStyle={styles.row}
-          ListHeaderComponent={renderLargeHeader}
-          contentContainerStyle={styles.listContent}
-          ListEmptyComponent={
-            !showLargeHeader ? (
-              <View style={styles.emptyContainer}>
-                <Feather name="image" size={48} color="#ccc" />
-                <Text style={styles.emptyText}>Chưa có ảnh kỷ niệm nào</Text>
-              </View>
-            ) : null
-          }
-        />
+          {/* Filter Tabs */}
+          <View style={styles.tabContainer}>
+            {(['all', 'recent', 'favorites'] as const).map((tab) => (
+              <TouchableOpacity
+                key={tab}
+                style={[styles.tabButton, activeTab === tab && styles.activeTabButton]}
+                onPress={() => setActiveTab(tab)}
+              >
+                <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
+                  {tab === 'all' ? 'Tất cả' : tab === 'recent' ? 'Gần đây' : 'Yêu thích'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Grid List */}
+          {loading && listData.length === 0 ? (
+            <View style={styles.loadingWrapper}>
+              <ActivityIndicator size="large" color="#2F80ED" />
+            </View>
+          ) : (
+            <FlatList
+              data={listData}
+              renderItem={renderMemoryItem}
+              keyExtractor={(item) => item.id}
+              numColumns={2}
+              columnWrapperStyle={styles.row}
+              ListHeaderComponent={renderLargeHeader}
+              contentContainerStyle={styles.listContent}
+              ListEmptyComponent={
+                !showLargeHeader ? (
+                  <View style={styles.emptyContainer}>
+                    <Feather name="image" size={48} color="#ccc" />
+                    <Text style={styles.emptyText}>Chưa có ảnh kỷ niệm nào</Text>
+                  </View>
+                ) : null
+              }
+            />
+          )}
+        </>
       )}
 
+      {mode === 'nearby' && <NearbyPlacesList />}
+
+      {mode === 'missions' && <MissionProgressList />}
+
       {/* Floating Action Button */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => {
-          sessionCache.userImageUris = [null, null, null, null];
-          sessionCache.activeSlotIndex = 0;
-          sessionCache.selectedFrame = null;
-          router.push('/checkin/frame');
-        }}
-      >
-        <Feather name="plus" size={20} color="#fff" />
-        <Text style={styles.fabText}>Tạo check-in</Text>
-      </TouchableOpacity>
+      {mode === 'memories' && (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => {
+            sessionCache.userImageUris = [null, null, null, null];
+            sessionCache.activeSlotIndex = 0;
+            sessionCache.selectedFrame = null;
+            sessionCache.defaultTitle = undefined;
+            router.push('/checkin/frame');
+          }}
+        >
+          <Feather name="plus" size={20} color="#fff" />
+          <Text style={styles.fabText}>Tạo check-in</Text>
+        </TouchableOpacity>
+      )}
     </SafeAreaView>
   );
 };
@@ -397,5 +452,45 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 100,
+  },
+  modeTabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#EEF4FA',
+    padding: 5,
+    borderRadius: 14,
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E2EAF3',
+  },
+  modeTabBtn: {
+    flex: 1,
+    minHeight: 36,
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    borderRadius: 10,
+  },
+  activeModeTabBtn: {
+    backgroundColor: '#fff',
+    elevation: 3,
+    shadowColor: '#1A253C',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  modeTabIcon: {
+    marginRight: 5,
+  },
+  modeTabText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#7B8AA0',
+  },
+  activeModeTabText: {
+    color: '#2F80ED',
+    fontWeight: '800',
   },
 });

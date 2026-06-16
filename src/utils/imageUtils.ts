@@ -1,5 +1,5 @@
 export const getImageSource = (uri: string | null | undefined): any => {
-  if (!uri || typeof uri !== 'string' || uri.trim() === '') {
+  if (!isRenderableImageUri(uri)) {
     return null;
   }
 
@@ -24,5 +24,29 @@ export const getImageSource = (uri: string | null | undefined): any => {
   }
 
   // Return object with uri for regular sources to ensure compatibility with ImageBackground
-  return cleanUri.startsWith('http') ? { uri: cleanUri } : null;
+  return { uri: cleanUri };
+};
+
+export const isRenderableImageUri = (uri: string | null | undefined): uri is string => {
+  if (!uri || typeof uri !== 'string' || uri.trim() === '') {
+    return false;
+  }
+
+  const cleanUri = uri.trim().toLowerCase();
+  return (
+    cleanUri.startsWith('http://') ||
+    cleanUri.startsWith('https://') ||
+    cleanUri.startsWith('//') ||
+    cleanUri.startsWith('file://') ||
+    cleanUri.startsWith('content://') ||
+    cleanUri.startsWith('data:image/')
+  );
+};
+
+export const getFirstValidImageUri = (
+  uris: (string | null | undefined)[] | null | undefined,
+  fallbackUri?: string,
+): string | null => {
+  const validUri = uris?.find(isRenderableImageUri);
+  return validUri?.trim() || fallbackUri || null;
 };
