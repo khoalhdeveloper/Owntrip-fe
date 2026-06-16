@@ -1,5 +1,5 @@
 export const API_CONFIG = {
-  BASE_URL: 'https://owntrip.vercel.app', // Production URL
+  BASE_URL: 'http://10.0.2.2:3000', // Production URL
   
   
   TIMEOUT: 15000,
@@ -104,11 +104,20 @@ export const ENDPOINTS = {
   CHECKINS: {
     CREATE:   '/api/checkins',
     MY:       '/api/checkins/my',
+    NEARBY:   '/api/checkins/nearby',
+    VERIFY:   '/api/checkins/verify',
+    MY_PLACES: '/api/checkins/my/places',
     FAVORITE: (id: string) => `/api/checkins/${id}/favorite`,
     DELETE:   (id: string) => `/api/checkins/${id}`,
   },
   FRAMES: {
     LIST: '/api/frames', // Public — lấy danh sách frame đang active
+    MY_UNLOCKED: '/api/frames/my-unlocked',
+  },
+  MISSIONS: {
+    LIST:           '/api/missions',
+    MY_PROGRESS:    '/api/missions/my-progress',
+    CLAIM_REWARD:   (id: string) => `/api/missions/${id}/claim-reward`,
   },
   AI: {
     REARRANGE: '/api/ai/rearrange',
