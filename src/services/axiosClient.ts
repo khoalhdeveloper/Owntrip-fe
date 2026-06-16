@@ -28,10 +28,13 @@ axiosClient.interceptors.response.use(
   async (error) => {
     if (error.response) {
       const { status, data } = error.response;
+      const code = data?.code;
 
       if (status === 429) {
         // API quota hết — chỉ warn, không error đỏ
         console.warn(`⚠️ API quota exceeded [429]:`, data?.message || 'Rate limited');
+      } else if (status === 409 && code === 'already_checked_in') {
+        // Expected domain response: handled by the check-in UI.
       } else if (status === 401 || status === 403) {
         console.warn('🔒 Token hết hạn hoặc bị từ chối! Đang xóa token...');
         try {
@@ -41,6 +44,8 @@ axiosClient.interceptors.response.use(
         }
       } else if (status === 500) {
         console.warn(`⚠️ API Error [${status}]:`, data);
+      } else if (code) {
+        console.warn(`API handled response [${status}]:`, code);
       } else {
         console.error(`API Error [${status}]:`, data);
       }

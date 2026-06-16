@@ -1,9 +1,22 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, Image, TouchableOpacity, ScrollView, Dimensions, Linking, NativeModules, TouchableWithoutFeedback } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Modal,
+  Image,
+  TouchableOpacity,
+  ScrollView,
+  Dimensions,
+  Linking,
+  NativeModules,
+  TouchableWithoutFeedback,
+} from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { MAP_CONFIG } from '@/constants/map';
 import { WebView } from 'react-native-webview';
 import { generateMapHtml } from './journal/map-html';
+import { isRenderableImageUri } from '../../../utils/imageUtils';
 
 const isMapboxAvailable = !!NativeModules.RNMBXModule || !!NativeModules.RNMBXMapView;
 let MapboxGL: any = null;
@@ -32,151 +45,198 @@ interface PlaceDetailModalProps {
   showAddButton?: boolean;
 }
 
-const PlaceDetailModal: React.FC<PlaceDetailModalProps> = ({ 
-  isVisible, onClose, place, onAdd, showAddButton = true 
+const PlaceDetailModal: React.FC<PlaceDetailModalProps> = ({
+  isVisible,
+  onClose,
+  place,
+  onAdd,
+  showAddButton = true,
 }) => {
   const [selectedTime, setSelectedTime] = useState<'morning' | 'afternoon' | 'evening'>('morning');
   const [showMap, setShowMap] = useState(false);
 
   if (!place) return null;
 
+  const fallbackPhoto = 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=500';
+  const placePhotoUris = Array.from(
+    new Set(
+      [...(Array.isArray(place.photos) ? place.photos : []), place.photo]
+        .filter(isRenderableImageUri)
+        .map((uri) => uri.trim()),
+    ),
+  );
+  const headerPhoto = placePhotoUris[0] || fallbackPhoto;
+
   const handleOpenMap = () => {
     setShowMap(true);
   };
 
   return (
-    <Modal
-      visible={isVisible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={onClose}
-    >
+    <Modal visible={isVisible} animationType="slide" transparent={true} onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.overlay}>
           <TouchableWithoutFeedback onPress={() => {}}>
             <View style={styles.content}>
-          {/* Header Image */}
-          <View style={styles.imageContainer}>
-            <Image 
-              source={{ uri: place.photo || 'https://via.placeholder.com/400x200' }} 
-              style={styles.headerImage}
-            />
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Ionicons name="close" size={24} color="white" />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView style={styles.detailsScroll}>
-            <View style={styles.mainInfo}>
-              <Text style={styles.placeName}>{place.name}</Text>
-              <View style={styles.ratingRow}>
-                <Ionicons name="star" size={16} color="#FFB800" />
-                <Text style={styles.ratingText}>{place.rating || 'N/A'}</Text>
-                {place.totalReviews && (
-                  <Text style={styles.reviewCount}>({place.totalReviews} reviews)</Text>
-                )}
+              {/* Header Image */}
+              <View style={styles.imageContainer}>
+                <Image source={{ uri: headerPhoto }} style={styles.headerImage} />
+                <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                  <Ionicons name="close" size={24} color="white" />
+                </TouchableOpacity>
               </View>
-              <Text style={styles.addressText}>{place.address}</Text>
-            </View>
 
-            {/* Action Buttons */}
-            <View style={styles.actionRow}>
-              <TouchableOpacity style={styles.actionBtn} onPress={handleOpenMap}>
-                <View style={styles.actionIconCircle}>
-                  <Feather name="map-pin" size={20} color={BRAND} />
-                </View>
-                <Text style={styles.actionLabel}>Chỉ đường</Text>
-              </TouchableOpacity>
-              
-              {place.phoneNumber && (
-                <TouchableOpacity style={styles.actionBtn} onPress={() => Linking.openURL(`tel:${place.phoneNumber}`)}>
-                  <View style={styles.actionIconCircle}>
-                    <Feather name="phone" size={20} color={BRAND} />
+              <ScrollView style={styles.detailsScroll}>
+                <View style={styles.mainInfo}>
+                  <Text style={styles.placeName}>{place.name}</Text>
+                  <View style={styles.ratingRow}>
+                    <Ionicons name="star" size={16} color="#FFB800" />
+                    <Text style={styles.ratingText}>{place.rating || 'N/A'}</Text>
+                    {place.totalReviews && (
+                      <Text style={styles.reviewCount}>({place.totalReviews} reviews)</Text>
+                    )}
                   </View>
-                  <Text style={styles.actionLabel}>Gọi điện</Text>
-                </TouchableOpacity>
-              )}
-
-              <TouchableOpacity style={styles.actionBtn} onPress={() => {}}>
-                <View style={styles.actionIconCircle}>
-                  <Feather name="share-2" size={20} color={BRAND} />
+                  <Text style={styles.addressText}>{place.address}</Text>
                 </View>
-                <Text style={styles.actionLabel}>Chia sẻ</Text>
-              </TouchableOpacity>
-            </View>
 
-            {/* Photos Section */}
-            {place.photos && place.photos.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Hình ảnh</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoList}>
-                  {place.photos.map((img: string, idx: number) => (
-                    <Image key={idx} source={{ uri: img }} style={styles.detailPhoto} />
-                  ))}
-                </ScrollView>
-              </View>
-            )}
+                {/* Action Buttons */}
+                <View style={styles.actionRow}>
+                  <TouchableOpacity style={styles.actionBtn} onPress={handleOpenMap}>
+                    <View style={styles.actionIconCircle}>
+                      <Feather name="map-pin" size={20} color={BRAND} />
+                    </View>
+                    <Text style={styles.actionLabel}>Chỉ đường</Text>
+                  </TouchableOpacity>
 
-            {/* Placeholder for description or other info */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Về địa điểm này</Text>
-              <Text style={styles.description}>
-                Địa điểm này nằm ở khu vực trung tâm, thuận tiện cho việc di chuyển và tham quan. 
-                Được đánh giá cao bởi khách du lịch vì chất lượng dịch vụ và không gian đặc trưng.
-              </Text>
-            </View>
-            
-            <View style={{ height: 100 }} />
-          </ScrollView>
+                  {place.phoneNumber && (
+                    <TouchableOpacity
+                      style={styles.actionBtn}
+                      onPress={() => Linking.openURL(`tel:${place.phoneNumber}`)}
+                    >
+                      <View style={styles.actionIconCircle}>
+                        <Feather name="phone" size={20} color={BRAND} />
+                      </View>
+                      <Text style={styles.actionLabel}>Gọi điện</Text>
+                    </TouchableOpacity>
+                  )}
 
-          {/* Bottom Footer Action */}
-          {showAddButton ? (
-            <View style={styles.footer}>
-              <View style={styles.timeSelector}>
-                <TouchableOpacity 
-                  style={[styles.timeOption, selectedTime === 'morning' && styles.timeOptionActive]}
-                  onPress={() => setSelectedTime('morning')}
-                >
-                  <Text style={[styles.timeOptionText, selectedTime === 'morning' && styles.timeOptionTextActive]}>Sáng</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.timeOption, selectedTime === 'afternoon' && styles.timeOptionActive]}
-                  onPress={() => setSelectedTime('afternoon')}
-                >
-                  <Text style={[styles.timeOptionText, selectedTime === 'afternoon' && styles.timeOptionTextActive]}>Chiều</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.timeOption, selectedTime === 'evening' && styles.timeOptionActive]}
-                  onPress={() => setSelectedTime('evening')}
-                >
-                  <Text style={[styles.timeOptionText, selectedTime === 'evening' && styles.timeOptionTextActive]}>Tối</Text>
-                </TouchableOpacity>
-              </View>
+                  <TouchableOpacity style={styles.actionBtn} onPress={() => {}}>
+                    <View style={styles.actionIconCircle}>
+                      <Feather name="share-2" size={20} color={BRAND} />
+                    </View>
+                    <Text style={styles.actionLabel}>Chia sẻ</Text>
+                  </TouchableOpacity>
+                </View>
 
-              <TouchableOpacity 
-                style={styles.addButton}
-                onPress={() => {
-                  onAdd(place, selectedTime);
-                  onClose();
-                }}
-              >
-                <Text style={styles.addButtonText}>Thêm vào lịch trình</Text>
-              </TouchableOpacity>
+                {/* Photos Section */}
+                {placePhotoUris.length > 0 && (
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Hình ảnh</Text>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      style={styles.photoList}
+                    >
+                      {placePhotoUris.map((img: string, idx: number) => (
+                        <Image key={idx} source={{ uri: img }} style={styles.detailPhoto} />
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+
+                {/* Placeholder for description or other info */}
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Về địa điểm này</Text>
+                  <Text style={styles.description}>
+                    Địa điểm này nằm ở khu vực trung tâm, thuận tiện cho việc di chuyển và tham
+                    quan. Được đánh giá cao bởi khách du lịch vì chất lượng dịch vụ và không gian
+                    đặc trưng.
+                  </Text>
+                </View>
+
+                <View style={{ height: 100 }} />
+              </ScrollView>
+
+              {/* Bottom Footer Action */}
+              {showAddButton ? (
+                <View style={styles.footer}>
+                  <View style={styles.timeSelector}>
+                    <TouchableOpacity
+                      style={[
+                        styles.timeOption,
+                        selectedTime === 'morning' && styles.timeOptionActive,
+                      ]}
+                      onPress={() => setSelectedTime('morning')}
+                    >
+                      <Text
+                        style={[
+                          styles.timeOptionText,
+                          selectedTime === 'morning' && styles.timeOptionTextActive,
+                        ]}
+                      >
+                        Sáng
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.timeOption,
+                        selectedTime === 'afternoon' && styles.timeOptionActive,
+                      ]}
+                      onPress={() => setSelectedTime('afternoon')}
+                    >
+                      <Text
+                        style={[
+                          styles.timeOptionText,
+                          selectedTime === 'afternoon' && styles.timeOptionTextActive,
+                        ]}
+                      >
+                        Chiều
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.timeOption,
+                        selectedTime === 'evening' && styles.timeOptionActive,
+                      ]}
+                      onPress={() => setSelectedTime('evening')}
+                    >
+                      <Text
+                        style={[
+                          styles.timeOptionText,
+                          selectedTime === 'evening' && styles.timeOptionTextActive,
+                        ]}
+                      >
+                        Tối
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.addButton}
+                    onPress={() => {
+                      onAdd(place, selectedTime);
+                      onClose();
+                    }}
+                  >
+                    <Text style={styles.addButtonText}>Thêm vào lịch trình</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.footer}>
+                  <TouchableOpacity
+                    style={[
+                      styles.addButton,
+                      { backgroundColor: '#F3F4F6', shadowColor: 'transparent' },
+                    ]}
+                    onPress={onClose}
+                  >
+                    <Text style={[styles.addButtonText, { color: '#4B5563' }]}>Đóng</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
-          ) : (
-            <View style={styles.footer}>
-              <TouchableOpacity 
-                style={[styles.addButton, { backgroundColor: '#F3F4F6', shadowColor: 'transparent' }]}
-                onPress={onClose}
-              >
-                <Text style={[styles.addButtonText, { color: '#4B5563' }]}>Đóng</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          </TouchableWithoutFeedback>
         </View>
       </TouchableWithoutFeedback>
-    </View>
-  </TouchableWithoutFeedback>
 
       {/* Embedded Map Modal */}
       {showMap && (
@@ -188,18 +248,35 @@ const PlaceDetailModal: React.FC<PlaceDetailModalProps> = ({
         >
           <View style={{ flex: 1, backgroundColor: 'white' }}>
             {isMapboxAvailable ? (
-              <MapboxGL.MapView 
-                style={{ flex: 1 }} 
-                logoEnabled={false} 
-                attributionEnabled={false}
-              >
-                <MapboxGL.Camera 
-                  zoomLevel={15} 
-                  centerCoordinate={[place.longitude, place.latitude]} 
+              <MapboxGL.MapView style={{ flex: 1 }} logoEnabled={false} attributionEnabled={false}>
+                <MapboxGL.Camera
+                  zoomLevel={15}
+                  centerCoordinate={[place.longitude, place.latitude]}
                 />
-                <MapboxGL.MarkerView coordinate={[place.longitude, place.latitude]} id="placeMarker">
-                  <View style={{ width: 40, height: 40, backgroundColor: 'rgba(74, 124, 255, 0.2)', borderRadius: 20, justifyContent: 'center', alignItems: 'center' }}>
-                    <View style={{ width: 16, height: 16, backgroundColor: BRAND, borderRadius: 8, borderWidth: 2, borderColor: 'white' }} />
+                <MapboxGL.MarkerView
+                  coordinate={[place.longitude, place.latitude]}
+                  id="placeMarker"
+                >
+                  <View
+                    style={{
+                      width: 40,
+                      height: 40,
+                      backgroundColor: 'rgba(74, 124, 255, 0.2)',
+                      borderRadius: 20,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 16,
+                        height: 16,
+                        backgroundColor: BRAND,
+                        borderRadius: 8,
+                        borderWidth: 2,
+                        borderColor: 'white',
+                      }}
+                    />
                   </View>
                 </MapboxGL.MarkerView>
               </MapboxGL.MapView>
@@ -209,43 +286,46 @@ const PlaceDetailModal: React.FC<PlaceDetailModalProps> = ({
                 originWhitelist={['*']}
                 source={{
                   html: generateMapHtml(
-                    [{
-                      id: place._id || '1',
-                      name: place.name || '',
-                      photo: place.photo || '',
-                      latitude: place.latitude,
-                      longitude: place.longitude,
-                      dayDate: new Date().toISOString(),
-                      mockTime: '',
-                      mockMemory: '',
-                      rating: place.rating,
-                      totalReviews: place.totalReviews,
-                      address: place.address,
-                      types: place.types || []
-                    }],
+                    [
+                      {
+                        id: place._id || '1',
+                        name: place.name || '',
+                        photo: place.photo || '',
+                        latitude: place.latitude,
+                        longitude: place.longitude,
+                        dayDate: new Date().toISOString(),
+                        mockTime: '',
+                        mockMemory: '',
+                        rating: place.rating,
+                        totalReviews: place.totalReviews,
+                        address: place.address,
+                        types: place.types || [],
+                      },
+                    ],
                     BRAND,
                     MAP_CONFIG.MAPBOX_ACCESS_TOKEN || '',
                     MAP_CONFIG.GOONG_MAPTILES_KEY || '',
                     [new Date().toISOString()],
-                    []
+                    [],
                   ),
                   baseUrl: 'https://localhost',
                 }}
               />
             )}
 
-            <TouchableOpacity 
-              style={styles.mapBackButton}
-              onPress={() => setShowMap(false)}
-            >
+            <TouchableOpacity style={styles.mapBackButton} onPress={() => setShowMap(false)}>
               <Feather name="arrow-left" size={24} color={TEXT_MAIN} />
             </TouchableOpacity>
 
             <View style={styles.mapInfoCard}>
-              <Text style={styles.placeName} numberOfLines={1}>{place.name}</Text>
-              <Text style={styles.addressText} numberOfLines={2}>{place.address}</Text>
-              
-              <TouchableOpacity 
+              <Text style={styles.placeName} numberOfLines={1}>
+                {place.name}
+              </Text>
+              <Text style={styles.addressText} numberOfLines={2}>
+                {place.address}
+              </Text>
+
+              <TouchableOpacity
                 style={[styles.addButton, { marginTop: 16, flexDirection: 'row' }]}
                 onPress={() => {
                   const url = `https://www.google.com/maps/dir/?api=1&destination=${place.latitude},${place.longitude}`;
