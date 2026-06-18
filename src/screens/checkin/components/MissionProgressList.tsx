@@ -100,12 +100,12 @@ export const MissionProgressList: React.FC = () => {
                   <Text style={styles.statValue}>{activeCount}</Text>
                   <Text style={styles.statLabel}>Đang làm</Text>
                 </View>
-                <View style={[styles.statPill, readyCount > 0 && styles.readyStatPill]}>
-                  <Text style={[styles.statValue, readyCount > 0 && styles.readyStatValue]}>
-                    {readyCount}
+                <View style={[styles.statPill, completedCount > 0 && styles.completedStatPill]}>
+                  <Text style={[styles.statValue, completedCount > 0 && styles.completedStatValue]}>
+                    {completedCount}
                   </Text>
-                  <Text style={[styles.statLabel, readyCount > 0 && styles.readyStatLabel]}>
-                    Có thưởng
+                  <Text style={[styles.statLabel, completedCount > 0 && styles.completedStatLabel]}>
+                    Hoàn thành
                   </Text>
                 </View>
               </View>
@@ -207,6 +207,15 @@ const styles = StyleSheet.create({
   },
   readyStatLabel: {
     color: '#B7791F',
+  },
+  completedStatPill: {
+    backgroundColor: '#E9F8F0',
+  },
+  completedStatValue: {
+    color: '#22A661',
+  },
+  completedStatLabel: {
+    color: '#1E8C51',
   },
   centerContainer: {
     flex: 1,

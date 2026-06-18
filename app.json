@@ -56,6 +56,14 @@
       "@react-native-community/datetimepicker",
       "expo-sharing",
       [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Cho phép OwnTrip sử dụng microphone để nhập lệnh bằng giọng nói.",
+          "speechRecognitionPermission": "Cho phép OwnTrip chuyển giọng nói thành văn bản cho trợ lý AI.",
+          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
+        }
+      ],
+      [
         "@rnmapbox/maps",
         {
           "RNMapboxGLImpl": "mapbox"

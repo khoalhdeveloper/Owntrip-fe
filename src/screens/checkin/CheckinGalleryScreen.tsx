@@ -18,6 +18,7 @@ import { sessionCache } from './FrameSelectScreen';
 import { checkinService } from '../../services/checkinService';
 import { NearbyPlacesList } from './components/NearbyPlacesList';
 import { MissionProgressList } from './components/MissionProgressList';
+import { VisitedPlacesList } from './components/VisitedPlacesList';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 36) / 2; // Two-column grid with padding
@@ -57,6 +58,10 @@ export const CheckinGalleryScreen = () => {
   };
 
   const filteredMemories = memories.filter((mem) => {
+    // Chỉ hiện kỷ niệm có ảnh hợp lệ
+    const hasImage = mem.imageUri && mem.imageUri.trim() !== '' && !mem.imageUri.includes('undefined') && !mem.imageUri.includes('null');
+    if (!hasImage) return false;
+
     const matchesSearch = mem.title.toLowerCase().includes(searchQuery.toLowerCase());
     if (!matchesSearch) return false;
 
@@ -147,7 +152,7 @@ export const CheckinGalleryScreen = () => {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Kỷ niệm Check-in</Text>
+        <Text style={styles.headerTitle}>Check-in</Text>
         <View style={styles.headerRight}>
           <TouchableOpacity
             onPress={() => {
@@ -169,10 +174,16 @@ export const CheckinGalleryScreen = () => {
 
       {/* Mode Tabs */}
       <View style={styles.modeTabContainer}>
-        {(['memories', 'nearby', 'missions'] as const).map((tabMode) => {
+        {(['memories', 'visited', 'nearby', 'missions'] as const).map((tabMode) => {
           const isActive = mode === tabMode;
           const iconName =
-            tabMode === 'memories' ? 'image' : tabMode === 'nearby' ? 'map-pin' : 'target';
+            tabMode === 'memories'
+              ? 'image'
+              : tabMode === 'visited'
+              ? 'check-circle'
+              : tabMode === 'nearby'
+              ? 'map-pin'
+              : 'target';
 
           return (
             <TouchableOpacity
@@ -188,7 +199,13 @@ export const CheckinGalleryScreen = () => {
                 style={styles.modeTabIcon}
               />
               <Text style={[styles.modeTabText, isActive && styles.activeModeTabText]}>
-                {tabMode === 'memories' ? 'Kỷ niệm' : tabMode === 'nearby' ? 'Gần đây' : 'Nhiệm vụ'}
+                {tabMode === 'memories'
+                  ? 'Kỷ niệm'
+                  : tabMode === 'visited'
+                  ? 'Đã đi'
+                  : tabMode === 'nearby'
+                  ? 'Gần đây'
+                  : 'Nhiệm vụ'}
               </Text>
             </TouchableOpacity>
           );
@@ -254,6 +271,8 @@ export const CheckinGalleryScreen = () => {
           )}
         </>
       )}
+
+      {mode === 'visited' && <VisitedPlacesList />}
 
       {mode === 'nearby' && <NearbyPlacesList />}
 

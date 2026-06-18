@@ -1,6 +1,13 @@
 import axiosClient from './axiosClient';
 import { ENDPOINTS } from '../constants/api';
 
+export interface TripBudget {
+  accommodation: number;
+  food: number;
+  transport: number;
+  activities: number;
+}
+
 export interface Trip {
   _id: string;
   userId: string;
@@ -14,12 +21,7 @@ export interface Trip {
   description?: string;
   isPublished: boolean;
   notes?: string[];
-  budget?: {
-    accommodation: number;
-    food: number;
-    transport: number;
-    activities: number;
-  };
+  budget?: TripBudget;
   createdAt?: string;
   updatedAt?: string;
   accommodation?: {
@@ -236,12 +238,14 @@ export const tripService = {
   updateTrip: async (tripId: string, data: {
     title?: string;
     destination?: string;
+    provinceImage?: string;
     startDate?: string;
     endDate?: string;
     description?: string;
     isPublished?: boolean;
-    budget?: number;
+    budget?: number | TripBudget;
     accommodation?: any;
+    notes?: string[];
   }): Promise<Trip | null> => {
     try {
       const url = ENDPOINTS.TRIPS.UPDATE(tripId);

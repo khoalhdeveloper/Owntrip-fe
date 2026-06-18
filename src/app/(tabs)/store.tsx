@@ -174,12 +174,9 @@ export default function StoreScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={styles.safe} edges={['top']}>
-        {/* Header: Settings */}
+        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Cửa hàng</Text>
-          <TouchableOpacity style={styles.settingsBtn} onPress={() => {}}>
-            <Feather name="settings" size={22} color="#64748B" />
-          </TouchableOpacity>
         </View>
 
         <ScrollView

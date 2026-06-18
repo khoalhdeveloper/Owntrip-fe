@@ -61,9 +61,7 @@ export default function DecorationsScreen() {
             <Feather name="arrow-left" size={24} color="#E2E8F0" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Trang trí</Text>
-          <TouchableOpacity style={styles.headerBtn}>
-            <Feather name="settings" size={22} color="#94A3B8" />
-          </TouchableOpacity>
+          <View style={styles.headerBtn} />
         </View>
 
         {loading ? (

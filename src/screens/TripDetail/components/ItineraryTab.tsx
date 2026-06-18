@@ -7,13 +7,20 @@ import {
   Image,
   Platform,
   ActivityIndicator,
-  Linking,
   TextInput,
+  Modal,
+  KeyboardAvoidingView,
+  Pressable,
+  ScrollView,
+  Animated as RNAnimated,
+  PanResponder,
+  Dimensions,
+  Easing,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Swipeable, Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
+import ReanimatedAnimated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
@@ -27,9 +34,25 @@ import PlaceDetailModal from './PlaceDetailModal';
 import { useConfirm } from '@/components/ConfirmProvider';
 import { getDayColor } from './journal/types';
 import * as Speech from 'expo-speech';
+import Constants from 'expo-constants';
 
 const BRAND = '#4A7CFF';
 const BRAND_LIGHT = '#EBF5FF';
+const ASSISTANT_BTN_SIZE = 56;
+const ASSISTANT_LONG_PRESS_MS = 260;
+const ASSISTANT_DRAG_THRESHOLD = 6;
+const ASSISTANT_DEFAULT_TOP_RATIO = 0.5;
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const IS_EXPO_GO = Constants.appOwnership === 'expo';
+
+type SpeechRecognitionModuleLike = {
+  isRecognitionAvailable: () => boolean;
+  requestPermissionsAsync: () => Promise<{ granted: boolean }>;
+  start: (options: Record<string, unknown>) => void;
+  stop: () => void;
+  abort: () => void;
+  addListener: (eventName: string, listener: (event: any) => void) => { remove: () => void };
+};
 
 // ===== HELPERS =====
 function formatDayDate(dateStr: string): string {
@@ -84,13 +107,37 @@ export default function ItineraryTab({
   // Voice AI State
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
   const [aiText, setAiText] = useState('');
-  
+  const [assistantVisible, setAssistantVisible] = useState(false);
+  const [assistantDayNumber, setAssistantDayNumber] = useState<number | null>(null);
+  const [isListening, setIsListening] = useState(false);
+  const [speechError, setSpeechError] = useState('');
+  const [speechRecognitionUnavailable, setSpeechRecognitionUnavailable] = useState(false);
+  const [isMicHoldActive, setIsMicHoldActive] = useState(false);
+
   // Auto Generate State
   const [isAutoGenerating, setIsAutoGenerating] = useState(false);
 
   // Swipeable refs
   const swipeableRefs = useRef<Record<string, Swipeable | null>>({});
   const openSwipeable = useRef<string | null>(null);
+  const lastVoiceSubmitRef = useRef('');
+  const speechRecognitionModuleRef = useRef<SpeechRecognitionModuleLike | null>(null);
+  const speechRecognitionListenersRef = useRef<{ remove: () => void }[]>([]);
+  const assistantDefaultX = SCREEN_WIDTH - ASSISTANT_BTN_SIZE - 18;
+  const assistantDefaultY = SCREEN_HEIGHT * ASSISTANT_DEFAULT_TOP_RATIO - ASSISTANT_BTN_SIZE / 2;
+  const assistantFabPos = useRef(
+    new RNAnimated.ValueXY({
+      x: assistantDefaultX,
+      y: assistantDefaultY,
+    }),
+  ).current;
+  const assistantFabCurrentPos = useRef({
+    x: assistantDefaultX,
+    y: assistantDefaultY,
+  });
+  const assistantHoldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const assistantDraggedRef = useRef(false);
+  const assistantLongPressedRef = useRef(false);
 
   // Derive destinations from the days prop in real-time
   useEffect(() => {
@@ -118,7 +165,13 @@ export default function ItineraryTab({
         setExpandedDays({ [days[0].day]: true });
       }
     }
-  }, [days]);
+  }, [days, expandedDays]);
+
+  useEffect(() => {
+    if (assistantDayNumber === null && days.length > 0) {
+      setAssistantDayNumber(days[0].day);
+    }
+  }, [assistantDayNumber, days]);
 
   // Group destinations by day
   const destByDay = destinations.reduce<Record<number, Destination[]>>((acc, dest) => {
@@ -128,9 +181,17 @@ export default function ItineraryTab({
   }, {});
 
   const uniqueDates = React.useMemo(() => days.map((d) => d.date), [days]);
+  const targetAssistantDay = React.useMemo(() => {
+    return (
+      days.find((day) => day.day === assistantDayNumber) ||
+      days.find((day) => expandedDays[day.day]) ||
+      days[0]
+    );
+  }, [assistantDayNumber, days, expandedDays]);
 
   const toggleDay = (dayNum: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setAssistantDayNumber(dayNum);
     setExpandedDays((prev) => ({ ...prev, [dayNum]: !prev[dayNum] }));
   };
 
@@ -141,6 +202,7 @@ export default function ItineraryTab({
   const openAddModal = (dayId: string, dayNumber: number) => {
     setSelectedDayId(dayId);
     setSelectedDayNumber(dayNumber);
+    setAssistantDayNumber(dayNumber);
     setAddModalVisible(true);
   };
 
@@ -149,6 +211,29 @@ export default function ItineraryTab({
   };
 
   const { confirmDelete, alert: showAlert } = useConfirm();
+
+  const loadSpeechRecognitionModule = useCallback(async () => {
+    if (IS_EXPO_GO) {
+      setSpeechRecognitionUnavailable(true);
+      return null;
+    }
+
+    if (speechRecognitionModuleRef.current) {
+      return speechRecognitionModuleRef.current;
+    }
+
+    try {
+      const speechRecognition = await import('expo-speech-recognition');
+      speechRecognitionModuleRef.current =
+        speechRecognition.ExpoSpeechRecognitionModule as SpeechRecognitionModuleLike;
+      setSpeechRecognitionUnavailable(false);
+      return speechRecognitionModuleRef.current;
+    } catch (error) {
+      console.warn('Speech recognition is not available in this runtime:', error);
+      setSpeechRecognitionUnavailable(true);
+      return null;
+    }
+  }, []);
 
   // Delete place
   const handleDeletePlace = async (dest: Destination) => {
@@ -226,14 +311,14 @@ export default function ItineraryTab({
   const handleAutoGenerateItinerary = async () => {
     try {
       setIsAutoGenerating(true);
-      Speech.speak("Đang tự động thiết kế lịch trình...", { language: 'vi-VN' });
-      
+      Speech.speak('Đang tự động thiết kế lịch trình...', { language: 'vi-VN' });
+
       // 1. Lấy danh sách địa điểm bằng API address theo yêu cầu
       const query = trip.destination || trip.title;
       const availablePlaces = await placesService.searchByAddress(query);
 
       if (!availablePlaces || availablePlaces.length === 0) {
-        Speech.speak("Không tìm thấy địa điểm nào ở khu vực này.", { language: 'vi-VN' });
+        Speech.speak('Không tìm thấy địa điểm nào ở khu vực này.', { language: 'vi-VN' });
         setIsAutoGenerating(false);
         return;
       }
@@ -264,71 +349,339 @@ export default function ItineraryTab({
             longitude: placeData.longitude || placeData.location?.lng || 0,
             rating: placeData.rating,
             totalReviews: placeData.totalReviews || placeData.reviewCount,
-            photo: placeData.photo || (placeData.images && placeData.images.length > 0 ? placeData.images[0] : ''),
+            photo:
+              placeData.photo ||
+              (placeData.images && placeData.images.length > 0 ? placeData.images[0] : ''),
             mapUrl: placeData.mapUrl || '',
             timeOfDay,
           });
           localIndex++;
         }
       }
-      
-      Speech.speak("Đã hoàn tất việc tự động lên lịch trình.", { language: 'vi-VN' });
+
+      Speech.speak('Đã hoàn tất việc tự động lên lịch trình.', { language: 'vi-VN' });
       onRefresh();
     } catch (error) {
-      console.error("Lỗi khi tự động lên lịch trình:", error);
-      Speech.speak("Đã xảy ra lỗi trong quá trình tự động lên lịch trình.", { language: 'vi-VN' });
+      console.error('Lỗi khi tự động lên lịch trình:', error);
+      Speech.speak('Đã xảy ra lỗi trong quá trình tự động lên lịch trình.', { language: 'vi-VN' });
     } finally {
       setIsAutoGenerating(false);
     }
   };
 
   // Voice AI using Gemini LLM
-  const handleVoiceCommand = async () => {
+  const submitAssistantCommand = useCallback(
+    async (rawInput?: string) => {
+      const userInput = (rawInput ?? aiText).trim();
+
+      if (!userInput) {
+        showAlert('Trợ lý AI', 'Bạn hãy nói hoặc nhập yêu cầu trước khi gửi.', 'info');
+        return;
+      }
+
+      if (!targetAssistantDay) {
+        showAlert('Trợ lý AI', 'Không tìm thấy ngày nào trong lịch trình để chỉnh sửa.', 'warning');
+        return;
+      }
+
+      if (isListening) {
+        speechRecognitionModuleRef.current?.stop();
+        setIsListening(false);
+      }
+
+      let shouldRefreshAfterAi = false;
+
+      try {
+        setIsProcessingVoice(true);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+        Speech.speak(`Đang nhờ AI xử lý Ngày ${targetAssistantDay.day}...`, { language: 'vi-VN' });
+
+        if (days.length === 0) {
+          Speech.speak('Không có lịch trình nào để sắp xếp.', { language: 'vi-VN' });
+          return;
+        }
+
+        const dayDests = (destByDay[targetAssistantDay.day] || []).sort(
+          (a, b) => a.place.order - b.place.order,
+        );
+
+        if (dayDests.length < 2) {
+          Speech.speak('Ngày này không đủ địa điểm để sắp xếp lại.', { language: 'vi-VN' });
+          showAlert(
+            'Trợ lý AI',
+            `Ngày ${targetAssistantDay.day} cần ít nhất 2 hoạt động để AI sắp xếp lại.`,
+            'warning',
+          );
+          return;
+        }
+
+        // Call the real AI Service
+        shouldRefreshAfterAi = true;
+        const aiResult = await aiService.rearrangeItineraryWithAI(userInput, dayDests);
+
+        if (aiResult && aiResult.orderedPlaceIds) {
+          // Call API to save new order
+          await tripService.reorderPlacesInDay(targetAssistantDay.dayId, aiResult.orderedPlaceIds);
+
+          // Speak the AI's reply
+          Speech.speak(aiResult.replyMessage, { language: 'vi-VN' });
+
+          setAiText(''); // Clear input after success
+          setAssistantVisible(false);
+        } else {
+          Speech.speak('Xin lỗi, AI không thể phân tích được yêu cầu này.', { language: 'vi-VN' });
+          showAlert(
+            'Trợ lý AI',
+            'AI chưa hiểu yêu cầu này. Bạn thử nói hoặc nhập cụ thể hơn nhé.',
+            'warning',
+          );
+        }
+      } catch (error) {
+        console.error(error);
+        Speech.speak('Đã xảy ra lỗi khi gọi AI.', { language: 'vi-VN' });
+        showAlert('Trợ lý AI', 'Đã xảy ra lỗi khi gọi AI.', 'error');
+      } finally {
+        setIsProcessingVoice(false);
+        if (shouldRefreshAfterAi) {
+          onRefresh();
+        }
+      }
+    },
+    [aiText, days.length, destByDay, isListening, onRefresh, showAlert, targetAssistantDay],
+  );
+
+  const handleAssistantListening = useCallback(async () => {
+    if (isProcessingVoice) return;
+
+    if (isListening) {
+      speechRecognitionModuleRef.current?.stop();
+      return;
+    }
+
     try {
-      setIsProcessingVoice(true);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-      const userInput = aiText.trim() || "Trời hôm nay mưa";
-      
-      // Simulate listening...
-      Speech.speak(`Đang nghe... Bạn vừa nói: ${userInput}. Đang nhờ AI xử lý...`, { language: 'vi-VN' });
-      
-      if (days.length === 0) {
-        Speech.speak("Không có lịch trình nào để sắp xếp.", { language: 'vi-VN' });
+      const speechRecognitionModule = await loadSpeechRecognitionModule();
+      if (!speechRecognitionModule) {
+        showAlert(
+          'Không dùng được microphone',
+          'Expo Go không có module nhận dạng giọng nói này. Bạn vẫn có thể nhập yêu cầu bằng bàn phím, hoặc chạy dev build để dùng mic.',
+          'warning',
+        );
         return;
       }
 
-      // Pick the first day to mock rearrangement
-      const targetDay = days[0];
-      const dayDests = (destByDay[targetDay.day] || []).sort((a, b) => a.place.order - b.place.order);
-      
-      if (dayDests.length < 2) {
-        Speech.speak("Ngày này không đủ địa điểm để sắp xếp lại.", { language: 'vi-VN' });
+      const available = speechRecognitionModule.isRecognitionAvailable();
+      if (!available) {
+        showAlert(
+          'Không dùng được microphone',
+          'Thiết bị này chưa có dịch vụ nhận dạng giọng nói. Bạn vẫn có thể nhập yêu cầu bằng bàn phím.',
+          'warning',
+        );
         return;
       }
 
-      // Call the real AI Service
-      const aiResult = await aiService.rearrangeItineraryWithAI(userInput, dayDests);
-
-      if (aiResult && aiResult.orderedPlaceIds) {
-        // Call API to save new order
-        await tripService.reorderPlacesInDay(targetDay.dayId, aiResult.orderedPlaceIds);
-        
-        // Speak the AI's reply
-        Speech.speak(aiResult.replyMessage, { language: 'vi-VN' });
-        
-        setAiText(''); // Clear input after success
-        onRefresh();
-      } else {
-        Speech.speak("Xin lỗi, AI không thể phân tích được yêu cầu này.", { language: 'vi-VN' });
+      const permission = await speechRecognitionModule.requestPermissionsAsync();
+      if (!permission.granted) {
+        showAlert(
+          'Chưa có quyền microphone',
+          'Bạn cần cấp quyền microphone/nhận dạng giọng nói để dùng lệnh nói.',
+          'warning',
+        );
+        return;
       }
+
+      const currentDayPlaces = targetAssistantDay
+        ? (destByDay[targetAssistantDay.day] || []).map((dest) => dest.place.name)
+        : [];
+
+      setSpeechError('');
+      lastVoiceSubmitRef.current = '';
+      speechRecognitionModule.start({
+        lang: 'vi-VN',
+        interimResults: true,
+        continuous: false,
+        addsPunctuation: true,
+        contextualStrings: [
+          trip.destination,
+          `Ngày ${targetAssistantDay?.day ?? 1}`,
+          ...currentDayPlaces,
+        ].filter(Boolean),
+      });
     } catch (error) {
       console.error(error);
-      Speech.speak("Đã xảy ra lỗi khi gọi AI.", { language: 'vi-VN' });
-    } finally {
-      setIsProcessingVoice(false);
+      setIsListening(false);
+      setSpeechError('Không thể bắt đầu nghe. Bạn hãy nhập yêu cầu bằng bàn phím.');
     }
-  };
+  }, [
+    destByDay,
+    isListening,
+    isProcessingVoice,
+    loadSpeechRecognitionModule,
+    showAlert,
+    targetAssistantDay,
+    trip.destination,
+  ]);
+
+  useEffect(() => {
+    let disposed = false;
+
+    if (IS_EXPO_GO) {
+      setSpeechRecognitionUnavailable(true);
+      return () => {
+        disposed = true;
+      };
+    }
+
+    loadSpeechRecognitionModule().then((speechRecognitionModule) => {
+      if (disposed || !speechRecognitionModule) return;
+
+      speechRecognitionListenersRef.current.forEach((listener) => listener.remove());
+      speechRecognitionListenersRef.current = [
+        speechRecognitionModule.addListener('start', () => {
+          setIsListening(true);
+          setSpeechError('');
+        }),
+        speechRecognitionModule.addListener('end', () => {
+          setIsListening(false);
+        }),
+        speechRecognitionModule.addListener('result', (event) => {
+          const transcript = event.results?.[0]?.transcript?.trim();
+          if (!transcript) return;
+
+          setAiText(transcript);
+
+          if (event.isFinal && transcript !== lastVoiceSubmitRef.current) {
+            lastVoiceSubmitRef.current = transcript;
+            submitAssistantCommand(transcript);
+          }
+        }),
+        speechRecognitionModule.addListener('error', (event) => {
+          setIsListening(false);
+          if (event.error === 'aborted') return;
+
+          const message =
+            event.error === 'no-speech' || event.error === 'speech-timeout'
+              ? 'Chưa nghe thấy giọng nói. Bạn có thể bấm mic thử lại hoặc nhập bằng bàn phím.'
+              : 'Không nhận dạng được giọng nói. Bạn có thể nhập yêu cầu bằng bàn phím.';
+          setSpeechError(message);
+        }),
+      ];
+    });
+
+    return () => {
+      disposed = true;
+      speechRecognitionListenersRef.current.forEach((listener) => listener.remove());
+      speechRecognitionListenersRef.current = [];
+    };
+  }, [loadSpeechRecognitionModule, submitAssistantCommand]);
+
+  const closeAssistant = useCallback(() => {
+    if (isListening) {
+      speechRecognitionModuleRef.current?.abort();
+    }
+    setAssistantVisible(false);
+  }, [isListening]);
+
+  const clearAssistantHoldTimer = useCallback(() => {
+    if (assistantHoldTimerRef.current) {
+      clearTimeout(assistantHoldTimerRef.current);
+      assistantHoldTimerRef.current = null;
+    }
+  }, []);
+
+  const endMicHold = useCallback(() => {
+    clearAssistantHoldTimer();
+    setIsMicHoldActive(false);
+    speechRecognitionModuleRef.current?.stop();
+  }, [clearAssistantHoldTimer]);
+
+  const assistantPanResponder = React.useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderGrant: () => {
+          assistantDraggedRef.current = false;
+          assistantLongPressedRef.current = false;
+          assistantFabPos.stopAnimation();
+
+          clearAssistantHoldTimer();
+          assistantHoldTimerRef.current = setTimeout(() => {
+            assistantLongPressedRef.current = true;
+            setIsMicHoldActive(true);
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            handleAssistantListening();
+          }, ASSISTANT_LONG_PRESS_MS);
+        },
+        onPanResponderMove: (_, gestureState) => {
+          const hasMoved =
+            Math.abs(gestureState.dx) > ASSISTANT_DRAG_THRESHOLD ||
+            Math.abs(gestureState.dy) > ASSISTANT_DRAG_THRESHOLD;
+
+          if (hasMoved) {
+            assistantDraggedRef.current = true;
+            if (!assistantLongPressedRef.current) {
+              clearAssistantHoldTimer();
+            }
+          }
+
+          const nextX = Math.max(
+            8,
+            Math.min(
+              SCREEN_WIDTH - ASSISTANT_BTN_SIZE - 8,
+              assistantFabCurrentPos.current.x + gestureState.dx,
+            ),
+          );
+          const nextY = Math.max(
+            76,
+            Math.min(
+              SCREEN_HEIGHT - ASSISTANT_BTN_SIZE - 120,
+              assistantFabCurrentPos.current.y + gestureState.dy,
+            ),
+          );
+
+          assistantFabPos.setValue({ x: nextX, y: nextY });
+        },
+        onPanResponderRelease: (_, gestureState) => {
+          clearAssistantHoldTimer();
+
+          const finalX = Math.max(
+            8,
+            Math.min(
+              SCREEN_WIDTH - ASSISTANT_BTN_SIZE - 8,
+              assistantFabCurrentPos.current.x + gestureState.dx,
+            ),
+          );
+          const finalY = Math.max(
+            76,
+            Math.min(
+              SCREEN_HEIGHT - ASSISTANT_BTN_SIZE - 120,
+              assistantFabCurrentPos.current.y + gestureState.dy,
+            ),
+          );
+
+          assistantFabCurrentPos.current = { x: finalX, y: finalY };
+          assistantFabPos.setValue({ x: finalX, y: finalY });
+
+          if (assistantLongPressedRef.current) {
+            endMicHold();
+            return;
+          }
+
+          if (!assistantDraggedRef.current) {
+            setAssistantVisible(true);
+          }
+        },
+        onPanResponderTerminate: () => {
+          if (assistantLongPressedRef.current) {
+            endMicHold();
+          } else {
+            clearAssistantHoldTimer();
+          }
+        },
+      }),
+    [assistantFabPos, clearAssistantHoldTimer, endMicHold, handleAssistantListening],
+  );
 
   if (loading) {
     return (
@@ -342,19 +695,29 @@ export default function ItineraryTab({
     <View style={styles.container}>
       {/* Auto Generate Button */}
       <View style={styles.autoGenContainer}>
-        <TouchableOpacity 
-          style={[styles.autoGenBtn, isAutoGenerating && styles.autoGenBtnDisabled]} 
+        <TouchableOpacity
+          style={[styles.autoGenBtn, isAutoGenerating && styles.autoGenBtnDisabled]}
           onPress={handleAutoGenerateItinerary}
           disabled={isAutoGenerating}
         >
-          {isAutoGenerating ? (
-            <ActivityIndicator size="small" color="#FFF" />
-          ) : (
-            <Feather name="cpu" size={20} color="#FFF" />
-          )}
-          <Text style={styles.autoGenBtnText}>
-            {isAutoGenerating ? 'Đang thiết kế lịch trình...' : 'Tự động lên lịch trình'}
-          </Text>
+          <View style={styles.autoGenIconBox}>
+            {isAutoGenerating ? (
+              <ActivityIndicator size="small" color={BRAND} />
+            ) : (
+              <Feather name="zap" size={17} color={BRAND} />
+            )}
+          </View>
+          <View style={styles.autoGenCopy}>
+            <Text style={styles.autoGenBtnText}>
+              {isAutoGenerating ? 'Đang lên lịch trình' : 'Tự động lên lịch trình'}
+            </Text>
+            <Text style={styles.autoGenBtnSubtext}>
+              {isAutoGenerating
+                ? 'Đang chọn địa điểm phù hợp...'
+                : 'Gợi ý hoạt động cho các ngày trống'}
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={18} color="#A0AEC0" />
         </TouchableOpacity>
       </View>
 
@@ -371,7 +734,12 @@ export default function ItineraryTab({
               activeOpacity={0.7}
               onPress={() => toggleDay(day.day)}
             >
-              <View style={[styles.dayNumCircle, { backgroundColor: getDayColor(day.date, uniqueDates) }]}>
+              <View
+                style={[
+                  styles.dayNumCircle,
+                  { backgroundColor: getDayColor(day.date, uniqueDates) },
+                ]}
+              >
                 <Text style={[styles.dayNumText, { color: '#FFF' }]}>{day.day}</Text>
               </View>
               <View style={styles.dayHeaderInfo}>
@@ -449,35 +817,168 @@ export default function ItineraryTab({
         onPlaceAdded={handlePlaceAdded}
       />
 
-      {/* Floating Voice/Text AI Bar */}
-      <View style={styles.aiInputContainer}>
-        <TextInput
-          style={styles.aiInput}
-          placeholder="Nhập hoặc nói (VD: Trời mưa)..."
-          value={aiText}
-          onChangeText={setAiText}
-          onSubmitEditing={handleVoiceCommand}
-          returnKeyType="send"
-        />
-        <TouchableOpacity 
-          style={[styles.voiceAiBtnSmall, isProcessingVoice && styles.voiceAiBtnActive]}
-          activeOpacity={0.8}
-          onPress={handleVoiceCommand}
-          disabled={isProcessingVoice}
+      {/* Assistant */}
+      <RNAnimated.View
+        style={[styles.assistantFabWrap, { transform: assistantFabPos.getTranslateTransform() }]}
+        {...assistantPanResponder.panHandlers}
+      >
+        {(isListening || isMicHoldActive) && (
+          <View style={styles.assistantListenPreview}>
+            <VoiceWave />
+            <Text style={styles.assistantListenText} numberOfLines={1}>
+              {aiText.trim() || 'Đang nghe...'}
+            </Text>
+          </View>
+        )}
+        <View
+          style={[
+            styles.assistantFab,
+            (isListening || isMicHoldActive) && styles.assistantFabListening,
+          ]}
         >
-          {isProcessingVoice ? (
-            <ActivityIndicator size="small" color="#FFF" />
-          ) : (
-            <Feather name={aiText.trim() ? "send" : "mic"} size={20} color="#FFF" />
-          )}
-        </TouchableOpacity>
-      </View>
+          <Feather name="mic" size={24} color="#FFF" />
+        </View>
+        {targetAssistantDay ? (
+          <View style={styles.assistantFabBadge}>
+            <Text style={styles.assistantFabBadgeText}>{targetAssistantDay.day}</Text>
+          </View>
+        ) : null}
+      </RNAnimated.View>
 
-      <PlaceDetailModal 
+      <Modal
+        visible={assistantVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={closeAssistant}
+      >
+        <KeyboardAvoidingView
+          style={styles.assistantModalRoot}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <Pressable style={styles.assistantBackdrop} onPress={closeAssistant} />
+          <View style={styles.assistantSheet}>
+            <View style={styles.assistantHeader}>
+              <View style={styles.assistantHeaderLeft}>
+                <View style={styles.assistantBotIcon}>
+                  <Feather name="message-circle" size={20} color="#FFF" />
+                </View>
+                <View>
+                  <Text style={styles.assistantTitle}>OwnTrip AI</Text>
+                  <Text style={styles.assistantSubtitle}>
+                    {targetAssistantDay
+                      ? `Lịch trình Ngày ${targetAssistantDay.day}`
+                      : 'Lịch trình'}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity style={styles.assistantCloseBtn} onPress={closeAssistant}>
+                <Feather name="x" size={20} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.assistantChatArea} showsVerticalScrollIndicator={false}>
+              <View style={[styles.assistantMessageBubble, styles.assistantBotBubble]}>
+                <Text style={styles.assistantMessageText}>
+                  {targetAssistantDay
+                    ? `Mình đang sẵn sàng chỉnh Ngày ${targetAssistantDay.day}.`
+                    : 'Bạn chọn ngày muốn chỉnh trước nhé.'}
+                </Text>
+              </View>
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.assistantDayList}
+              >
+                {days.map((day) => {
+                  const selected = targetAssistantDay?.day === day.day;
+                  return (
+                    <TouchableOpacity
+                      key={day.dayId}
+                      style={[styles.assistantDayChip, selected && styles.assistantDayChipActive]}
+                      activeOpacity={0.8}
+                      onPress={() => setAssistantDayNumber(day.day)}
+                    >
+                      <Text
+                        style={[
+                          styles.assistantDayChipText,
+                          selected && styles.assistantDayChipTextActive,
+                        ]}
+                      >
+                        Ngày {day.day}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.assistantDayChipDate,
+                          selected && styles.assistantDayChipTextActive,
+                        ]}
+                      >
+                        {formatDayDate(day.date)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
+              {(speechError || speechRecognitionUnavailable || isListening) && (
+                <View style={[styles.assistantMessageBubble, styles.assistantBotBubble]}>
+                  <Text style={[styles.assistantMessageText, speechError && styles.assistantError]}>
+                    {speechError ||
+                      (speechRecognitionUnavailable
+                        ? 'Expo Go chưa hỗ trợ mic ở đây, bạn nhập yêu cầu bằng bàn phím nhé.'
+                        : 'Đang nghe...')}
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+
+            <View style={styles.assistantInputRow}>
+              <TouchableOpacity
+                style={[styles.assistantMicBtn, isListening && styles.assistantMicBtnListening]}
+                activeOpacity={0.82}
+                onPress={handleAssistantListening}
+                disabled={isProcessingVoice}
+              >
+                <Feather name={isListening ? 'square' : 'mic'} size={21} color="#FFF" />
+              </TouchableOpacity>
+
+              <TextInput
+                style={styles.assistantInput}
+                placeholder="Nói hoặc nhập yêu cầu..."
+                placeholderTextColor="#A0AEC0"
+                value={aiText}
+                onChangeText={setAiText}
+                onSubmitEditing={() => submitAssistantCommand()}
+                editable={!isProcessingVoice}
+                returnKeyType="send"
+                multiline
+              />
+
+              <TouchableOpacity
+                style={[
+                  styles.assistantSendBtn,
+                  (!aiText.trim() || isProcessingVoice) && styles.assistantSendBtnDisabled,
+                ]}
+                activeOpacity={0.82}
+                onPress={() => submitAssistantCommand()}
+                disabled={!aiText.trim() || isProcessingVoice}
+              >
+                {isProcessingVoice ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Feather name="send" size={18} color="#FFF" />
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      <PlaceDetailModal
         isVisible={detailVisible}
         onClose={() => setDetailVisible(false)}
         place={selectedPlace}
-        onAdd={() => {}} 
+        onAdd={() => {}}
         showAddButton={false}
       />
     </View>
@@ -642,69 +1143,349 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
-  // Voice/Text AI Bar
-  aiInputContainer: {
+
+  // Assistant
+  assistantFabWrap: {
     position: 'absolute',
-    bottom: 24,
-    left: 24,
-    right: 24,
+    zIndex: 50,
+    elevation: 20,
+    width: ASSISTANT_BTN_SIZE,
+    height: ASSISTANT_BTN_SIZE,
+  },
+  assistantFab: {
+    width: 56,
     height: 56,
-    backgroundColor: '#FFF',
     borderRadius: 28,
+    backgroundColor: BRAND,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: BRAND,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.34,
+        shadowRadius: 14,
+      },
+      android: { elevation: 10 },
+    }),
+  },
+  assistantFabListening: {
+    backgroundColor: '#EF4444',
+  },
+  assistantFabBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#FFAA00',
+    borderWidth: 2,
+    borderColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  assistantFabBadgeText: { color: '#FFF', fontSize: 11, fontWeight: '800' },
+  assistantListenPreview: {
+    position: 'absolute',
+    right: 66,
+    top: 5,
+    minWidth: 138,
+    maxWidth: 190,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#FFF',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingLeft: 20,
+    paddingHorizontal: 12,
+    gap: 9,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
+        shadowOpacity: 0.12,
+        shadowRadius: 10,
       },
-      android: { elevation: 6 },
+      android: { elevation: 8 },
     }),
   },
-  aiInput: {
+  assistantListenText: {
     flex: 1,
-    fontSize: 16,
-    fontFamily: 'Inter-Medium',
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1A2B4A',
   },
-  autoGenContainer: {
-    paddingHorizontal: 20,
-    marginTop: 10,
-    marginBottom: 5,
-  },
-  autoGenBtn: {
-    backgroundColor: '#8B5CF6',
+  voiceWave: {
+    width: 32,
+    height: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 3,
+  },
+  voiceWaveBar: {
+    width: 4,
+    height: 12,
+    borderRadius: 2,
+    backgroundColor: BRAND,
+  },
+  assistantModalRoot: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  assistantBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  assistantSheet: {
+    height: '82%',
+    backgroundColor: '#FAFBFC',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -10 },
+        shadowOpacity: 0.12,
+        shadowRadius: 20,
+      },
+      android: { elevation: 20 },
+    }),
+  },
+  assistantHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 18,
+    backgroundColor: '#FFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDF2F7',
+  },
+  assistantHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  assistantBotIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: BRAND,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  assistantTitle: { fontSize: 18, fontWeight: '800', color: '#1A2B4A' },
+  assistantSubtitle: { fontSize: 13, color: '#718096', marginTop: 1 },
+  assistantCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F7FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  assistantChatArea: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  assistantMessageBubble: {
+    maxWidth: '84%',
+    paddingHorizontal: 14,
     paddingVertical: 12,
-    borderRadius: 12,
-    gap: 8,
+    borderRadius: 20,
+    marginTop: 16,
+    marginBottom: 12,
+  },
+  assistantBotBubble: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#FFF',
+    borderBottomLeftRadius: 4,
+    borderWidth: 1,
+    borderColor: '#EDF2F7',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 6,
+      },
+      android: { elevation: 1 },
+    }),
+  },
+  assistantMessageText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#2D3748',
+  },
+  assistantDayList: { gap: 8, paddingRight: 18, paddingBottom: 8 },
+  assistantDayChip: {
+    minWidth: 78,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFF',
+  },
+  assistantDayChipActive: {
+    borderColor: BRAND,
+    backgroundColor: BRAND,
+  },
+  assistantDayChipText: { fontSize: 13, fontWeight: '700', color: '#374151' },
+  assistantDayChipDate: { fontSize: 11, color: '#9CA3AF', marginTop: 1 },
+  assistantDayChipTextActive: { color: '#FFF' },
+  assistantInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#FFF',
+    borderTopWidth: 1,
+    borderTopColor: '#EDF2F7',
+    gap: 10,
+  },
+  assistantMicBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#10B981',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  assistantMicBtnListening: {
+    backgroundColor: '#EF4444',
+  },
+  assistantInput: {
+    flex: 1,
+    maxHeight: 110,
+    minHeight: 46,
+    borderRadius: 23,
+    backgroundColor: '#F7FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: '#1A2B4A',
+    textAlignVertical: 'center',
+  },
+  assistantSendBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: BRAND,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  assistantSendBtnDisabled: {
+    backgroundColor: '#A0AEC0',
+  },
+  assistantError: {
+    color: '#DC2626',
+  },
+  autoGenContainer: {
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  autoGenBtn: {
+    backgroundColor: '#FFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+      },
+      android: { elevation: 2 },
+    }),
   },
   autoGenBtnDisabled: {
     opacity: 0.7,
   },
-  autoGenBtnText: {
-    color: '#FFF',
-    fontSize: 15,
-    fontFamily: 'Inter-SemiBold',
-  },
-  voiceAiBtnSmall: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#3B82F6',
+  autoGenIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: BRAND_LIGHT,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  voiceAiBtnActive: {
-    backgroundColor: '#EF4444',
+  autoGenCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  autoGenBtnText: {
+    color: '#1A2B4A',
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+  },
+  autoGenBtnSubtext: {
+    color: '#9CA3AF',
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
   },
 });
+
+function VoiceWave() {
+  const bars = useRef([
+    new RNAnimated.Value(0.45),
+    new RNAnimated.Value(0.85),
+    new RNAnimated.Value(0.6),
+    new RNAnimated.Value(1),
+  ]).current;
+
+  useEffect(() => {
+    const animations = bars.map((bar, index) =>
+      RNAnimated.loop(
+        RNAnimated.sequence([
+          RNAnimated.timing(bar, {
+            toValue: 1,
+            duration: 260 + index * 45,
+            easing: Easing.inOut(Easing.quad),
+            useNativeDriver: true,
+          }),
+          RNAnimated.timing(bar, {
+            toValue: 0.38,
+            duration: 260 + index * 45,
+            easing: Easing.inOut(Easing.quad),
+            useNativeDriver: true,
+          }),
+        ]),
+      ),
+    );
+
+    animations.forEach((animation) => animation.start());
+    return () => animations.forEach((animation) => animation.stop());
+  }, [bars]);
+
+  return (
+    <View style={styles.voiceWave}>
+      {bars.map((bar, index) => (
+        <RNAnimated.View
+          key={index}
+          style={[
+            styles.voiceWaveBar,
+            {
+              opacity: bar.interpolate({
+                inputRange: [0.38, 1],
+                outputRange: [0.45, 1],
+              }),
+              transform: [{ scaleY: bar }],
+            },
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
 
 // ===== DRAGGABLE ACTIVITY ITEM =====
 interface DraggableActivityItemProps {
@@ -724,9 +1505,19 @@ interface DraggableActivityItemProps {
 }
 
 function DraggableActivityItem({
-  dest, idx, isLast, dayNum, dayColor, imgErrors,
-  onImageError, onDelete, onDragStart, onDragEnd,
-  swipeableRefs, openSwipeable, onPress,
+  dest,
+  idx,
+  isLast,
+  dayNum,
+  dayColor,
+  imgErrors,
+  onImageError,
+  onDelete,
+  onDragStart,
+  onDragEnd,
+  swipeableRefs,
+  openSwipeable,
+  onPress,
 }: DraggableActivityItemProps) {
   const tod = getTimeOfDay(dest.place.order, dest.place.timeOfDay);
   const hasPhoto = dest.place.photo && !imgErrors[dest.place._id];
@@ -807,14 +1598,16 @@ function DraggableActivityItem({
   );
 
   return (
-    <Animated.View
+    <ReanimatedAnimated.View
       style={[{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 } }, animatedStyle]}
     >
       <View style={styles.timelineItem}>
         {/* Timeline line + dot */}
         <View style={styles.timelineTrack}>
           <View style={[styles.timelineDot, { backgroundColor: dayColor }]} />
-          {!isLast && <View style={[styles.timelineLine, { backgroundColor: dayColor, opacity: 0.25 }]} />}
+          {!isLast && (
+            <View style={[styles.timelineLine, { backgroundColor: dayColor, opacity: 0.25 }]} />
+          )}
         </View>
 
         {/* Activity card — swipeable */}
@@ -844,9 +1637,9 @@ function DraggableActivityItem({
           >
             {/* Drag Handle */}
             <GestureDetector gesture={dragGesture}>
-              <Animated.View style={styles.dragHandle}>
+              <ReanimatedAnimated.View style={styles.dragHandle}>
                 <Feather name="menu" size={14} color="#C5C8CE" />
-              </Animated.View>
+              </ReanimatedAnimated.View>
             </GestureDetector>
 
             {/* Info */}
@@ -886,6 +1679,6 @@ function DraggableActivityItem({
           </TouchableOpacity>
         </Swipeable>
       </View>
-    </Animated.View>
+    </ReanimatedAnimated.View>
   );
 }

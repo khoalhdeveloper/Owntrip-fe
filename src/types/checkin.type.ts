@@ -97,4 +97,4 @@ export type CheckedInPlace = {
 };
 
 // --- Check-in mode tabs ---
-export type CheckinMode = 'memories' | 'nearby' | 'missions';
+export type CheckinMode = 'memories' | 'visited' | 'nearby' | 'missions';
