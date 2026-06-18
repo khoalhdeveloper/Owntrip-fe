@@ -1,0 +1,8 @@
+node_modules/
+.env
+.expo/
+expo-env.d.ts
+
+# Ignore entire native folders to force clean prebuild on EAS Cloud
+android/
+ios/
