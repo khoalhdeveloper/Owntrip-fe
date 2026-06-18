@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,8 @@ import { checkinService } from '../../../services/checkinService';
 import { getCheckinErrorMessage } from '../../../utils/checkinErrors';
 import { getFirstValidImageUri } from '../../../utils/imageUtils';
 import { sessionCache } from '../FrameSelectScreen';
+import axiosClient from '../../../services/axiosClient';
+import { ENDPOINTS } from '../../../constants/api';
 
 interface CheckinVerifyModalProps {
   visible: boolean;
@@ -39,6 +41,27 @@ export const CheckinVerifyModal: React.FC<CheckinVerifyModalProps> = ({
   const [status, setStatus] = useState<CheckinStatus>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [response, setResponse] = useState<CheckinVerifyResponse | null>(null);
+  const [framesList, setFramesList] = useState<any[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    const fetchFrames = async () => {
+      try {
+        const res: any = await axiosClient.get(ENDPOINTS.FRAMES.LIST);
+        if (active && res && res.success && res.frames) {
+          setFramesList(res.frames);
+        }
+      } catch (err) {
+        console.error('Error fetching frames in CheckinVerifyModal:', err);
+      }
+    };
+    if (visible) {
+      fetchFrames();
+    }
+    return () => {
+      active = false;
+    };
+  }, [visible]);
 
   if (!place) return null;
 
@@ -169,7 +192,13 @@ export const CheckinVerifyModal: React.FC<CheckinVerifyModalProps> = ({
                           khung_hoi_an_xua: 'Khung Hội An Cổ Kính',
                           khung_ha_noi_xua: 'Khung Hà Nội Cổ Kính',
                         };
+                        const matchedFrame = framesList.find(
+                          (f) => f._id === reward.frameId || f.id === reward.frameId
+                        );
                         const name =
+                          (reward as any).frameName ||
+                          (reward as any).name ||
+                          matchedFrame?.name ||
                           (reward.frameId && frameTitles[reward.frameId]) ||
                           reward.frameId ||
                           'Khung hình giới hạn';
