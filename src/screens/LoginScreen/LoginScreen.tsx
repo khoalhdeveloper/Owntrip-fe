@@ -5,7 +5,6 @@ import { FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import * as WebBrowser from 'expo-web-browser';
-import * as AuthSession from 'expo-auth-session';
 import * as Google from 'expo-auth-session/providers/google';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
@@ -25,13 +24,12 @@ export default function LoginScreen() {
   const loginCalled = useRef(false);
   const router = useRouter();
   const isExpoGo = Constants.appOwnership === 'expo';
-  const redirectUri = AuthSession.makeRedirectUri({
-    scheme: 'owntrip',
-  });
 
-  const webClientId = '1077908035428-qea7lvnkopbd3o7jspukhs919jhaqct5.apps.googleusercontent.com';
+  const redirectUri = 'com.khoale3004.owntrip:/oauthredirect';
+
+  const webClientId = '524802175661-eqh020259d1r1da0rp6lr2c626crrg97.apps.googleusercontent.com';
   const androidClientId =
-    '1077908035428-skkb4uncp5k6stgonoa3oba16oich6ga.apps.googleusercontent.com';
+    '524802175661-ubek35mvbpg4m2ociktb484us6prr6oq.apps.googleusercontent.com';
   const effectiveAndroidClientId = isExpoGo ? webClientId : androidClientId;
 
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({

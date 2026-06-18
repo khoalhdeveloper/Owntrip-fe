@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "owntrip",
+    "scheme": ["owntrip", "com.khoale3004.owntrip"],
     "extra": {
       "googleWebClientId": "524802175661-62nri3lt2vkio173e1imnt375qt9kjc5.apps.googleusercontent.com",
       "router": {},
