@@ -29,9 +29,9 @@ export default function LoginScreen() {
     scheme: 'owntrip',
   });
 
-  const webClientId = '1077908035428-qea7lvnkopbd3o7jspukhs919jhaqct5.apps.googleusercontent.com';
+  const webClientId = '524802175661-eqh020259d1r1da0rp6lr2c626crrg97.apps.googleusercontent.com';
   const androidClientId =
-    '1077908035428-skkb4uncp5k6stgonoa3oba16oich6ga.apps.googleusercontent.com';
+    '524802175661-4jmb95kti7c3csqu22ljdccqp66pff6l.apps.googleusercontent.com';
   const effectiveAndroidClientId = isExpoGo ? webClientId : androidClientId;
 
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
