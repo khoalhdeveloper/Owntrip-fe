@@ -1,11 +1,64 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { missionService } from '@/services/missionService';
+import { MissionProgress } from '@/types/mission.type';
 
 export default function AchievementScreen() {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [progressList, setProgressList] = useState<MissionProgress[]>([]);
+  const [stats, setStats] = useState({ collected: 0, coins: 0 });
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const data = await missionService.getMyProgress();
+      setProgressList(data || []);
+
+      let collectedCount = 0;
+      let totalCoins = 0;
+
+      if (data && Array.isArray(data)) {
+        data.forEach((item) => {
+          if (item.rewardGranted) {
+            const rewardType = item.mission?.reward?.type || item.reward?.type;
+            if (rewardType === 'points') {
+              const amount = Number(item.mission?.reward?.pointsAmount || item.reward?.pointsAmount || 0);
+              totalCoins += amount;
+            } else {
+              collectedCount++;
+            }
+          }
+        });
+      }
+
+      setStats({
+        collected: collectedCount,
+        coins: totalCoins,
+      });
+    } catch (error) {
+      console.error('Error loading achievements:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4A7CFF" />
+      </View>
+    );
+  }
+
+  const claimedMissions = progressList.filter((item) => item.rewardGranted);
 
   return (
     <View style={styles.container}>
@@ -16,9 +69,7 @@ export default function AchievementScreen() {
             <Feather name="arrow-left" size={24} color="#1E293B" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Thành tựu</Text>
-          <TouchableOpacity style={styles.headerBtn}>
-            <Feather name="settings" size={22} color="#64748B" />
-          </TouchableOpacity>
+          <View style={styles.headerBtn} />
         </View>
 
         <ScrollView
@@ -39,11 +90,11 @@ export default function AchievementScreen() {
             </View>
             <View style={styles.statsRow}>
               <View style={styles.statBox}>
-                <Text style={styles.statValue}>0</Text>
+                <Text style={styles.statValue}>{stats.collected}</Text>
                 <Text style={styles.statLabel}>Đã thu thập</Text>
               </View>
               <View style={styles.statBox}>
-                <Text style={styles.statValue}>0</Text>
+                <Text style={styles.statValue}>{stats.coins}</Text>
                 <Text style={styles.statLabel}>Xu đã nhận</Text>
               </View>
             </View>
@@ -69,15 +120,50 @@ export default function AchievementScreen() {
           <View style={styles.historySection}>
             <Text style={styles.historyTitle}>Lịch sử thành tựu</Text>
             <Text style={styles.historySubtitle}>Những món quà bạn đã tích lũy</Text>
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIconWrap}>
-                <Feather name="package" size={56} color="#CBD5E0" />
+            {claimedMissions.length === 0 ? (
+              <View style={styles.emptyState}>
+                <View style={styles.emptyIconWrap}>
+                  <Feather name="package" size={56} color="#CBD5E0" />
+                </View>
+                <Text style={styles.emptyTitle}>Chưa có quà lưu niệm</Text>
+                <Text style={styles.emptyMessage}>
+                  Mua quà lưu niệm tại Cửa hàng hoặc hoàn thành nhiệm vụ để thấy chúng ở đây
+                </Text>
               </View>
-              <Text style={styles.emptyTitle}>Chưa có quà lưu niệm</Text>
-              <Text style={styles.emptyMessage}>
-                Mua quà lưu niệm tại Cửa hàng để thấy chúng ở đây
-              </Text>
-            </View>
+            ) : (
+              <View style={styles.historyList}>
+                {claimedMissions.map((item, index) => {
+                  const rewardType = item.mission?.reward?.type || item.reward?.type;
+                  const isPoints = rewardType === 'points';
+                  const pointsAmount = item.mission?.reward?.pointsAmount || item.reward?.pointsAmount || 0;
+                  
+                  return (
+                    <View key={item.mission?._id || index} style={styles.historyItem}>
+                      <View style={[styles.historyIconWrap, isPoints ? styles.iconPoints : styles.iconFrame]}>
+                        <Feather 
+                          name={isPoints ? "database" : "image"} 
+                          size={22} 
+                          color={isPoints ? "#EAB308" : "#3B82F6"} 
+                        />
+                      </View>
+                      <View style={styles.historyContent}>
+                        <Text style={styles.historyItemTitle} numberOfLines={1}>
+                          {item.mission?.title || item.mission?.name || 'Nhiệm vụ'}
+                        </Text>
+                        <Text style={styles.historyItemReward}>
+                          {isPoints ? `+${pointsAmount} xu` : 'Nhận khung ảnh check-in'}
+                        </Text>
+                      </View>
+                      <Text style={styles.historyDate}>
+                        {item.progress?.rewardGrantedAt 
+                          ? new Date(item.progress.rewardGrantedAt).toLocaleDateString('vi-VN') 
+                          : 'Đã nhận'}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
           </View>
 
           <View style={{ height: 80 }} />
@@ -166,6 +252,12 @@ const styles = StyleSheet.create({
   missionsTitle: { fontSize: 16, fontWeight: '700', color: '#1E293B', marginBottom: 2 },
   missionsSubtitle: { fontSize: 13, color: '#64748B', fontWeight: '500' },
 
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+  },
   historySection: { marginBottom: 24 },
   historyTitle: { fontSize: 17, fontWeight: '800', color: '#1E293B', marginBottom: 4 },
   historySubtitle: { fontSize: 13, color: '#64748B', marginBottom: 16, fontWeight: '500' },
@@ -181,4 +273,55 @@ const styles = StyleSheet.create({
   emptyIconWrap: { marginBottom: 16 },
   emptyTitle: { fontSize: 16, fontWeight: '700', color: '#475569', marginBottom: 8 },
   emptyMessage: { fontSize: 14, color: '#94A3B8', textAlign: 'center', lineHeight: 20 },
+  historyList: {
+    gap: 12,
+  },
+  historyItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.02,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  historyIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  iconPoints: {
+    backgroundColor: '#FEF9C3',
+  },
+  iconFrame: {
+    backgroundColor: '#DBEAFE',
+  },
+  historyContent: {
+    flex: 1,
+    marginRight: 8,
+  },
+  historyItemTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 4,
+  },
+  historyItemReward: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  historyDate: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
 });
