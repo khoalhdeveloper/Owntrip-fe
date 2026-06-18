@@ -5,6 +5,7 @@ expo-env.d.ts
 
 # Android build artifacts
 android/.gradle/
+android/.kotlin/
 android/build/
 android/app/build/
 android/local.properties

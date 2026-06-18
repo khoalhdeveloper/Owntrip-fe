@@ -6,7 +6,10 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": ["owntrip", "com.khoale3004.owntrip"],
+    "scheme": [
+      "owntrip",
+      "com.khoale3004.owntrip"
+    ],
     "extra": {
       "googleWebClientId": "524802175661-62nri3lt2vkio173e1imnt375qt9kjc5.apps.googleusercontent.com",
       "router": {},
@@ -60,7 +63,9 @@
         {
           "microphonePermission": "Cho phép OwnTrip sử dụng microphone để nhập lệnh bằng giọng nói.",
           "speechRecognitionPermission": "Cho phép OwnTrip chuyển giọng nói thành văn bản cho trợ lý AI.",
-          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox"
+          ]
         }
       ],
       [
@@ -68,7 +73,9 @@
         {
           "RNMapboxGLImpl": "mapbox"
         }
-      ]
+      ],
+      "expo-font",
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true,
