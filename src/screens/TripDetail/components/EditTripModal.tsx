@@ -7,21 +7,91 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
+  Image,
   ActivityIndicator,
   Platform,
   KeyboardAvoidingView,
   Pressable,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import Toast from 'react-native-toast-message';
-import { Trip, tripService } from '@/services/tripService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Trip, TripBudget, tripService } from '@/services/tripService';
+import { API_CONFIG } from '@/constants/api';
+import axiosClient from '@/services/axiosClient';
 import { useConfirm } from '@/components/ConfirmProvider';
 import { toastConfig } from '@/components/ui/ToastConfig';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const BRAND = '#4A7CFF';
+
+const getBudgetTotal = (value?: TripBudget | number | null) => {
+  if (!value) return 0;
+  if (typeof value === 'number') return value;
+
+  return (
+    (Number(value.accommodation) || 0) +
+    (Number(value.food) || 0) +
+    (Number(value.transport) || 0) +
+    (Number(value.activities) || 0)
+  );
+};
+
+const splitBudgetTotal = (total: number, current?: TripBudget | number | null): TripBudget => {
+  if (typeof current === 'object' && current && getBudgetTotal(current) > 0) {
+    const oldTotal = getBudgetTotal(current);
+    const accommodation = Math.round(((current.accommodation || 0) / oldTotal) * total);
+    const food = Math.round(((current.food || 0) / oldTotal) * total);
+    const transport = Math.round(((current.transport || 0) / oldTotal) * total);
+
+    return {
+      accommodation,
+      food,
+      transport,
+      activities: Math.max(0, total - accommodation - food - transport),
+    };
+  }
+
+  const accommodation = Math.round(total * 0.4);
+  const food = Math.round(total * 0.25);
+  const transport = Math.round(total * 0.2);
+
+  return {
+    accommodation,
+    food,
+    transport,
+    activities: Math.max(0, total - accommodation - food - transport),
+  };
+};
+
+const uploadTripImage = async (uri: string): Promise<string | null> => {
+  try {
+    const formData = new FormData();
+    formData.append('image', {
+      uri,
+      type: 'image/jpeg',
+      name: 'trip-cover.jpg',
+    } as any);
+
+    const token = await AsyncStorage.getItem('token');
+    const response = await fetch(`${API_CONFIG.BASE_URL}/api/system/upload-image`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    const data = await response.json();
+    return data?.url ?? null;
+  } catch (error) {
+    console.error('📡 Backend upload error:', error);
+    return null;
+  }
+};
 
 interface EditTripModalProps {
   visible: boolean;
@@ -38,6 +108,8 @@ export default function EditTripModal({ visible, trip, onClose, onUpdated }: Edi
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [budget, setBudget] = useState('');
+  const [provinceImage, setProvinceImage] = useState('');
+  const [selectedImageUri, setSelectedImageUri] = useState('');
   const [saving, setSaving] = useState(false);
   const { confirm } = useConfirm();
 
@@ -56,7 +128,9 @@ export default function EditTripModal({ visible, trip, onClose, onUpdated }: Edi
       setDescription(trip.description || '');
       setStartDate(new Date(trip.startDate));
       setEndDate(new Date(trip.endDate));
-      setBudget(trip.budget ? String(trip.budget) : '');
+      setBudget(getBudgetTotal(trip.budget) ? String(getBudgetTotal(trip.budget)) : '');
+      setProvinceImage(trip.provinceImage || '');
+      setSelectedImageUri('');
       setErrors({});
     }
   }, [visible, trip]);
@@ -84,13 +158,20 @@ export default function EditTripModal({ visible, trip, onClose, onUpdated }: Edi
       description !== (trip.description || '') ||
       toDateStr(startDate) !== (trip.startDate?.split('T')[0] || '') ||
       toDateStr(endDate) !== (trip.endDate?.split('T')[0] || '') ||
-      budget !== (trip.budget ? String(trip.budget) : '')
+      budget !== (getBudgetTotal(trip.budget) ? String(getBudgetTotal(trip.budget)) : '') ||
+      selectedImageUri.length > 0 ||
+      provinceImage !== (trip.provinceImage || '')
     );
   };
 
   const handleClose = async () => {
     if (hasChanges()) {
-      const discard = await confirm('Huỷ thay đổi?', 'Các thay đổi chưa lưu sẽ bị mất.', 'Huỷ');
+      const discard = await confirm(
+        'Huỷ thay đổi?',
+        'Các thay đổi chưa lưu sẽ bị mất.',
+        'Bỏ thay đổi',
+        'question',
+      );
       if (!discard) return;
     }
     onClose();
@@ -98,6 +179,29 @@ export default function EditTripModal({ visible, trip, onClose, onUpdated }: Edi
 
   const clearError = (field: string) => {
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: false }));
+  };
+
+  const pickTripImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Toast.show({
+        type: 'error',
+        text1: 'Cần quyền truy cập ảnh',
+        text2: 'Hãy cấp quyền thư viện ảnh để đổi ảnh chuyến đi.',
+      });
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.4, // Giảm dung lượng ảnh để upload nhanh hơn
+    });
+
+    if (!result.canceled) {
+      setSelectedImageUri(result.assets[0].uri);
+    }
   };
 
   const handleSave = async () => {
@@ -127,7 +231,17 @@ export default function EditTripModal({ visible, trip, onClose, onUpdated }: Edi
       if (toDateStr(startDate) !== trip.startDate?.split('T')[0])
         data.startDate = toDateStr(startDate);
       if (toDateStr(endDate) !== trip.endDate?.split('T')[0]) data.endDate = toDateStr(endDate);
-      if (budget && Number(budget) !== trip.budget) data.budget = Number(budget);
+      const budgetTotal = budget ? Number(budget) : 0;
+      if (budget && budgetTotal !== getBudgetTotal(trip.budget)) {
+        data.budget = splitBudgetTotal(budgetTotal, trip.budget);
+      }
+      if (selectedImageUri) {
+        const uploadedUrl = await uploadTripImage(selectedImageUri);
+        if (!uploadedUrl) throw new Error('Upload failed');
+        data.provinceImage = uploadedUrl;
+      } else if (provinceImage !== (trip.provinceImage || '')) {
+        data.provinceImage = provinceImage;
+      }
 
       if (Object.keys(data).length === 0) {
         onClose();
@@ -147,7 +261,8 @@ export default function EditTripModal({ visible, trip, onClose, onUpdated }: Edi
           text2: 'Thông tin chuyến đi đã được lưu.',
         });
       }, 300);
-    } catch {
+    } catch (error) {
+      console.error('Update trip error:', error);
       Toast.show({
         type: 'error',
         text1: 'Lỗi',
@@ -218,6 +333,35 @@ export default function EditTripModal({ visible, trip, onClose, onUpdated }: Edi
             contentContainerStyle={styles.scroll}
             keyboardShouldPersistTaps="handled"
           >
+            {/* Trip image */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>Ảnh chuyến đi</Text>
+              <TouchableOpacity
+                style={styles.tripImagePicker}
+                onPress={pickTripImage}
+                activeOpacity={0.86}
+              >
+                {selectedImageUri || provinceImage ? (
+                  <Image
+                    source={{ uri: selectedImageUri || provinceImage }}
+                    style={styles.tripImage}
+                  />
+                ) : (
+                  <View style={styles.tripImagePlaceholder}>
+                    <Feather name="image" size={28} color="#9CA3AF" />
+                  </View>
+                )}
+                <View style={styles.tripImageOverlay}>
+                  <View style={styles.cameraBadge}>
+                    <Feather name="camera" size={16} color="#FFF" />
+                  </View>
+                  <Text style={styles.tripImageText}>
+                    {selectedImageUri || provinceImage ? 'Đổi ảnh bìa' : 'Thêm ảnh bìa'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+
             {/* Title */}
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>
@@ -393,6 +537,56 @@ const styles = StyleSheet.create({
   fieldGroup: { marginBottom: 20 },
   label: { fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 },
   required: { color: '#EF4444', fontSize: 14 },
+  tripImagePicker: {
+    height: 156,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  tripImage: {
+    width: '100%',
+    height: '100%',
+  },
+  tripImagePlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  tripImageOverlay: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    bottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  cameraBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: BRAND,
+    shadowColor: '#000',
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  tripImageText: {
+    overflow: 'hidden',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(17, 24, 39, 0.72)',
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
   input: {
     backgroundColor: '#F9FAFB',
     borderRadius: 12,

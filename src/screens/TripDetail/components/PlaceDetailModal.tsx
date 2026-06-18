@@ -119,12 +119,7 @@ const PlaceDetailModal: React.FC<PlaceDetailModalProps> = ({
                     </TouchableOpacity>
                   )}
 
-                  <TouchableOpacity style={styles.actionBtn} onPress={() => {}}>
-                    <View style={styles.actionIconCircle}>
-                      <Feather name="share-2" size={20} color={BRAND} />
-                    </View>
-                    <Text style={styles.actionLabel}>Chia sẻ</Text>
-                  </TouchableOpacity>
+
                 </View>
 
                 {/* Photos Section */}
