@@ -130,8 +130,25 @@ export const checkinService = {
   getMyCheckedInPlaces: async (): Promise<CheckedInPlace[]> => {
     try {
       const response = await axiosClient.get<any, any>(ENDPOINTS.CHECKINS.MY_PLACES);
-      if (response && response.success && response.data) {
+      
+      if (Array.isArray(response)) {
+        return response;
+      }
+      if (response && response.data && Array.isArray(response.data)) {
         return response.data;
+      }
+      if (response && response.success && response.data) {
+        if (Array.isArray(response.data)) return response.data;
+      }
+      if (response && Array.isArray(response.places)) {
+        return response.places;
+      }
+      if (response && Array.isArray(response.checkins)) {
+        return response.checkins;
+      }
+      if (response && response.data) {
+        if (Array.isArray(response.data.places)) return response.data.places;
+        if (Array.isArray(response.data.checkins)) return response.data.checkins;
       }
       return [];
     } catch (error) {
