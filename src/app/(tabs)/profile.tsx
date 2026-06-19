@@ -19,7 +19,7 @@ import {
   Animated,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -39,6 +39,7 @@ import { decodeJWT } from '@/utils/jwtUtils';
 import { useConfirm } from '@/components/ConfirmProvider';
 import { paymentService } from '@/services/paymentService';
 import { CheckedInPlacesSection } from '@/components/shared/CheckedInPlacesSection';
+import { getTabScreenBottomPadding } from '@/utils/mobileLayout';
 
 const { width } = Dimensions.get('window');
 
@@ -46,6 +47,7 @@ const { width } = Dimensions.get('window');
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
@@ -438,6 +440,7 @@ export default function ProfileScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: getTabScreenBottomPadding(insets.bottom) }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {/* Header Background */}
@@ -726,7 +729,6 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          <View style={{ height: 100 }} />
         </View>
       </ScrollView>
 

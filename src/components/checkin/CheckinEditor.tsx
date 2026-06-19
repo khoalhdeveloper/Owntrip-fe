@@ -10,13 +10,13 @@ import { Feather } from '@expo/vector-icons';
 import { CheckinFrame } from '../../types/checkin.type';
 
 const { width } = Dimensions.get('window');
-const EDITOR_SIZE = width - 40; // Square size with padding
+const EDITOR_SIZE = Math.min(width - 40, 340); // Square size with padding
 const INNER_SIZE = EDITOR_SIZE * 0.68; // Adjust based on typical frame border thickness
 const INNER_OFFSET = (EDITOR_SIZE - INNER_SIZE) / 2;
 
 // Vertical Film Strip Dimensions — tỷ lệ 1:3 theo chiều rộng màn hình
-const FILM_WIDTH = (width - 80); // Để lại padding hai bên
-const FILM_HEIGHT = FILM_WIDTH * 3; // Tỷ lệ 1:3 chuẩn
+const FILM_HEIGHT = Math.min((width - 80) * 3, 460);
+const FILM_WIDTH = FILM_HEIGHT / 3;
 
 interface CheckinEditorProps {
   userImageUri?: string | null;
@@ -79,11 +79,11 @@ export const CheckinEditor: React.FC<CheckinEditorProps> = ({
   });
 
   const renderSingleLayout = () => {
-    const frameSource = selectedFrame?.imageUrl ? { uri: selectedFrame.imageUrl } : selectedFrame?.image;
+    const frameSource = selectedFrame?.imageUrl ? { uri: selectedFrame.imageUrl } : null;
     return (
       <View style={styles.editorArea}>
         {/* Fake Frame (Rendered underneath) */}
-        {selectedFrame && frameSource && (
+        {frameSource && (
           <Image
             source={frameSource}
             style={styles.frameImage}
@@ -124,17 +124,18 @@ export const CheckinEditor: React.FC<CheckinEditorProps> = ({
     const slotTops = [14.5, 32, 50, 67]; 
     const slotHeight = 17.5; 
 
-    const frameSource = selectedFrame?.imageUrl ? { uri: selectedFrame.imageUrl } : selectedFrame?.image;
+    const frameSource = selectedFrame?.imageUrl ? { uri: selectedFrame.imageUrl } : null;
 
     return (
       <View style={styles.filmstripEditorArea}>
         {/* The Frame overlay on top, pointerEvents="none" so user can still click slots underneath */}
-        {selectedFrame && frameSource && (
-          <Image
-            source={frameSource}
-            style={styles.filmstripFrameImage}
-            pointerEvents="none"
-          />
+        {frameSource && (
+          <View pointerEvents="none" style={styles.filmstripFrameOverlay}>
+            <Image
+              source={frameSource}
+              style={styles.filmstripFrameImage}
+            />
+          </View>
         )}
 
         {/* Render 4 absolute positioned photo slots */}
@@ -249,14 +250,18 @@ const styles = StyleSheet.create({
     height: EDITOR_SIZE,
     resizeMode: 'stretch',
   },
-  filmstripFrameImage: {
+  filmstripFrameOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     width: FILM_WIDTH,
     height: FILM_HEIGHT,
-    resizeMode: 'stretch',
     zIndex: 20, // Frame sits on top to create transparent overlay effect
+  },
+  filmstripFrameImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'stretch',
   },
   filmstripSlot: {
     position: 'absolute',

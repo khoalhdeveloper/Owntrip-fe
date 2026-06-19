@@ -15,7 +15,12 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { checkinService } from '../../services/checkinService';
+import {
+  getCheckinHeaderTopPadding,
+  getTabScreenBottomPadding,
+} from '../../utils/mobileLayout';
 
 const { width } = Dimensions.get('window');
 const PREVIEW_WIDTH = width - 40;
@@ -37,9 +42,11 @@ const normalizeFilePath = (uri: any): string | null => {
 
 export const CheckinResultScreen = () => {
   const params = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
   const rawImageUri = params.finalImageUri;
   const finalImageUri = normalizeFilePath(rawImageUri);
   const fromGallery = params.fromGallery === 'true';
+  const resultTitle = params.title ? String(params.title) : 'Ká»· niá»‡m Check-in';
 
   const [isFavorite, setIsFavorite] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -122,9 +129,8 @@ export const CheckinResultScreen = () => {
       // Save to backend database
       try {
         console.log('📡 Saving checkin to Backend database...', uploadUrl);
-        const title = params.title ? String(params.title) : 'Kỷ niệm Check-in';
         const date = new Date().toLocaleDateString('vi-VN');
-        const savedMemory = await checkinService.createMemory(uploadUrl, title, date);
+        const savedMemory = await checkinService.createMemory(uploadUrl, resultTitle, date);
 
         if (savedMemory) {
           console.log('✅ Composed check-in saved to backend:', savedMemory);
@@ -142,7 +148,7 @@ export const CheckinResultScreen = () => {
     };
 
     saveToBackend();
-  }, [finalImageUri, fromGallery]);
+  }, [finalImageUri, fromGallery, resultTitle]);
 
   const handleToggleFavorite = async () => {
     if (!dbId) {
@@ -161,7 +167,7 @@ export const CheckinResultScreen = () => {
   if (!finalImageUri) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: getCheckinHeaderTopPadding(insets.top) }]}>
           <TouchableOpacity onPress={() => router.back()}>
             <Feather name="arrow-left" size={24} color="#333" />
           </TouchableOpacity>
@@ -229,18 +235,19 @@ export const CheckinResultScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: getCheckinHeaderTopPadding(insets.top) }]}>
         <TouchableOpacity onPress={() => router.back()}>
           <Feather name="arrow-left" size={24} color="#333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Check-in Photo Booth</Text>
-        <TouchableOpacity>
-          <Feather name="settings" size={22} color="#333" />
-        </TouchableOpacity>
+        <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: getTabScreenBottomPadding(insets.bottom) },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.title}>Looking Good!</Text>
@@ -336,7 +343,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 15,
+    paddingTop: 15,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
     backgroundColor: '#fff',
@@ -345,6 +353,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#1A253C',
+  },
+  headerSpacer: {
+    width: 24,
+    height: 24,
   },
   emptyContainer: {
     flex: 1,
@@ -359,7 +371,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 40,
   },
   title: {
     fontSize: 24,

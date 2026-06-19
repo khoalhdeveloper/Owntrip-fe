@@ -7,11 +7,11 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Alert,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import ViewShot from 'react-native-view-shot';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CheckinFrame } from '../../types/checkin.type';
 import { FrameGallery } from '../../components/checkin/FrameGallery';
@@ -20,6 +20,11 @@ import { CheckinToolbar } from '../../components/checkin/CheckinToolbar';
 
 import { saveImageToLibrary } from '../../utils/saveImageToLibrary';
 import { shareImage } from '../../utils/shareImage';
+import {
+  getCheckinActionBarBottomOffset,
+  getCheckinHeaderTopPadding,
+  getCheckinScreenBottomPadding,
+} from '../../utils/mobileLayout';
 
 // Session Cache to preserve state across camera navigation and route transitions.
 // Attached to global scope to be 100% immune to duplicate Metro module bundles.
@@ -34,6 +39,7 @@ export const sessionCache = (global as any).checkinSessionCache;
 
 export const FrameSelectScreen = () => {
   const params = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
   const [userImageUris, setUserImageUris] = useState<(string | null)[]>(sessionCache.userImageUris);
   const [activeSlotIndex, setActiveSlotIndex] = useState<number>(sessionCache.activeSlotIndex);
   const [selectedFrame, setSelectedFrame] = useState<CheckinFrame | null>(sessionCache.selectedFrame);
@@ -114,17 +120,20 @@ export const FrameSelectScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: getCheckinHeaderTopPadding(insets.top) }]}>
         <TouchableOpacity onPress={() => router.back()}>
           <Feather name="arrow-left" size={24} color="#333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Chọn khung hình</Text>
-        <TouchableOpacity>
-          <Feather name="settings" size={22} color="#333" />
-        </TouchableOpacity>
+        <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: getCheckinScreenBottomPadding(insets.bottom) },
+        ]}
+      >
         {/* Thumbnails list on top */}
         <View style={styles.thumbnailsContainer}>
           <Text style={styles.sectionTitle}>
@@ -224,6 +233,7 @@ export const FrameSelectScreen = () => {
         onSave={handleSave}
         onShare={handleShare}
         canSave={hasAnyImage && !isProcessing}
+        bottomOffset={getCheckinActionBarBottomOffset(insets.bottom)}
       />
     </SafeAreaView>
   );
@@ -233,7 +243,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F9FA',
-    paddingBottom: 90,
   },
   scrollContent: {
     flexGrow: 1,
@@ -243,7 +252,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 15,
+    paddingTop: 15,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
     backgroundColor: '#fff',
@@ -252,6 +262,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#1A253C',
+  },
+  headerSpacer: {
+    width: 24,
+    height: 24,
   },
   thumbnailsContainer: {
     paddingHorizontal: 16,

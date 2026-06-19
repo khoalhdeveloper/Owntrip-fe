@@ -13,7 +13,7 @@ import {
   Dimensions,
   Animated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,6 +21,7 @@ import * as Haptics from 'expo-haptics';
 import { Swipeable } from 'react-native-gesture-handler';
 import { tripService, Trip } from '@/services/tripService';
 import { useConfirm } from '@/components/ConfirmProvider';
+import { getTabScreenBottomPadding } from '@/utils/mobileLayout';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SEGMENT_PADDING = 3;
@@ -74,6 +75,7 @@ function getTripStatus(trip: Trip) {
 
 export default function TripsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -345,7 +347,10 @@ export default function TripsScreen() {
           data={filteredTrips}
           keyExtractor={(item) => item._id}
           renderItem={renderTrip}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[
+            styles.list,
+            { paddingBottom: getTabScreenBottomPadding(insets.bottom) },
+          ]}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
