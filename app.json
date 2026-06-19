@@ -23,6 +23,10 @@
       "bundleIdentifier": "com.khoale3004.owntrip",
       "config": {
         "googleMapsApiKey": "AIzaSyDJe6vKECRNVew2g9EHKedjj65EimJ18FI"
+      },
+      "infoPlist": {
+        "NSSpeechRecognitionUsageDescription": "Cho phép OwnTrip chuyển giọng nói thành văn bản cho trợ lý AI.",
+        "NSMicrophoneUsageDescription": "Cho phép OwnTrip sử dụng microphone để nhập lệnh bằng giọng nói."
       }
     },
     "android": {
@@ -38,7 +42,10 @@
           "apiKey": "AIzaSyDJe6vKECRNVew2g9EHKedjj65EimJ18FI"
         }
       },
-      "package": "com.khoale3004.owntrip"
+      "package": "com.khoale3004.owntrip",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "output": "static",
@@ -80,6 +87,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/375ddeaa-4ef3-44e8-89de-e25030f322e3"
     }
   }
 }
