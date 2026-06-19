@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSegments } from 'expo-router';
+import { getBottomTabBarPadding } from '@/utils/mobileLayout';
 
 interface TabConfig {
   name: string;
@@ -100,11 +101,13 @@ function TabItem({
 
 export default function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
-  const bottomPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 10 : 0);
+  const bottomPadding = getBottomTabBarPadding(insets.bottom);
   const segments = useSegments() as string[];
 
   // Hide tab bar only on camera screen and select screen
-  if (segments.includes('checkin') && (segments.includes('camera') || segments.includes('select'))) return null;
+  if (segments.includes('checkin') && (segments.includes('camera') || segments.includes('select'))) {
+    return null;
+  }
 
   return (
     <View style={[styles.container, { paddingBottom: bottomPadding }]}>

@@ -1,69 +1,92 @@
-import React, { useState, useRef } from 'react';
-import { View, StyleSheet, Animated, PanResponder, Dimensions } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, PanResponder, StyleSheet, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ChatbotModal from './ChatbotModal';
 import { useChatbotSetting } from '../context/ChatbotSettingContext';
+import {
+  clampFloatingButtonPosition,
+  getFloatingButtonBounds,
+  getInitialFloatingButtonPosition,
+} from '../utils/mobileLayout';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const BTN_SIZE = 56;
 
 export default function DraggableChatbot() {
   const { aiButtonEnabled } = useChatbotSetting();
   const [modalVisible, setModalVisible] = useState(false);
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
-  const pos = useRef(
-    new Animated.ValueXY({
-      x: SCREEN_WIDTH - BTN_SIZE - 20,
-      y: SCREEN_HEIGHT - BTN_SIZE - 100,
+  const layoutOptions = useMemo(
+    () => ({
+      screenWidth: width,
+      screenHeight: height,
+      buttonSize: BTN_SIZE,
+      safeAreaTop: insets.top,
+      safeAreaBottom: insets.bottom,
     }),
-  ).current;
+    [height, insets.bottom, insets.top, width],
+  );
 
-  const currentPos = useRef({
-    x: SCREEN_WIDTH - BTN_SIZE - 20,
-    y: SCREEN_HEIGHT - BTN_SIZE - 100,
-  });
-
+  const bounds = useMemo(() => getFloatingButtonBounds(layoutOptions), [layoutOptions]);
+  const initialPosition = useMemo(
+    () => getInitialFloatingButtonPosition(layoutOptions),
+    [layoutOptions],
+  );
+  const pos = useRef(new Animated.ValueXY(initialPosition)).current;
+  const currentPos = useRef(initialPosition);
   const hasDragged = useRef(false);
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
+  useEffect(() => {
+    const clampedPosition = clampFloatingButtonPosition(currentPos.current, bounds);
+    currentPos.current = clampedPosition;
+    pos.setValue(clampedPosition);
+  }, [bounds, pos]);
 
-      onPanResponderGrant: () => {
-        hasDragged.current = false;
-        pos.stopAnimation();
-      },
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
 
-      onPanResponderMove: (_, g) => {
-        // Nếu di chuyển > 5px tính là kéo
-        if (Math.abs(g.dx) > 5 || Math.abs(g.dy) > 5) {
-          hasDragged.current = true;
-        }
+        onPanResponderGrant: () => {
+          hasDragged.current = false;
+          pos.stopAnimation();
+        },
 
-        const newX = Math.max(0, Math.min(SCREEN_WIDTH - BTN_SIZE, currentPos.current.x + g.dx));
-        const newY = Math.max(
-          60,
-          Math.min(SCREEN_HEIGHT - BTN_SIZE - 80, currentPos.current.y + g.dy),
-        );
-        pos.setValue({ x: newX, y: newY });
-      },
+        onPanResponderMove: (_, g) => {
+          if (Math.abs(g.dx) > 5 || Math.abs(g.dy) > 5) {
+            hasDragged.current = true;
+          }
 
-      onPanResponderRelease: (_, g) => {
-        const finalX = Math.max(0, Math.min(SCREEN_WIDTH - BTN_SIZE, currentPos.current.x + g.dx));
-        const finalY = Math.max(
-          60,
-          Math.min(SCREEN_HEIGHT - BTN_SIZE - 80, currentPos.current.y + g.dy),
-        );
-        currentPos.current = { x: finalX, y: finalY };
+          const nextPosition = clampFloatingButtonPosition(
+            {
+              x: currentPos.current.x + g.dx,
+              y: currentPos.current.y + g.dy,
+            },
+            bounds,
+          );
+          pos.setValue(nextPosition);
+        },
 
-        // Nếu không kéo → coi là tap → mở modal
-        if (!hasDragged.current) {
-          setModalVisible(true);
-        }
-      },
-    }),
-  ).current;
+        onPanResponderRelease: (_, g) => {
+          const finalPosition = clampFloatingButtonPosition(
+            {
+              x: currentPos.current.x + g.dx,
+              y: currentPos.current.y + g.dy,
+            },
+            bounds,
+          );
+          currentPos.current = finalPosition;
+
+          if (!hasDragged.current) {
+            setModalVisible(true);
+          }
+        },
+      }),
+    [bounds, pos],
+  );
 
   if (!aiButtonEnabled) return null;
 

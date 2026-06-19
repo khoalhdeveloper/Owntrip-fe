@@ -19,7 +19,7 @@ import {
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { placesService, Place } from '../../services/placesService';
@@ -30,6 +30,7 @@ import { getImageSource, isRenderableImageUri } from '../../utils/imageUtils';
 import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
 import PayOSWebViewModal from '../../components/PayOSWebViewModal';
+import { getTabScreenBottomPadding } from '../../utils/mobileLayout';
 
 const MOCK_TRIP_REVIEWS = [
   {
@@ -80,6 +81,7 @@ const MOCK_REVIEWS = [
 
 export default function HomeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [trendingPlaces, setTrendingPlaces] = useState<Place[]>([]);
   const [recommendedTrips, setRecommendedTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
@@ -296,7 +298,10 @@ export default function HomeScreen() {
       <StatusBar barStyle="dark-content" backgroundColor="#FAFBFC" />
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: getTabScreenBottomPadding(insets.bottom) },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}

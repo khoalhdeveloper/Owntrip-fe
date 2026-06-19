@@ -1,19 +1,19 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  Modal,
-  TouchableOpacity,
-  TextInput,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
   Animated,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { chatbotService } from '../services/chatbotService';
 
 interface Message {
@@ -26,6 +26,9 @@ interface ChatbotModalProps {
   visible: boolean;
   onClose: () => void;
 }
+
+const INITIAL_BOT_MESSAGE =
+  'Chào bạn! Tôi là chatbot tư vấn du lịch Việt Nam, rất vui được hỗ trợ bạn.\n\nBạn đang quan tâm đến địa điểm nào hay cần lịch trình, món ăn ra sao? Hãy cho tôi biết nhé!';
 
 const TypingIndicator = () => {
   const dot1 = useRef(new Animated.Value(0)).current;
@@ -70,15 +73,15 @@ export default function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
     {
       id: Date.now().toString(),
       sender: 'bot',
-      text: 'Chào bạn! Tôi là chatbot tư vấn du lịch Việt Nam, rất vui được hỗ trợ bạn.\n\nBạn đang quan tâm đến địa điểm nào hay cần lịch trình, món ăn ra sao? Hãy cho tôi biết nhé!',
+      text: INITIAL_BOT_MESSAGE,
     },
   ]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    // Tự động cuộn xuống khi có tin nhắn mới
     if (visible) {
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -128,87 +131,95 @@ export default function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
       {
         id: Date.now().toString(),
         sender: 'bot',
-        text: 'Chào bạn! Tôi là chatbot tư vấn du lịch Việt Nam, rất vui được hỗ trợ bạn.\n\nBạn đang quan tâm đến địa điểm nào hay cần lịch trình, món ăn ra sao? Hãy cho tôi biết nhé!',
+        text: INITIAL_BOT_MESSAGE,
       },
     ]);
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent={true}
+      statusBarTranslucent
+      navigationBarTranslucent
+      onRequestClose={onClose}
+    >
       <BlurView intensity={20} style={styles.overlay}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.modalContent}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
+          style={styles.keyboardAvoiding}
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.headerLeft}>
-              <View style={styles.botIconContainer}>
-                <Feather name="message-circle" size={20} color="#FFF" />
+          <View style={styles.modalContent}>
+            <View style={styles.header}>
+              <View style={styles.headerLeft}>
+                <View style={styles.botIconContainer}>
+                  <Feather name="message-circle" size={20} color="#FFF" />
+                </View>
+                <Text style={styles.headerTitle}>OwnTrip AI</Text>
               </View>
-              <Text style={styles.headerTitle}>OwnTrip AI</Text>
+              <View style={styles.headerRight}>
+                <TouchableOpacity onPress={clearChat} style={styles.actionBtn}>
+                  <Feather name="trash-2" size={20} color="#718096" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={onClose} style={styles.actionBtn}>
+                  <Feather name="x" size={24} color="#718096" />
+                </TouchableOpacity>
+              </View>
             </View>
-            <View style={styles.headerRight}>
-              <TouchableOpacity onPress={clearChat} style={styles.actionBtn}>
-                <Feather name="trash-2" size={20} color="#718096" />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={onClose} style={styles.actionBtn}>
-                <Feather name="x" size={24} color="#718096" />
-              </TouchableOpacity>
-            </View>
-          </View>
 
-          {/* Chat Messages */}
-          <ScrollView
-            ref={scrollViewRef}
-            style={styles.chatArea}
-            contentContainerStyle={styles.chatContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {messages.map((item) => (
-              <View
-                key={item.id}
-                style={[
-                  styles.messageBubble,
-                  item.sender === 'user' ? styles.userBubble : styles.botBubble,
-                ]}
-              >
-                <Text
+            <ScrollView
+              ref={scrollViewRef}
+              style={styles.chatArea}
+              contentContainerStyle={styles.chatContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              {messages.map((item) => (
+                <View
+                  key={item.id}
                   style={[
-                    styles.messageText,
-                    item.sender === 'user' ? styles.userMessageText : styles.botMessageText,
+                    styles.messageBubble,
+                    item.sender === 'user' ? styles.userBubble : styles.botBubble,
                   ]}
                 >
-                  {item.text}
-                </Text>
-              </View>
-            ))}
+                  <Text
+                    style={[
+                      styles.messageText,
+                      item.sender === 'user' ? styles.userMessageText : styles.botMessageText,
+                    ]}
+                  >
+                    {item.text}
+                  </Text>
+                </View>
+              ))}
 
-            {isTyping && (
-              <View style={[styles.messageBubble, styles.botBubble, styles.typingBubble]}>
-                <TypingIndicator />
-              </View>
-            )}
-          </ScrollView>
+              {isTyping && (
+                <View style={[styles.messageBubble, styles.botBubble, styles.typingBubble]}>
+                  <TypingIndicator />
+                </View>
+              )}
+            </ScrollView>
 
-          {/* Input Area */}
-          <View style={styles.inputArea}>
-            <TextInput
-              style={styles.input}
-              placeholder="Nhập tin nhắn..."
-              placeholderTextColor="#A0AEC0"
-              value={inputText}
-              onChangeText={setInputText}
-              multiline
-              maxLength={500}
-            />
-            <TouchableOpacity
-              style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
-              onPress={handleSend}
-              disabled={!inputText.trim() || isTyping}
-            >
-              <Feather name="send" size={18} color="#FFF" />
-            </TouchableOpacity>
+            <View style={[styles.inputArea, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+              <TextInput
+                style={styles.input}
+                placeholder="Nhập tin nhắn..."
+                placeholderTextColor="#A0AEC0"
+                value={inputText}
+                onChangeText={setInputText}
+                multiline
+                maxLength={500}
+              />
+              <TouchableOpacity
+                style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
+                onPress={handleSend}
+                disabled={!inputText.trim() || isTyping}
+              >
+                <Feather name="send" size={18} color="#FFF" />
+              </TouchableOpacity>
+            </View>
           </View>
         </KeyboardAvoidingView>
       </BlurView>
@@ -221,6 +232,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
     justifyContent: 'flex-end',
+  },
+  keyboardAvoiding: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    width: '100%',
   },
   modalContent: {
     height: '85%',
@@ -330,7 +346,8 @@ const styles = StyleSheet.create({
   inputArea: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    paddingTop: 16,
+    paddingHorizontal: 16,
     backgroundColor: '#FFF',
     borderTopWidth: 1,
     borderTopColor: '#EDF2F7',

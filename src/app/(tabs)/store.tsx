@@ -14,7 +14,7 @@ import {
   Linking,
   TextInput,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -27,6 +27,7 @@ import { decorationsService, Decoration } from '@/services/decorationsService';
 import { useConfirm } from '@/components/ConfirmProvider';
 import axiosClient from '@/services/axiosClient';
 import { ENDPOINTS } from '@/constants/api';
+import { getTabScreenBottomPadding } from '@/utils/mobileLayout';
 
 const { width } = Dimensions.get('window');
 const CARD_GAP = 12;
@@ -47,6 +48,7 @@ function getDecorationCategory(type?: string) {
 
 export default function StoreScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [marketplaceTrips, setMarketplaceTrips] = useState<Trip[]>([]);
   const [loadingTrips, setLoadingTrips] = useState(true);
@@ -158,7 +160,6 @@ export default function StoreScreen() {
           showAlert('Thành công', 'Vật phẩm đã được thêm vào kho của bạn!', 'success');
           loadProfile(); // Refresh balance
           setSelectedDecoration(null);
-          setSelectedSouvenir(null);
         } else {
           showAlert('Lỗi', res.message, 'error');
         }
@@ -181,7 +182,10 @@ export default function StoreScreen() {
 
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: getTabScreenBottomPadding(insets.bottom) },
+          ]}
           showsVerticalScrollIndicator={false}
         >
           {/* Coin Balance Card */}
@@ -425,7 +429,6 @@ export default function StoreScreen() {
             )}
           </View>
 
-          <View style={{ height: 100 }} />
         </ScrollView>
 
         {/* Trang chi tiết Decoration (full-screen như hình) */}
