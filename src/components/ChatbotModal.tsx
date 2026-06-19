@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -9,12 +10,15 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { chatbotService } from '../services/chatbotService';
+import { formatChatbotMessageText } from '../utils/chatbotText';
+import { getChatbotModalHeight } from '../utils/mobileLayout';
 
 interface Message {
   id: string;
@@ -78,8 +82,13 @@ export default function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
   ]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
+  const { height: screenHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const bottomInset =
+    Platform.OS === 'android' ? Math.max(insets.bottom, 24) : Math.max(insets.bottom, 12);
+  const modalHeight = getChatbotModalHeight({ screenHeight, keyboardHeight });
 
   useEffect(() => {
     if (visible) {
@@ -88,6 +97,22 @@ export default function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
       }, 100);
     }
   }, [messages, visible]);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSubscription = Keyboard.addListener(showEvent, (event) => {
+      setKeyboardHeight(event.endCoordinates.height);
+    });
+    const hideSubscription = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   const handleSend = async () => {
     if (!inputText.trim()) return;
@@ -147,11 +172,19 @@ export default function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
     >
       <BlurView intensity={20} style={styles.overlay}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
           style={styles.keyboardAvoiding}
         >
-          <View style={styles.modalContent}>
+          <View
+            style={[
+              styles.modalContent,
+              {
+                height: modalHeight,
+                marginBottom: Platform.OS === 'android' ? keyboardHeight : 0,
+              },
+            ]}
+          >
             <View style={styles.header}>
               <View style={styles.headerLeft}>
                 <View style={styles.botIconContainer}>
@@ -190,7 +223,7 @@ export default function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
                       item.sender === 'user' ? styles.userMessageText : styles.botMessageText,
                     ]}
                   >
-                    {item.text}
+                    {item.sender === 'bot' ? formatChatbotMessageText(item.text) : item.text}
                   </Text>
                 </View>
               ))}
@@ -202,7 +235,7 @@ export default function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
               )}
             </ScrollView>
 
-            <View style={[styles.inputArea, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+            <View style={[styles.inputArea, { paddingBottom: bottomInset }]}>
               <TextInput
                 style={styles.input}
                 placeholder="Nhập tin nhắn..."
@@ -239,7 +272,6 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   modalContent: {
-    height: '85%',
     backgroundColor: '#FAFBFC',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
@@ -363,6 +395,7 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 14,
     fontSize: 15,
+    lineHeight: 20,
     color: '#1A2B4A',
     maxHeight: 100,
   },

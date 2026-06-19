@@ -7,6 +7,7 @@ interface CheckinToolbarProps {
   onSave: () => void;
   onShare: () => void;
   canSave: boolean;
+  bottomOffset?: number;
 }
 
 export const CheckinToolbar: React.FC<CheckinToolbarProps> = ({
@@ -14,9 +15,10 @@ export const CheckinToolbar: React.FC<CheckinToolbarProps> = ({
   onSave,
   onShare,
   canSave,
+  bottomOffset = 0,
 }) => {
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { bottom: bottomOffset }]}>
       <TouchableOpacity style={styles.button} onPress={onTakePhoto}>
         <Feather name="camera" size={18} color="#fff" />
         <Text style={styles.buttonText}>Chụp ảnh</Text>
@@ -45,20 +47,26 @@ export const CheckinToolbar: React.FC<CheckinToolbarProps> = ({
 
 const styles = StyleSheet.create({
   container: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 15,
+    paddingVertical: 8,
     paddingHorizontal: 10,
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#eee',
+    zIndex: 20,
+    elevation: 20,
   },
   button: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#4A90E2',
-    paddingVertical: 12,
+    minHeight: 44,
+    paddingHorizontal: 8,
     borderRadius: 25,
     justifyContent: 'center',
     marginHorizontal: 4,
@@ -76,6 +84,9 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
     marginLeft: 6,
-    fontSize: 13,
+    fontSize: 12,
+    lineHeight: 15,
+    includeFontPadding: false,
+    flexShrink: 1,
   },
 });

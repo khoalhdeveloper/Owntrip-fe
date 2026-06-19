@@ -5,20 +5,22 @@ import {
   StyleSheet,
   SafeAreaView,
   TouchableOpacity,
-  Dimensions,
-  ScrollView,
-  Image,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { CAMERA_FILTERS } from '../../constants/checkinFrames';
 import { sessionCache } from './FrameSelectScreen';
-
-const { width, height } = Dimensions.get('window');
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  getCameraControlsBottomPadding,
+  getCameraHeaderTopPadding,
+  getCheckinHeaderTopPadding,
+} from '../../utils/mobileLayout';
 
 export const CheckinCameraScreen = () => {
   const params = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
   const slotsCount = Number(params.slotsCount) || 1;
   const [capturedPhotos, setCapturedPhotos] = useState<string[]>([]);
 
@@ -28,6 +30,7 @@ export const CheckinCameraScreen = () => {
   const [facing, setFacing] = useState<'front' | 'back'>('front');
   const [flash, setFlash] = useState<'off' | 'on'>('off');
   const cameraRef = useRef<any>(null);
+  const canSkipToSelect = slotsCount > 1 && capturedPhotos.length >= 4;
 
   if (!permission) {
     return <View style={styles.loadingContainer} />;
@@ -36,12 +39,12 @@ export const CheckinCameraScreen = () => {
   if (!permission.granted) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: getCheckinHeaderTopPadding(insets.top) }]}>
           <TouchableOpacity onPress={() => router.back()}>
-            <Feather name="arrow-left" size={24} color="#333" />
+            <Feather name="arrow-left" size={24} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Check-in Photo Booth</Text>
-          <View style={{ width: 24 }} />
+          <View style={{ width: 38 }} />
         </View>
         <View style={styles.permissionContainer}>
           <Feather name="camera-off" size={64} color="#A0AEC0" style={{ marginBottom: 20 }} />
@@ -141,11 +144,8 @@ export const CheckinCameraScreen = () => {
           </View>
         </View>
         <SafeAreaView style={styles.safeOverlay}>
-          <View style={styles.header}>
+          <View style={[styles.header, { paddingTop: getCameraHeaderTopPadding(insets.top) }]}>
             <View style={styles.headerLeft}>
-              <TouchableOpacity onPress={() => router.back()} style={styles.headerIconBtn}>
-                <Feather name="arrow-left" size={22} color="#fff" style={{ marginRight: 4 }} />
-              </TouchableOpacity>
               <TouchableOpacity onPress={toggleFlash} style={styles.headerIconBtn}>
                 <Feather
                   name={flash === 'on' ? 'zap' : 'zap-off'}
@@ -153,14 +153,11 @@ export const CheckinCameraScreen = () => {
                   color={flash === 'on' ? '#F59E0B' : '#fff'}
                 />
               </TouchableOpacity>
-              <TouchableOpacity onPress={toggleFacing} style={styles.headerIconBtn}>
-                <Ionicons name="camera-reverse-outline" size={22} color="#fff" />
-              </TouchableOpacity>
             </View>
-            <Text style={styles.headerTitle}>Check-in Photo Booth</Text>
-            <TouchableOpacity style={styles.headerIconBtn}>
-              <Feather name="settings" size={20} color="#fff" />
-            </TouchableOpacity>
+            <View style={styles.headerTitlePill}>
+              <Text style={styles.headerTitle} numberOfLines={1}>Check-in Photo Booth</Text>
+            </View>
+            <View style={styles.headerSpacer} />
           </View>
           {slotsCount > 1 && (
             <View style={styles.stepIndicatorContainer}>
@@ -180,7 +177,12 @@ export const CheckinCameraScreen = () => {
             </View>
           )}
           <View style={{ flex: 1 }} />
-          <View style={styles.bottomControlsPanel}>
+          <View
+            style={[
+              styles.bottomControlsPanel,
+              { paddingBottom: getCameraControlsBottomPadding(insets.bottom) },
+            ]}
+          >
 
             <View style={styles.filtersWrapper}>
               {CAMERA_FILTERS.map(filter => {
@@ -210,7 +212,7 @@ export const CheckinCameraScreen = () => {
             </View>
             <View style={styles.controlsContainer}>
               <TouchableOpacity
-                style={styles.backButton}
+                style={styles.secondaryControlButton}
                 onPress={() => router.back()}
               >
                 <Feather name="arrow-left" size={24} color="#fff" />
@@ -219,7 +221,7 @@ export const CheckinCameraScreen = () => {
                 <TouchableOpacity
                   style={[
                     styles.captureButton,
-                    capturedPhotos.length >= CAPTURE_LIMIT && styles.captureButtonDisabled
+                    capturedPhotos.length >= CAPTURE_LIMIT && styles.captureButtonDisabled,
                   ]}
                   onPress={handleCapture}
                   disabled={capturedPhotos.length >= CAPTURE_LIMIT}
@@ -232,24 +234,26 @@ export const CheckinCameraScreen = () => {
                     : `Chụp ảnh ${capturedPhotos.length + 1}`}
                 </Text>
               </View>
-              {/* Nút bỏ qua: cho phép vào màn chọn ảnh sớm nếu đã có ít nhất 4 tấm */}
-              {slotsCount > 1 ? (
-                <TouchableOpacity
-                  style={[
-                    styles.confirmButton,
-                    capturedPhotos.length >= 4 ? styles.confirmButtonActive : styles.confirmButtonDisabled
-                  ]}
-                  disabled={capturedPhotos.length < 4}
-                  onPress={() => {
+              <TouchableOpacity
+                style={[
+                  styles.secondaryControlButton,
+                  canSkipToSelect && styles.confirmButtonActive,
+                ]}
+                onPress={() => {
+                  if (canSkipToSelect) {
                     (sessionCache as any).capturedPhotosTemp = capturedPhotos;
                     router.push({ pathname: '/checkin/select' });
-                  }}
-                >
+                    return;
+                  }
+                  toggleFacing();
+                }}
+              >
+                {canSkipToSelect ? (
                   <Feather name="check" size={24} color="#fff" />
-                </TouchableOpacity>
-              ) : (
-                <View style={styles.controlPlaceholder} />
-              )}
+                ) : (
+                  <Ionicons name="camera-reverse-outline" size={24} color="#fff" />
+                )}
+              </TouchableOpacity>
             </View>
           </View>
         </SafeAreaView>
@@ -276,24 +280,45 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 15,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    paddingTop: 15,
+    paddingBottom: 12,
+    backgroundColor: 'transparent',
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
   headerIconBtn: {
-    padding: 4,
-    marginRight: 12,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(8, 13, 24, 0.42)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerSpacer: {
+    width: 38,
+    height: 38,
+  },
+  headerTitlePill: {
+    flex: 1,
+    minHeight: 38,
+    marginHorizontal: 10,
+    paddingHorizontal: 14,
+    borderRadius: 19,
+    backgroundColor: 'rgba(8, 13, 24, 0.42)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
+    justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '800',
     color: '#fff',
-    flex: 1,
     textAlign: 'center',
-    marginRight: 12,
   },
   permissionContainer: {
     flex: 1,
@@ -349,41 +374,47 @@ const styles = StyleSheet.create({
     height: 150,
     borderRadius: 75,
     borderWidth: 1.5,
-    borderColor: 'rgba(47, 128, 237, 0.45)',
+    borderColor: 'rgba(255, 255, 255, 0.45)',
     transform: [{ translateX: -75 }, { translateY: -75 }],
   },
   bottomControlsPanel: {
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    paddingVertical: 20,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    marginHorizontal: 12,
+    marginBottom: 10,
+    paddingTop: 14,
+    paddingHorizontal: 14,
+    backgroundColor: 'rgba(8, 13, 24, 0.58)',
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.16)',
   },
   filtersWrapper: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 16,
-    marginBottom: 20,
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+    marginBottom: 14,
   },
   filterItem: {
     alignItems: 'center',
+    width: 68,
   },
   filterOuterRing: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     borderWidth: 2,
     borderColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 5,
   },
   activeFilterRing: {
-    borderColor: '#2F80ED',
+    borderColor: '#60A5FA',
+    backgroundColor: 'rgba(96, 165, 250, 0.15)',
   },
   filterCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -411,46 +442,51 @@ const styles = StyleSheet.create({
     backgroundColor: '#0055ff',
   },
   filterText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#E2E8F0',
-    fontWeight: '500',
+    fontWeight: '700',
+    lineHeight: 14,
+    includeFontPadding: false,
   },
   activeFilterText: {
-    color: '#2F80ED',
-    fontWeight: 'bold',
+    color: '#60A5FA',
   },
   controlsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 8,
   },
   controlPlaceholder: {
-    width: 50,
+    width: 54,
   },
   captureButton: {
-    width: 74,
-    height: 74,
-    borderRadius: 37,
-    backgroundColor: '#2F80ED',
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#3B82F6',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 4,
-    borderColor: '#e1eeff',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
+    borderWidth: 5,
+    borderColor: 'rgba(255, 255, 255, 0.9)',
+    elevation: 8,
+    shadowColor: '#3B82F6',
+    shadowOpacity: 0.36,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
   },
   captureButtonContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+    minWidth: 112,
   },
   captureButtonSubtext: {
-    fontSize: 11,
-    color: '#E2E8F0',
-    fontWeight: 'bold',
-    marginTop: 6,
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '800',
+    marginTop: 8,
+    lineHeight: 15,
+    includeFontPadding: false,
   },
   stepIndicatorContainer: {
     position: 'absolute',
@@ -535,11 +571,13 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#fff',
   },
-  backButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  secondaryControlButton: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.16)',
     justifyContent: 'center',
     alignItems: 'center',
   },

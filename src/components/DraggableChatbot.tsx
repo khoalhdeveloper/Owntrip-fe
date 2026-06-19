@@ -2,12 +2,16 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, PanResponder, StyleSheet, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSegments } from 'expo-router';
 import ChatbotModal from './ChatbotModal';
 import { useChatbotSetting } from '../context/ChatbotSettingContext';
 import {
   clampFloatingButtonPosition,
+  getBottomTabBarHeight,
+  getCheckinScreenBottomPadding,
   getFloatingButtonBounds,
   getInitialFloatingButtonPosition,
+  shouldHideFloatingChatbot,
 } from '../utils/mobileLayout';
 
 const BTN_SIZE = 56;
@@ -17,6 +21,12 @@ export default function DraggableChatbot() {
   const [modalVisible, setModalVisible] = useState(false);
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const segments = useSegments() as string[];
+  const hiddenForRoute = shouldHideFloatingChatbot(segments);
+  const hasCheckinActionBar = segments.includes('checkin') && segments.includes('frame');
+  const bottomAvoidance = hasCheckinActionBar
+    ? Math.max(0, getCheckinScreenBottomPadding(insets.bottom) - insets.bottom)
+    : Math.max(0, getBottomTabBarHeight(insets.bottom) - insets.bottom);
 
   const layoutOptions = useMemo(
     () => ({
@@ -25,8 +35,9 @@ export default function DraggableChatbot() {
       buttonSize: BTN_SIZE,
       safeAreaTop: insets.top,
       safeAreaBottom: insets.bottom,
+      bottomAvoidance,
     }),
-    [height, insets.bottom, insets.top, width],
+    [bottomAvoidance, height, insets.bottom, insets.top, width],
   );
 
   const bounds = useMemo(() => getFloatingButtonBounds(layoutOptions), [layoutOptions]);
@@ -88,7 +99,7 @@ export default function DraggableChatbot() {
     [bounds, pos],
   );
 
-  if (!aiButtonEnabled) return null;
+  if (!aiButtonEnabled || hiddenForRoute) return null;
 
   return (
     <>

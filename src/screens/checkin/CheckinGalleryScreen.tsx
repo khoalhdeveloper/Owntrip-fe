@@ -13,17 +13,23 @@ import {
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { FontAwesome, Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CheckinMemory, CheckinMode } from '../../types/checkin.type';
 import { sessionCache } from './FrameSelectScreen';
 import { checkinService } from '../../services/checkinService';
 import { NearbyPlacesList } from './components/NearbyPlacesList';
 import { MissionProgressList } from './components/MissionProgressList';
 import { VisitedPlacesList } from './components/VisitedPlacesList';
+import {
+  getCheckinGalleryFabBottomOffset,
+  getCheckinGalleryListBottomPadding,
+} from '../../utils/mobileLayout';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 36) / 2; // Two-column grid with padding
 
 export const CheckinGalleryScreen = () => {
+  const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<CheckinMode>('memories');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'recent' | 'favorites'>('all');
@@ -258,7 +264,10 @@ export const CheckinGalleryScreen = () => {
               numColumns={2}
               columnWrapperStyle={styles.row}
               ListHeaderComponent={renderLargeHeader}
-              contentContainerStyle={styles.listContent}
+              contentContainerStyle={[
+                styles.listContent,
+                { paddingBottom: getCheckinGalleryListBottomPadding(insets.bottom) },
+              ]}
               ListEmptyComponent={
                 !showLargeHeader ? (
                   <View style={styles.emptyContainer}>
@@ -281,7 +290,7 @@ export const CheckinGalleryScreen = () => {
       {/* Floating Action Button */}
       {mode === 'memories' && (
         <TouchableOpacity
-          style={styles.fab}
+          style={[styles.fab, { bottom: getCheckinGalleryFabBottomOffset(insets.bottom) }]}
           onPress={() => {
             sessionCache.userImageUris = [null, null, null, null];
             sessionCache.activeSlotIndex = 0;
@@ -371,7 +380,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 12,
-    paddingBottom: 100,
   },
   row: {
     justifyContent: 'space-between',
@@ -446,7 +454,6 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: 95,
     right: 16,
     backgroundColor: '#2F80ED',
     flexDirection: 'row',
