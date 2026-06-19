@@ -33,8 +33,8 @@ import AddPlaceModal from './AddPlaceModal';
 import PlaceDetailModal from './PlaceDetailModal';
 import { useConfirm } from '@/components/ConfirmProvider';
 import { getDayColor } from './journal/types';
-import * as Speech from 'expo-speech';
 import Constants from 'expo-constants';
+import { speakItineraryAiFeedback } from '@/utils/itineraryAssistantAudio';
 
 const BRAND = '#4A7CFF';
 const BRAND_LIGHT = '#EBF5FF';
@@ -311,14 +311,14 @@ export default function ItineraryTab({
   const handleAutoGenerateItinerary = async () => {
     try {
       setIsAutoGenerating(true);
-      Speech.speak('Đang tự động thiết kế lịch trình...', { language: 'vi-VN' });
+      speakItineraryAiFeedback('Đang tự động thiết kế lịch trình...');
 
       // 1. Lấy danh sách địa điểm bằng API address theo yêu cầu
       const query = trip.destination || trip.title;
       const availablePlaces = await placesService.searchByAddress(query);
 
       if (!availablePlaces || availablePlaces.length === 0) {
-        Speech.speak('Không tìm thấy địa điểm nào ở khu vực này.', { language: 'vi-VN' });
+        speakItineraryAiFeedback('Không tìm thấy địa điểm nào ở khu vực này.');
         setIsAutoGenerating(false);
         return;
       }
@@ -359,11 +359,11 @@ export default function ItineraryTab({
         }
       }
 
-      Speech.speak('Đã hoàn tất việc tự động lên lịch trình.', { language: 'vi-VN' });
+      speakItineraryAiFeedback('Đã hoàn tất việc tự động lên lịch trình.');
       onRefresh();
     } catch (error) {
       console.error('Lỗi khi tự động lên lịch trình:', error);
-      Speech.speak('Đã xảy ra lỗi trong quá trình tự động lên lịch trình.', { language: 'vi-VN' });
+      speakItineraryAiFeedback('Đã xảy ra lỗi trong quá trình tự động lên lịch trình.');
     } finally {
       setIsAutoGenerating(false);
     }
@@ -395,10 +395,10 @@ export default function ItineraryTab({
         setIsProcessingVoice(true);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-        Speech.speak(`Đang nhờ AI xử lý Ngày ${targetAssistantDay.day}...`, { language: 'vi-VN' });
+        speakItineraryAiFeedback(`Đang nhờ AI xử lý Ngày ${targetAssistantDay.day}...`);
 
         if (days.length === 0) {
-          Speech.speak('Không có lịch trình nào để sắp xếp.', { language: 'vi-VN' });
+          speakItineraryAiFeedback('Không có lịch trình nào để sắp xếp.');
           return;
         }
 
@@ -407,7 +407,7 @@ export default function ItineraryTab({
         );
 
         if (dayDests.length < 2) {
-          Speech.speak('Ngày này không đủ địa điểm để sắp xếp lại.', { language: 'vi-VN' });
+          speakItineraryAiFeedback('Ngày này không đủ địa điểm để sắp xếp lại.');
           showAlert(
             'Trợ lý AI',
             `Ngày ${targetAssistantDay.day} cần ít nhất 2 hoạt động để AI sắp xếp lại.`,
@@ -424,13 +424,12 @@ export default function ItineraryTab({
           // Call API to save new order
           await tripService.reorderPlacesInDay(targetAssistantDay.dayId, aiResult.orderedPlaceIds);
 
-          // Speak the AI's reply
-          Speech.speak(aiResult.replyMessage, { language: 'vi-VN' });
+          speakItineraryAiFeedback(aiResult.replyMessage);
 
           setAiText(''); // Clear input after success
           setAssistantVisible(false);
         } else {
-          Speech.speak('Xin lỗi, AI không thể phân tích được yêu cầu này.', { language: 'vi-VN' });
+          speakItineraryAiFeedback('Xin lỗi, AI không thể phân tích được yêu cầu này.');
           showAlert(
             'Trợ lý AI',
             'AI chưa hiểu yêu cầu này. Bạn thử nói hoặc nhập cụ thể hơn nhé.',
@@ -439,7 +438,7 @@ export default function ItineraryTab({
         }
       } catch (error) {
         console.error(error);
-        Speech.speak('Đã xảy ra lỗi khi gọi AI.', { language: 'vi-VN' });
+        speakItineraryAiFeedback('Đã xảy ra lỗi khi gọi AI.');
         showAlert('Trợ lý AI', 'Đã xảy ra lỗi khi gọi AI.', 'error');
       } finally {
         setIsProcessingVoice(false);
