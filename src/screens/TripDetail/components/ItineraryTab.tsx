@@ -35,6 +35,12 @@ import { useConfirm } from '@/components/ConfirmProvider';
 import { getDayColor } from './journal/types';
 import Constants from 'expo-constants';
 import { speakItineraryAiFeedback } from '@/utils/itineraryAssistantAudio';
+import {
+  ItineraryPreviewChange,
+  normalizeAiPreviewChanges,
+  normalizeOrderedPlaceIds,
+  reorderDestinationsByIds,
+} from '@/utils/itineraryPreview';
 
 const BRAND = '#4A7CFF';
 const BRAND_LIGHT = '#EBF5FF';
@@ -52,6 +58,24 @@ type SpeechRecognitionModuleLike = {
   stop: () => void;
   abort: () => void;
   addListener: (eventName: string, listener: (event: any) => void) => { remove: () => void };
+};
+
+type PendingAiPreview = {
+  dayId: string;
+  dayNumber: number;
+  orderedPlaceIds: string[];
+  replyMessage: string;
+  summary?: string;
+  changes: ItineraryPreviewChange[];
+  dayDests: Destination[];
+  userInput: string;
+};
+
+type UndoSnapshot = {
+  dayId: string;
+  orderedPlaceIds: string[];
+  destinations: Destination[];
+  label: string;
 };
 
 // ===== HELPERS =====
@@ -113,6 +137,10 @@ export default function ItineraryTab({
   const [speechError, setSpeechError] = useState('');
   const [speechRecognitionUnavailable, setSpeechRecognitionUnavailable] = useState(false);
   const [isMicHoldActive, setIsMicHoldActive] = useState(false);
+  const [pendingAiPreview, setPendingAiPreview] = useState<PendingAiPreview | null>(null);
+  const [undoSnapshot, setUndoSnapshot] = useState<UndoSnapshot | null>(null);
+  const [isApplyingAiPreview, setIsApplyingAiPreview] = useState(false);
+  const [isUndoing, setIsUndoing] = useState(false);
 
   // Auto Generate State
   const [isAutoGenerating, setIsAutoGenerating] = useState(false);
@@ -267,6 +295,34 @@ export default function ItineraryTab({
     return (destByDay[dayNum] || []).map((d) => d.place.placeId);
   };
 
+  const getOrderedIdsForDay = useCallback(
+    (dayId: string) =>
+      destinations
+        .filter((dest) => dest.dayId === dayId)
+        .sort((a, b) => a.place.order - b.place.order)
+        .map((dest) => dest.place._id),
+    [destinations],
+  );
+
+  const handleUndoReorder = useCallback(async () => {
+    if (!undoSnapshot || isUndoing) return;
+
+    const currentDestinations = [...destinations];
+    try {
+      setIsUndoing(true);
+      setDestinations(undoSnapshot.destinations);
+      await tripService.reorderPlacesInDay(undoSnapshot.dayId, undoSnapshot.orderedPlaceIds);
+      setUndoSnapshot(null);
+      onRefresh();
+    } catch (error: any) {
+      setDestinations(currentDestinations);
+      const msg = error?.response?.data?.message || 'Không thể hoàn tác thứ tự';
+      showAlert('Lỗi', msg, 'error');
+    } finally {
+      setIsUndoing(false);
+    }
+  }, [destinations, isUndoing, onRefresh, showAlert, undoSnapshot]);
+
   // Drag reorder handler — no bounce, just swap
   const handleDragEnd = useCallback(
     async (dayNum: number, fromIdx: number, dy: number) => {
@@ -278,6 +334,9 @@ export default function ItineraryTab({
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
       // Swap in local destinations
+      const backupDestinations = [...destinations];
+      const targetDayId = dayDests[0]?.dayId;
+      const previousOrderedIds = targetDayId ? getOrderedIdsForDay(targetDayId) : [];
       const reordered = [...dayDests];
       const [moved] = reordered.splice(fromIdx, 1);
       reordered.splice(toIdx, 0, moved);
@@ -292,19 +351,25 @@ export default function ItineraryTab({
       setDestinations(updatedDests);
 
       // Save to backend
-      const targetDayId = dayDests[0]?.dayId;
       if (targetDayId) {
         try {
           const orderedPlaceIds = reordered.map((r) => r.place._id);
           await tripService.reorderPlacesInDay(targetDayId, orderedPlaceIds);
+          setUndoSnapshot({
+            dayId: targetDayId,
+            orderedPlaceIds: previousOrderedIds,
+            destinations: backupDestinations,
+            label: `Ngày ${dayNum}`,
+          });
           onRefresh(); // Refresh parent to synchronize across tabs!
         } catch (error: any) {
+          setDestinations(backupDestinations);
           const msg = error?.response?.data?.message || 'Không thể lưu thứ tự mới';
           showAlert('Lỗi', msg, 'error');
         }
       }
     },
-    [destByDay, destinations, onRefresh, showAlert],
+    [destByDay, destinations, getOrderedIdsForDay, onRefresh, showAlert],
   );
 
   // Auto-Generate Itinerary (Offline/Local logic without AI)
@@ -389,8 +454,6 @@ export default function ItineraryTab({
         setIsListening(false);
       }
 
-      let shouldRefreshAfterAi = false;
-
       try {
         setIsProcessingVoice(true);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -417,16 +480,23 @@ export default function ItineraryTab({
         }
 
         // Call the real AI Service
-        shouldRefreshAfterAi = true;
         const aiResult = await aiService.rearrangeItineraryWithAI(userInput, dayDests);
 
         if (aiResult && aiResult.orderedPlaceIds) {
-          // Call API to save new order
-          await tripService.reorderPlacesInDay(targetAssistantDay.dayId, aiResult.orderedPlaceIds);
+          const orderedPlaceIds = normalizeOrderedPlaceIds(dayDests, aiResult.orderedPlaceIds);
+          const changes = normalizeAiPreviewChanges(aiResult.changes, dayDests, orderedPlaceIds);
 
+          setPendingAiPreview({
+            dayId: targetAssistantDay.dayId,
+            dayNumber: targetAssistantDay.day,
+            orderedPlaceIds,
+            replyMessage: aiResult.replyMessage,
+            summary: aiResult.summary,
+            changes,
+            dayDests,
+            userInput,
+          });
           speakItineraryAiFeedback(aiResult.replyMessage);
-
-          setAiText(''); // Clear input after success
           setAssistantVisible(false);
         } else {
           speakItineraryAiFeedback('Xin lỗi, AI không thể phân tích được yêu cầu này.');
@@ -442,13 +512,53 @@ export default function ItineraryTab({
         showAlert('Trợ lý AI', 'Đã xảy ra lỗi khi gọi AI.', 'error');
       } finally {
         setIsProcessingVoice(false);
-        if (shouldRefreshAfterAi) {
-          onRefresh();
-        }
       }
     },
-    [aiText, days.length, destByDay, isListening, onRefresh, showAlert, targetAssistantDay],
+    [aiText, days.length, destByDay, isListening, showAlert, targetAssistantDay],
   );
+
+  const applyAiPreview = useCallback(async () => {
+    if (!pendingAiPreview || isApplyingAiPreview) return;
+
+    const backupDestinations = [...destinations];
+    const previousOrderedIds = getOrderedIdsForDay(pendingAiPreview.dayId);
+    const nextDestinations = reorderDestinationsByIds(
+      destinations,
+      pendingAiPreview.dayId,
+      pendingAiPreview.orderedPlaceIds,
+    ) as Destination[];
+
+    try {
+      setIsApplyingAiPreview(true);
+      setDestinations(nextDestinations);
+      await tripService.reorderPlacesInDay(
+        pendingAiPreview.dayId,
+        pendingAiPreview.orderedPlaceIds,
+      );
+      setUndoSnapshot({
+        dayId: pendingAiPreview.dayId,
+        orderedPlaceIds: previousOrderedIds,
+        destinations: backupDestinations,
+        label: `Ngày ${pendingAiPreview.dayNumber}`,
+      });
+      setAiText('');
+      setPendingAiPreview(null);
+      onRefresh();
+    } catch (error: any) {
+      setDestinations(backupDestinations);
+      const msg = error?.response?.data?.message || 'Không thể áp dụng gợi ý AI';
+      showAlert('Lỗi', msg, 'error');
+    } finally {
+      setIsApplyingAiPreview(false);
+    }
+  }, [
+    destinations,
+    getOrderedIdsForDay,
+    isApplyingAiPreview,
+    onRefresh,
+    pendingAiPreview,
+    showAlert,
+  ]);
 
   const handleAssistantListening = useCallback(async () => {
     if (isProcessingVoice) return;
@@ -720,6 +830,27 @@ export default function ItineraryTab({
         </TouchableOpacity>
       </View>
 
+      {undoSnapshot ? (
+        <View style={styles.undoBar}>
+          <View style={styles.undoCopy}>
+            <Text style={styles.undoTitle}>Đã đổi thứ tự {undoSnapshot.label}</Text>
+            <Text style={styles.undoSub}>Bạn có thể hoàn tác về thứ tự trước đó.</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.undoBtn}
+            onPress={handleUndoReorder}
+            disabled={isUndoing}
+            activeOpacity={0.82}
+          >
+            {isUndoing ? (
+              <ActivityIndicator size="small" color="#FFF" />
+            ) : (
+              <Text style={styles.undoBtnText}>Hoàn tác</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
       {days.map((day) => {
         const dayDests = (destByDay[day.day] || []).sort((a, b) => a.place.order - b.place.order);
         const isExpanded = expandedDays[day.day] ?? false;
@@ -971,6 +1102,95 @@ export default function ItineraryTab({
             </View>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal
+        visible={!!pendingAiPreview}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPendingAiPreview(null)}
+      >
+        <View style={styles.previewOverlay}>
+          <View style={styles.previewCard}>
+            <View style={styles.previewHeader}>
+              <View style={styles.previewIcon}>
+                <Feather name="star" size={20} color="#FFF" />
+              </View>
+              <View style={styles.previewHeaderCopy}>
+                <Text style={styles.previewTitle}>Xem trước AI</Text>
+                <Text style={styles.previewSub}>Ngày {pendingAiPreview?.dayNumber}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.previewCloseBtn}
+                onPress={() => setPendingAiPreview(null)}
+                disabled={isApplyingAiPreview}
+              >
+                <Feather name="x" size={19} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.previewSummary}>
+              {pendingAiPreview?.summary || pendingAiPreview?.replyMessage}
+            </Text>
+
+            <ScrollView style={styles.previewList} showsVerticalScrollIndicator={false}>
+              {(pendingAiPreview?.orderedPlaceIds || []).map((placeId, index) => {
+                const dest = pendingAiPreview?.dayDests.find((item) => item.place._id === placeId);
+                const originalIndex =
+                  (pendingAiPreview?.dayDests.findIndex((item) => item.place._id === placeId) ?? -1) +
+                  1;
+
+                return (
+                  <View key={placeId} style={styles.previewRow}>
+                    <View style={styles.previewOrderPill}>
+                      <Text style={styles.previewOrderText}>{index + 1}</Text>
+                    </View>
+                    <View style={styles.previewPlaceCopy}>
+                      <Text style={styles.previewPlaceName} numberOfLines={1}>
+                        {dest?.place.name || 'Địa điểm'}
+                      </Text>
+                      <Text style={styles.previewMoveText}>
+                        Vị trí {originalIndex > 0 ? originalIndex : '-'} {'->'} {index + 1}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+
+              {pendingAiPreview?.changes?.length ? (
+                <View style={styles.previewChangesBox}>
+                  <Text style={styles.previewChangesTitle}>Thay đổi chính</Text>
+                  {pendingAiPreview.changes.slice(0, 4).map((change) => (
+                    <Text key={`${change.placeId}-${change.to}`} style={styles.previewChangeText}>
+                      {change.name}: {change.from} {'->'} {change.to}
+                    </Text>
+                  ))}
+                </View>
+              ) : null}
+            </ScrollView>
+
+            <View style={styles.previewActions}>
+              <TouchableOpacity
+                style={styles.previewSecondaryBtn}
+                onPress={() => setPendingAiPreview(null)}
+                disabled={isApplyingAiPreview}
+              >
+                <Text style={styles.previewSecondaryText}>Để sau</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.previewPrimaryBtn}
+                onPress={applyAiPreview}
+                disabled={isApplyingAiPreview}
+              >
+                {isApplyingAiPreview ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Text style={styles.previewPrimaryText}>Áp dụng</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
 
       <PlaceDetailModal
@@ -1430,6 +1650,192 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     fontSize: 12,
     fontFamily: 'Inter-Medium',
+  },
+  undoBar: {
+    backgroundColor: '#111827',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  undoCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  undoTitle: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  undoSub: {
+    color: '#D1D5DB',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  undoBtn: {
+    minWidth: 86,
+    minHeight: 36,
+    borderRadius: 18,
+    backgroundColor: BRAND,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  undoBtnText: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  previewOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(17, 24, 39, 0.45)',
+    justifyContent: 'center',
+    padding: 18,
+  },
+  previewCard: {
+    maxHeight: '82%',
+    borderRadius: 22,
+    backgroundColor: '#FFF',
+    overflow: 'hidden',
+  },
+  previewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEF2F7',
+  },
+  previewIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: BRAND,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewHeaderCopy: {
+    flex: 1,
+  },
+  previewTitle: {
+    color: '#111827',
+    fontSize: 17,
+    fontWeight: '900',
+  },
+  previewSub: {
+    color: '#6B7280',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  previewCloseBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewSummary: {
+    color: '#374151',
+    fontSize: 14,
+    lineHeight: 20,
+    paddingHorizontal: 18,
+    paddingTop: 14,
+  },
+  previewList: {
+    paddingHorizontal: 18,
+    marginTop: 12,
+  },
+  previewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E5E7EB',
+  },
+  previewOrderPill: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: BRAND_LIGHT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewOrderText: {
+    color: BRAND,
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  previewPlaceCopy: {
+    flex: 1,
+  },
+  previewPlaceName: {
+    color: '#111827',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  previewMoveText: {
+    color: '#6B7280',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  previewChangesBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    padding: 12,
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  previewChangesTitle: {
+    color: '#111827',
+    fontSize: 13,
+    fontWeight: '900',
+    marginBottom: 6,
+  },
+  previewChangeText: {
+    color: '#4B5563',
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: '600',
+  },
+  previewActions: {
+    flexDirection: 'row',
+    gap: 10,
+    padding: 18,
+    borderTopWidth: 1,
+    borderTopColor: '#EEF2F7',
+  },
+  previewSecondaryBtn: {
+    flex: 1,
+    minHeight: 46,
+    borderRadius: 14,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewSecondaryText: {
+    color: '#374151',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  previewPrimaryBtn: {
+    flex: 1,
+    minHeight: 46,
+    borderRadius: 14,
+    backgroundColor: BRAND,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewPrimaryText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '900',
   },
 });
 

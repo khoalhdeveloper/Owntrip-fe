@@ -4,6 +4,22 @@ import { ENDPOINTS } from '../constants/api';
 export interface AIReorderResult {
   orderedPlaceIds: string[];
   replyMessage: string;
+  summary?: string;
+  changes?: string[];
+}
+
+export interface AIItineraryScoreResult {
+  score: number;
+  level: 'good' | 'warning' | 'too_busy';
+  summary: string;
+  warnings: string[];
+  suggestions: string[];
+  dayReviews: {
+    day: number;
+    score: number;
+    warnings: string[];
+    suggestions: string[];
+  }[];
 }
 
 export const aiService = {
@@ -25,6 +41,8 @@ export const aiService = {
       if (response && response.orderedPlaceIds) {
         return {
           orderedPlaceIds: response.orderedPlaceIds,
+          summary: response.summary,
+          changes: response.changes,
           replyMessage: response.replyMessage || "Đã sắp xếp xong!"
         };
       }
@@ -35,6 +53,7 @@ export const aiService = {
       // Fake logic: Just reverse the order as a demonstration
       return {
         orderedPlaceIds: currentPlaces.map(p => p.place._id).reverse(),
+        summary: 'AI đề xuất đổi thứ tự các điểm trong ngày.',
         replyMessage: "Dạ, vì mạng đang lỗi kết nối tới Server, em xin phép đổi ngược danh sách tạm thời ạ!"
       };
     }
@@ -81,5 +100,28 @@ export const aiService = {
         replyMessage: "Dạ mạng hơi nghẽn nên em đã tự động nhặt ngẫu nhiên 3 địa điểm mỗi ngày cho lịch trình của mình ạ!"
       };
     }
-  }
+  },
+
+  scoreItinerary: async (trip: any, days: any[]): Promise<AIItineraryScoreResult | null> => {
+    try {
+      const response = await axiosClient.post<any, any>(ENDPOINTS.AI.ITINERARY_SCORE, {
+        trip,
+        days,
+      });
+
+      if (!response || typeof response.score !== 'number') return null;
+
+      return {
+        score: response.score,
+        level: response.level || 'warning',
+        summary: response.summary || '',
+        warnings: Array.isArray(response.warnings) ? response.warnings : [],
+        suggestions: Array.isArray(response.suggestions) ? response.suggestions : [],
+        dayReviews: Array.isArray(response.dayReviews) ? response.dayReviews : [],
+      };
+    } catch (error: any) {
+      console.error('Lỗi khi chấm điểm lịch trình bằng AI:', error);
+      return null;
+    }
+  },
 };

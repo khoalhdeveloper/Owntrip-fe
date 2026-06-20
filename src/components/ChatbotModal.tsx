@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { chatbotService } from '../services/chatbotService';
 import { formatChatbotMessageText } from '../utils/chatbotText';
 import { getChatbotModalHeight } from '../utils/mobileLayout';
+import { useChatbotTripContext } from '../context/ChatbotTripContext';
 
 interface Message {
   id: string;
@@ -73,6 +74,7 @@ const TypingIndicator = () => {
 };
 
 export default function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
+  const { tripContext } = useChatbotTripContext();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: Date.now().toString(),
@@ -128,7 +130,7 @@ export default function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
     setIsTyping(true);
 
     try {
-      const respText = await chatbotService.sendMessage(userMessage.text);
+      const respText = await chatbotService.sendMessage(userMessage.text, tripContext);
 
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -190,7 +192,14 @@ export default function ChatbotModal({ visible, onClose }: ChatbotModalProps) {
                 <View style={styles.botIconContainer}>
                   <Feather name="message-circle" size={20} color="#FFF" />
                 </View>
-                <Text style={styles.headerTitle}>OwnTrip AI</Text>
+                <View>
+                  <Text style={styles.headerTitle}>OwnTrip AI</Text>
+                  {tripContext ? (
+                    <Text style={styles.headerSubtitle} numberOfLines={1}>
+                      {tripContext.title}
+                    </Text>
+                  ) : null}
+                </View>
               </View>
               <View style={styles.headerRight}>
                 <TouchableOpacity onPress={clearChat} style={styles.actionBtn}>
@@ -308,6 +317,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
     color: '#1A2B4A',
+  },
+  headerSubtitle: {
+    maxWidth: 190,
+    color: '#718096',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 1,
   },
   headerRight: {
     flexDirection: 'row',

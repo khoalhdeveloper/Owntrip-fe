@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { CheckinFrame } from '../types/checkin.type';
-import { frameService } from '../services/frameService';
+import { frameService, FrameQuery } from '../services/frameService';
 
 // Frame mặc định luôn được prepend đầu danh sách
 const NO_FRAME: CheckinFrame = {
@@ -17,10 +17,13 @@ interface UseFetchFramesResult {
   error: string | null;
 }
 
-export const useFetchFrames = (): UseFetchFramesResult => {
+export const useFetchFrames = (filters?: FrameQuery): UseFetchFramesResult => {
   const [frames,  setFrames]  = useState<CheckinFrame[]>([NO_FRAME]);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState<string | null>(null);
+  const province = filters?.province;
+  const destination = filters?.destination;
+  const category = filters?.category;
 
   useEffect(() => {
     let cancelled = false;
@@ -30,12 +33,12 @@ export const useFetchFrames = (): UseFetchFramesResult => {
       setError(null);
 
       try {
-        const mapped = await frameService.getMyUnlockedFrames();
+        const mapped = await frameService.getMyUnlockedFrames({ province, destination, category });
         if (!cancelled) {
           setFrames([NO_FRAME, ...mapped]);
           setError(null);
         }
-      } catch (fetchErr) {
+      } catch {
         if (!cancelled) {
           setError('Không thể tải danh sách khung hình của bạn');
         }
@@ -46,7 +49,7 @@ export const useFetchFrames = (): UseFetchFramesResult => {
 
     fetchFrames();
     return () => { cancelled = true; };
-  }, []);
+  }, [province, destination, category]);
 
   return { frames, loading, error };
 };
