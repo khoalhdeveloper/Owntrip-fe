@@ -122,6 +122,7 @@ export const ENDPOINTS = {
   AI: {
     REARRANGE: '/api/ai/rearrange',
     AUTO_GENERATE: '/api/ai/auto-generate',
+    ITINERARY_SCORE: '/api/ai/itinerary-score',
   },
 };
 

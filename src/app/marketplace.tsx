@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   TextInput,
   FlatList,
+  Alert,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -43,6 +45,7 @@ export default function MarketplaceScreen() {
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState('newest');
   const [dayFilter, setDayFilter] = useState('all');
+  const [purchasingId, setPurchasingId] = useState<string | null>(null);
 
   const loadTrips = useCallback(async () => {
     setLoading(true);
@@ -107,6 +110,38 @@ export default function MarketplaceScreen() {
     return result;
   }, [trips, search, sortKey, dayFilter]);
 
+  const handlePurchase = useCallback(
+    async (trip: Trip) => {
+      if (purchasingId) return;
+
+      setPurchasingId(trip._id);
+      try {
+        const res = await tripService.purchaseTrip(trip._id);
+        if (!res?.success) {
+          Alert.alert('Không mua được', res?.message || 'Bạn thử lại sau nhé.');
+          return;
+        }
+
+        if (res.tripId) {
+          router.push(`/trip/${res.tripId}` as any);
+          return;
+        }
+
+        if (res.paymentUrl) {
+          await Linking.openURL(res.paymentUrl);
+          return;
+        }
+
+        Alert.alert('Đã gửi yêu cầu', res.message || 'Vui lòng kiểm tra lại lịch trình của bạn.');
+      } catch {
+        Alert.alert('Không mua được', 'Bạn thử lại sau nhé.');
+      } finally {
+        setPurchasingId(null);
+      }
+    },
+    [purchasingId, router],
+  );
+
   const renderCard = ({ item: trip }: { item: Trip }) => {
     const days = getDayCount(trip);
     const coverImage = trip.provinceImage || trip.accommodation?.hotelImage;
@@ -150,6 +185,24 @@ export default function MarketplaceScreen() {
               </Text>
             </View>
           </View>
+          <TouchableOpacity
+            style={styles.purchaseBtn}
+            activeOpacity={0.85}
+            onPress={(event) => {
+              event.stopPropagation();
+              handlePurchase(trip);
+            }}
+            disabled={purchasingId === trip._id}
+          >
+            {purchasingId === trip._id ? (
+              <ActivityIndicator size="small" color="#FFF" />
+            ) : (
+              <>
+                <Feather name="shopping-bag" size={13} color="#FFF" />
+                <Text style={styles.purchaseBtnText}>Dùng plan</Text>
+              </>
+            )}
+          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     );
@@ -386,6 +439,21 @@ const styles = StyleSheet.create({
   tripPrice: { fontSize: 13, fontWeight: '800', color: '#10B981' },
   tripRatingRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   tripRatingText: { fontSize: 10, color: '#64748B' },
+  purchaseBtn: {
+    minHeight: 34,
+    marginTop: 9,
+    borderRadius: 12,
+    backgroundColor: '#3B82F6',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  purchaseBtnText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '800',
+  },
 
   loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   loadingText: { color: '#94A3B8', fontSize: 14 },

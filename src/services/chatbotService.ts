@@ -6,11 +6,22 @@ export interface ChatbotResponse {
   reply: string;
 }
 
+export interface ChatbotTripPayload {
+  tripId: string;
+  title: string;
+  destination?: string;
+  province?: string;
+  startDate?: string;
+  endDate?: string;
+  days?: unknown[];
+}
+
 export const chatbotService = {
-  sendMessage: async (message: string): Promise<string> => {
+  sendMessage: async (message: string, tripContext?: ChatbotTripPayload | null): Promise<string> => {
     try {
       const response = await axiosClient.post<any, ChatbotResponse>(ENDPOINTS.CHATBOT.CHAT, {
         message,
+        tripContext: tripContext ?? undefined,
       });
       if (response && response.success) {
         return response.reply;

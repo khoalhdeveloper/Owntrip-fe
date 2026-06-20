@@ -8,6 +8,12 @@ export type CheckinFrame = {
   slotsCount?: number;
   isActive?: boolean;
   order?: number;
+  province?: string;
+  destinationTags?: string[];
+  category?: string;
+  isDefault?: boolean;
+  unlockCondition?: string | Record<string, unknown>;
+  isUnlocked?: boolean;
 };
 
 export type CheckinMemory = {

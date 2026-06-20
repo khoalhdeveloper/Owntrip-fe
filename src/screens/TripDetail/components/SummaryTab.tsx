@@ -31,6 +31,8 @@ import BudgetModal from './BudgetModal';
 import { userService, UserProfile } from '@/services/userService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
+import { aiService, AIItineraryScoreResult } from '@/services/aiService';
+import AiScoreModal from './AiScoreModal';
 
 const BRAND = '#4A7CFF';
 const BRAND_LIGHT = '#EBF5FF';
@@ -116,7 +118,7 @@ function SectionHeader({
 }
 
 // ===== MAIN COMPONENT =====
-export default function SummaryTab({ trip, days, reviews }: { trip: Trip; days: TripDay[]; reviews?: any[] }) {
+export default function SummaryTab({ trip, days, reviews, onRefresh }: { trip: Trip; days: TripDay[]; reviews?: any[]; onRefresh?: () => Promise<void> }) {
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [loadingDest, setLoadingDest] = useState(true);
   const [loadingTripDetail, setLoadingTripDetail] = useState(false);
@@ -147,6 +149,12 @@ export default function SummaryTab({ trip, days, reviews }: { trip: Trip; days: 
   const [payosCheckoutUrl, setPayosCheckoutUrl] = useState<string | null>(null);
   const [payosBookingId, setPayosBookingId] = useState<string | null>(null);
   const [payosModalVisible, setPayosModalVisible] = useState(false);
+
+  // AI score states
+  const [aiScoreVisible, setAiScoreVisible] = useState(false);
+  const [aiScoreLoading, setAiScoreLoading] = useState(false);
+  const [aiScoreResult, setAiScoreResult] = useState<AIItineraryScoreResult | null>(null);
+  const [aiScoreError, setAiScoreError] = useState('');
 
   // Notes and Budget states
   const [notesModalVisible, setNotesModalVisible] = useState(false);
@@ -269,6 +277,22 @@ export default function SummaryTab({ trip, days, reviews }: { trip: Trip; days: 
     loadUserProfile();
   }, [fetchHotels]);
 
+  useEffect(() => {
+    const loadCachedAiScore = async () => {
+      try {
+        const cached = await AsyncStorage.getItem(`ai_score_${trip._id}`);
+        if (cached) {
+          setAiScoreResult(JSON.parse(cached));
+        }
+      } catch (e) {
+        console.error('Error loading cached AI score:', e);
+      }
+    };
+    if (trip._id) {
+      loadCachedAiScore();
+    }
+  }, [trip._id]);
+
   const handleImageError = (id: string) => {
     setImgErrors((prev) => ({ ...prev, [id]: true }));
   };
@@ -308,6 +332,31 @@ export default function SummaryTab({ trip, days, reviews }: { trip: Trip; days: 
     setTimeout(() => setReviewVisible(true), 300);
   };
 
+  const openAiScoreModal = async () => {
+    setAiScoreVisible(true);
+    if (!aiScoreResult) {
+      await runAiScore();
+    }
+  };
+
+  const runAiScore = async () => {
+    try {
+      setAiScoreLoading(true);
+      setAiScoreError('');
+      const result = await aiService.scoreItinerary(trip, days);
+      if (!result) {
+        setAiScoreError('AI chưa chấm điểm được lịch trình này. Bạn thử lại sau nhé.');
+        return;
+      }
+      setAiScoreResult(result);
+      await AsyncStorage.setItem(`ai_score_${trip._id}`, JSON.stringify(result));
+    } catch {
+      setAiScoreError('Không thể kết nối AI để chấm điểm lịch trình.');
+    } finally {
+      setAiScoreLoading(false);
+    }
+  };
+
   const openTripReviewModal = async () => {
     const myReview = await tripService.getMyItineraryReview(trip._id);
     if (myReview?.success && myReview.data) {
@@ -341,6 +390,7 @@ export default function SummaryTab({ trip, days, reviews }: { trip: Trip; days: 
                 setTripReviewRating(0);
                 setTripReviewComment('');
                 setHasExistingTripReview(false);
+                await onRefresh?.();
               } else {
                 showToast(res?.message || 'Không thể xóa đánh giá', true);
               }
@@ -376,6 +426,7 @@ export default function SummaryTab({ trip, days, reviews }: { trip: Trip; days: 
       if (result?.success) {
         setTripReviewVisible(false);
         showToast('Đã gửi feedback cho lịch trình thành công!');
+        await onRefresh?.();
         return;
       }
 
@@ -782,6 +833,69 @@ export default function SummaryTab({ trip, days, reviews }: { trip: Trip; days: 
           </View>
         </View>
       )}
+
+      {/* ===== AI SCORE ROW ===== */}
+      {!aiScoreResult ? (
+        <View style={styles.aiCompactRow}>
+          <View style={styles.aiRowLeft}>
+            <View style={styles.aiZapIconBg}>
+              <Feather name="zap" size={14} color="#7C3AED" />
+            </View>
+            <Text style={styles.aiRowLabel}>Độ hợp lý lịch trình (AI)</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.aiMiniBtn}
+            activeOpacity={0.8}
+            onPress={openAiScoreModal}
+            disabled={aiScoreLoading}
+          >
+            {aiScoreLoading ? (
+              <ActivityIndicator size="small" color="#FFF" />
+            ) : (
+              <Text style={styles.aiMiniBtnText}>Chấm điểm</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      ) : (() => {
+        let scoreBgColor = '#FEF2F2';
+        let scoreTextColor = '#EF4444';
+        let levelShortText = 'Cần sửa';
+
+        if (aiScoreResult.level === 'good') {
+          scoreBgColor = '#ECFDF5';
+          scoreTextColor = '#10B981';
+          levelShortText = 'Tốt';
+        } else if (aiScoreResult.level === 'too_busy') {
+          scoreBgColor = '#FFFBEB';
+          scoreTextColor = '#F59E0B';
+          levelShortText = 'Dày';
+        } else if (aiScoreResult.score >= 70) {
+          scoreBgColor = '#EFF6FF';
+          scoreTextColor = '#3B82F6';
+          levelShortText = 'Ổn';
+        }
+
+        return (
+          <TouchableOpacity
+            style={styles.aiCompactRow}
+            activeOpacity={0.7}
+            onPress={openAiScoreModal}
+          >
+            <View style={styles.aiRowLeft}>
+              <View style={styles.aiZapIconBg}>
+                <Feather name="zap" size={14} color="#7C3AED" />
+              </View>
+              <Text style={styles.aiRowLabel}>Điểm lịch trình AI</Text>
+            </View>
+            <View style={[styles.aiScoreBadge, { backgroundColor: scoreBgColor }]}>
+              <Text style={[styles.aiScoreBadgeText, { color: scoreTextColor }]}>
+                {Math.round(aiScoreResult.score)}/100 • {levelShortText}
+              </Text>
+              <Feather name="chevron-right" size={12} color={scoreTextColor} style={{ marginLeft: 2 }} />
+            </View>
+          </TouchableOpacity>
+        );
+      })()}
 
       {trip.isPurchasedClone && (
         <View style={styles.card}>
@@ -1450,6 +1564,14 @@ export default function SummaryTab({ trip, days, reviews }: { trip: Trip; days: 
         onPaymentSuccess={handlePayOSSuccess}
         onPaymentCancel={handlePayOSCancel}
       />
+
+      <AiScoreModal
+        visible={aiScoreVisible}
+        onClose={() => setAiScoreVisible(false)}
+        aiScoreResult={aiScoreResult}
+        onReScore={runAiScore}
+        aiScoreLoading={aiScoreLoading}
+      />
     </View>
   );
 }
@@ -1978,5 +2100,69 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     lineHeight: 20,
     marginBottom: 4,
+  },
+  aiCompactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginTop: 4,
+    marginBottom: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 3,
+      },
+      android: { elevation: 1 },
+    }),
+  },
+  aiRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  aiZapIconBg: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#F3E8FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  aiRowLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  aiMiniBtn: {
+    backgroundColor: '#7C3AED',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  aiMiniBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  aiScoreBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  aiScoreBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
 });
