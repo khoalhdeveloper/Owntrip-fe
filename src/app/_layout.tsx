@@ -7,6 +7,7 @@ import { ConfirmProvider } from '@/components/ConfirmProvider';
 import Toast from 'react-native-toast-message';
 import { toastConfig } from '@/components/ui/ToastConfig';
 import { applyAppTextDefaults } from '@/utils/appDefaults';
+import { ChatbotTripContextProvider } from '@/context/ChatbotTripContext';
 
 applyAppTextDefaults();
 
@@ -15,19 +16,21 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ConfirmProvider>
-          <StatusBar style="light" />
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="index" />
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="decorations" options={{ title: 'Decoration' }} />
-            <Stack.Screen name="achievement" options={{ title: 'Achievement' }} />
-            <Stack.Screen name="missions" options={{ title: 'Missions' }} />
-            <Stack.Screen name="trip" />
-            <Stack.Screen name="create-trip" />
-            <Stack.Screen name="instant-plan" />
-            <Stack.Screen name="hotel-management" />
-          </Stack>
+          <ChatbotTripContextProvider>
+            <StatusBar style="light" />
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="index" />
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="decorations" options={{ title: 'Decoration' }} />
+              <Stack.Screen name="achievement" options={{ title: 'Achievement' }} />
+              <Stack.Screen name="missions" options={{ title: 'Missions' }} />
+              <Stack.Screen name="trip" />
+              <Stack.Screen name="create-trip" />
+              <Stack.Screen name="instant-plan" />
+              <Stack.Screen name="hotel-management" />
+            </Stack>
+          </ChatbotTripContextProvider>
           <Toast config={toastConfig} />
         </ConfirmProvider>
       </SafeAreaProvider>

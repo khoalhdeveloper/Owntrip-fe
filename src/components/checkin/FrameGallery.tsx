@@ -11,17 +11,20 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { useFetchFrames } from '../../hooks/useFrames';
 import { CheckinFrame } from '../../types/checkin.type';
+import { FrameQuery } from '../../services/frameService';
 
 interface FrameGalleryProps {
   selectedFrameId: string | null;
   onSelectFrame: (frame: CheckinFrame | null) => void;
+  filters?: FrameQuery;
 }
 
 export const FrameGallery: React.FC<FrameGalleryProps> = ({
   selectedFrameId,
   onSelectFrame,
+  filters,
 }) => {
-  const { frames, loading } = useFetchFrames();
+  const { frames, loading } = useFetchFrames(filters);
 
   const renderItem = ({ item }: { item: CheckinFrame }) => {
     const isSelected = item.id === (selectedFrameId || 'no-frame');
@@ -46,6 +49,11 @@ export const FrameGallery: React.FC<FrameGalleryProps> = ({
         <Text style={styles.frameName} numberOfLines={1}>
           {item.name}
         </Text>
+        {item.category && item.type !== 'none' ? (
+          <Text style={styles.frameCategory} numberOfLines={1}>
+            {item.category}
+          </Text>
+        ) : null}
       </TouchableOpacity>
     );
   };
@@ -118,6 +126,13 @@ const styles = StyleSheet.create({
     marginTop: 5,
     color: '#666',
     textAlign: 'center',
+  },
+  frameCategory: {
+    fontSize: 9,
+    marginTop: 2,
+    color: '#3B82F6',
+    textAlign: 'center',
+    fontWeight: '700',
   },
   noFramePreview: {
     justifyContent: 'center',

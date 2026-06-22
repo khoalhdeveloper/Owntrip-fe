@@ -87,6 +87,16 @@ export interface ItineraryReview {
   createdAt?: string;
 }
 
+export interface PurchaseTripResult {
+  success: boolean;
+  tripId?: string;
+  message?: string;
+  paymentUrl?: string;
+  orderCode?: number;
+  paymentRequired?: boolean;
+  alreadyOwned?: boolean;
+}
+
 export interface DestinationPlace {
   _id: string;
   dayId: string;
@@ -302,11 +312,19 @@ export const tripService = {
     }
   },
 
-  purchaseTrip: async (tripId: string): Promise<{ success: boolean; tripId?: string; message?: string; paymentUrl?: string; orderCode?: number } | null> => {
+  purchaseTrip: async (tripId: string): Promise<PurchaseTripResult | null> => {
     try {
       const url = `/api/trips/marketplace/${tripId}/purchase`;
       const response = await axiosClient.post<any, any>(url);
-      return response;
+      if (!response) return null;
+
+      return {
+        ...response,
+        tripId: response.tripId ?? response.newTripId ?? response.clonedTripId,
+        paymentUrl: response.paymentUrl ?? response.checkoutUrl,
+        paymentRequired: response.paymentRequired ?? Boolean(response.paymentUrl ?? response.checkoutUrl),
+        alreadyOwned: response.alreadyOwned,
+      };
     } catch (error) {
       console.error(`Error purchasing trip ${tripId}:`, error);
       return null;

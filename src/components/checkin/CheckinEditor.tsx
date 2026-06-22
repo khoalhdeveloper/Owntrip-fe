@@ -121,7 +121,7 @@ export const CheckinEditor: React.FC<CheckinEditorProps> = ({
     // - Phần decor trên (hello from VŨNG TÀU + hoa + sò) chiếm ~17% chiều cao
     // - Phần decor dưới (cọ + bãi biển + logo) chiếm ~22% chiều cao
     // - 4 slot nằm gọn trong khoảng 17% → 78%
-    const slotTops = [14.5, 32, 50, 67]; 
+    const slotTops = [14.2, 32.4, 50, 67]; 
     const slotHeight = 17.5; 
 
     const frameSource = selectedFrame?.imageUrl ? { uri: selectedFrame.imageUrl } : null;
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: '9.8%',
     width: '80.4%',
-    borderRadius: 18,
+    borderRadius: 13,
     overflow: 'hidden',
     backgroundColor: '#EDF2F7',
     borderWidth: 0,

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -45,6 +45,20 @@ export const FrameSelectScreen = () => {
   const [selectedFrame, setSelectedFrame] = useState<CheckinFrame | null>(sessionCache.selectedFrame);
   const [isProcessing, setIsProcessing] = useState(false);
   const viewShotRef = useRef<ViewShot>(null);
+  const frameFilters = useMemo(() => {
+    const destination =
+      typeof params.destination === 'string'
+        ? params.destination
+        : typeof params.title === 'string'
+          ? params.title
+          : undefined;
+
+    return {
+      province: typeof params.province === 'string' ? params.province : undefined,
+      destination,
+      category: typeof params.category === 'string' ? params.category : undefined,
+    };
+  }, [params.category, params.destination, params.province, params.title]);
 
   // Sync state with sessionCache when component mounts or updates
   useEffect(() => {
@@ -81,7 +95,12 @@ export const FrameSelectScreen = () => {
     setActiveSlotIndex(index);
     router.push({
       pathname: '/checkin/camera',
-      params: { slotsCount: selectedFrame?.slotsCount || 1 }
+      params: {
+        slotsCount: selectedFrame?.slotsCount || 1,
+        province: frameFilters.province,
+        destination: frameFilters.destination,
+        category: frameFilters.category,
+      }
     });
   };
 
@@ -213,6 +232,7 @@ export const FrameSelectScreen = () => {
         {/* Frame Selector */}
         <FrameGallery
           selectedFrameId={selectedFrame?.id || null}
+          filters={frameFilters}
           onSelectFrame={(frame) => {
             sessionCache.selectedFrame = frame;
             setSelectedFrame(frame);
@@ -228,7 +248,12 @@ export const FrameSelectScreen = () => {
       <CheckinToolbar
         onTakePhoto={() => router.push({
           pathname: '/checkin/camera',
-          params: { slotsCount: selectedFrame?.slotsCount || 1 }
+          params: {
+            slotsCount: selectedFrame?.slotsCount || 1,
+            province: frameFilters.province,
+            destination: frameFilters.destination,
+            category: frameFilters.category,
+          }
         })}
         onSave={handleSave}
         onShare={handleShare}

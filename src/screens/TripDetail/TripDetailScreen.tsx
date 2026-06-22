@@ -23,6 +23,7 @@ import ExploreTab from './components/ExploreTab';
 import JournalTab from './components/JournalTab';
 import EditTripModal from './components/EditTripModal';
 import SellTripModal from './components/SellTripModal';
+import { useChatbotTripContext } from '@/context/ChatbotTripContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const HEADER_HEIGHT = 260;
@@ -78,6 +79,7 @@ export default function TripDetailScreen({ tripId }: { tripId: string }) {
   const [refreshing, setRefreshing] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
   const [sellVisible, setSellVisible] = useState(false);
+  const { setTripContext, clearTripContext } = useChatbotTripContext();
 
   const fetchTrip = useCallback(async () => {
     try {
@@ -98,6 +100,16 @@ export default function TripDetailScreen({ tripId }: { tripId: string }) {
   useEffect(() => {
     fetchTrip();
   }, [fetchTrip]);
+
+  useEffect(() => {
+    if (trip) {
+      setTripContext(trip, days);
+    }
+
+    return () => {
+      clearTripContext(tripId);
+    };
+  }, [clearTripContext, days, setTripContext, trip, tripId]);
 
   const handleTabPress = (tabKey: string, index: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -163,7 +175,7 @@ export default function TripDetailScreen({ tripId }: { tripId: string }) {
     return (
       <>
         <View style={{ display: activeTab === 'summary' ? 'flex' : 'none' }}>
-          <SummaryTab trip={trip} days={days} reviews={reviews} />
+          <SummaryTab trip={trip} days={days} reviews={reviews} onRefresh={fetchTrip} />
         </View>
         <View style={{ display: activeTab === 'itinerary' ? 'flex' : 'none' }}>
           <ItineraryTab trip={trip} days={days} onRefresh={fetchTrip} />
