@@ -31,6 +31,7 @@ import { aiService } from '@/services/aiService';
 import { placesService } from '@/services/placesService';
 import AddPlaceModal from './AddPlaceModal';
 import PlaceDetailModal from './PlaceDetailModal';
+import WeatherWidget from './WeatherWidget';
 import { useConfirm } from '@/components/ConfirmProvider';
 import { getDayColor } from './journal/types';
 import Constants from 'expo-constants';
@@ -802,6 +803,7 @@ export default function ItineraryTab({
 
   return (
     <View style={styles.container}>
+      <WeatherWidget destination={trip.destination} />
       {/* Auto Generate Button */}
       <View style={styles.autoGenContainer}>
         <TouchableOpacity
