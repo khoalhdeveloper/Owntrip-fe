@@ -13,9 +13,11 @@ import {
   Animated,
   TextInput,
   Alert,
+  Share,
 } from 'react-native';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import * as ExpoLinking from 'expo-linking';
 import { Trip, TripDay, Destination, tripService } from '@/services/tripService';
 import { accommodationService, Accommodation, IRoomType } from '@/services/accommodationService';
 import StayDatePickerModal from './StayDatePickerModal';
@@ -28,6 +30,7 @@ import { paymentService } from '@/services/paymentService';
 import PayOSWebViewModal from '@/components/PayOSWebViewModal';
 import NotesModal from './NotesModal';
 import BudgetModal from './BudgetModal';
+import ShareBillModal from './ShareBillModal';
 import { userService, UserProfile } from '@/services/userService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
@@ -123,6 +126,7 @@ export default function SummaryTab({ trip, days, reviews, onRefresh }: { trip: T
   const [loadingDest, setLoadingDest] = useState(true);
   const [loadingTripDetail, setLoadingTripDetail] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
 
@@ -159,7 +163,9 @@ export default function SummaryTab({ trip, days, reviews, onRefresh }: { trip: T
   // Notes and Budget states
   const [notesModalVisible, setNotesModalVisible] = useState(false);
   const [budgetModalVisible, setBudgetModalVisible] = useState(false);
+  const [shareBillVisible, setShareBillVisible] = useState(false);
   const [tripNotes, setTripNotes] = useState<string[]>(trip.notes || []);
+  const [tripMembers, setTripMembers] = useState<string[]>(trip.members || []);
   const [tripBudget, setTripBudget] = useState(trip.budget || {
     accommodation: 0,
     food: 0,
@@ -354,6 +360,26 @@ export default function SummaryTab({ trip, days, reviews, onRefresh }: { trip: T
       setAiScoreError('Không thể kết nối AI để chấm điểm lịch trình.');
     } finally {
       setAiScoreLoading(false);
+    }
+  };
+
+  const handleShareTrip = async () => {
+    try {
+      setIsSharing(true);
+      const res = await tripService.enableTripSharing(trip._id);
+      if (res.success && res.shareToken) {
+        const shareUrl = ExpoLinking.createURL(`shared/${res.shareToken}`);
+        await Share.share({
+          message: `Cùng xem chuyến đi "${trip.title}" của tôi nhé: ${shareUrl}`,
+          title: 'Chia sẻ chuyến đi',
+        });
+      } else {
+        showToast('Không thể tạo link chia sẻ.', true);
+      }
+    } catch (e) {
+      showToast('Lỗi khi chia sẻ.', true);
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -914,6 +940,23 @@ export default function SummaryTab({ trip, days, reviews, onRefresh }: { trip: T
         </View>
       )}
 
+      {/* ===== SHARE LINK ROW ===== */}
+      <TouchableOpacity
+        style={[styles.actionBtn, { marginBottom: 16, backgroundColor: BRAND_LIGHT, height: 48, borderRadius: 12 }]}
+        activeOpacity={0.8}
+        onPress={handleShareTrip}
+        disabled={isSharing}
+      >
+        {isSharing ? (
+          <ActivityIndicator size="small" color={BRAND} />
+        ) : (
+          <>
+            <Feather name="share-2" size={16} color={BRAND} />
+            <Text style={[styles.actionBtnText, { color: BRAND, fontWeight: '600' }]}>Chia sẻ lịch trình với bạn bè</Text>
+          </>
+        )}
+      </TouchableOpacity>
+
       {/* ===== 1. ACCOMMODATION ===== */}
       <View style={styles.card}>
         <SectionHeader
@@ -1140,17 +1183,23 @@ export default function SummaryTab({ trip, days, reviews, onRefresh }: { trip: T
           title="Ngân sách"
           right={
             ((tripBudget.accommodation || 0) + (tripBudget.food || 0) + (tripBudget.transport || 0) + (tripBudget.activities || 0)) > 0 ? (
-              <TouchableOpacity
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setBudgetModalVisible(true);
-                }}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-              >
-                <Text style={styles.budgetTotal}>{formatCurrency((tripBudget.accommodation || 0) + (tripBudget.food || 0) + (tripBudget.transport || 0) + (tripBudget.activities || 0))}</Text>
-                <Feather name="edit-3" size={14} color={BRAND} />
-              </TouchableOpacity>
-            ) : undefined
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TouchableOpacity
+                  onPress={() => setShareBillVisible(true)}
+                  style={{
+                    backgroundColor: '#10B981',
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 16,
+                  }}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#FFF' }}>Chia tiền</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setBudgetModalVisible(true)}>
+                  <Feather name="edit-2" size={16} color={BRAND} />
+                </TouchableOpacity>
+              </View>
+            ) : null
           }
         />
 
@@ -1180,22 +1229,24 @@ export default function SummaryTab({ trip, days, reviews, onRefresh }: { trip: T
             </View>
           </TouchableOpacity>
         ) : (
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIcon}>
-              <Feather name="credit-card" size={24} color="#D1D5DB" />
-            </View>
-            <Text style={styles.emptyTitle}>Chưa lập ngân sách</Text>
-            <Text style={styles.emptyHint}>Lên kế hoạch chi phí cho chuyến đi</Text>
+          <View style={{ alignItems: 'center', gap: 12, paddingVertical: 10 }}>
             <TouchableOpacity
-              style={styles.actionBtn}
-              activeOpacity={0.7}
+              style={[styles.budgetEmptyBtn, { backgroundColor: '#10B981', borderColor: '#10B981' }]}
+              onPress={() => setShareBillVisible(true)}
+            >
+              <Feather name="users" size={16} color="#FFF" />
+              <Text style={[styles.budgetEmptyText, { color: '#FFF' }]}>Quản lý Share Bill</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.budgetEmptyBtn}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 setBudgetModalVisible(true);
               }}
             >
-              <Feather name="plus" size={14} color="#FFF" />
-              <Text style={styles.actionBtnText}>Lập ngân sách</Text>
+              <Feather name="plus" size={16} color={BRAND} />
+              <Text style={styles.budgetEmptyText}>Lập ngân sách</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -1545,6 +1596,14 @@ export default function SummaryTab({ trip, days, reviews, onRefresh }: { trip: T
         onSave={handleSaveBudget}
       />
 
+      <ShareBillModal
+        visible={shareBillVisible}
+        tripId={trip._id}
+        initialMembers={tripMembers}
+        onClose={() => setShareBillVisible(false)}
+        onUpdateMembers={(m) => setTripMembers(m)}
+      />
+
       {/* ===== LOADING OVERLAY ===== */}
       {isUpdating && (
         <View style={styles.loadingOverlay}>
@@ -1817,6 +1876,23 @@ const styles = StyleSheet.create({
   budgetValue: { fontSize: 14, fontWeight: '700', color: '#1A1A1A' },
   budgetBarBg: { height: 5, borderRadius: 3, backgroundColor: '#F3F4F6' },
   budgetBarFill: { height: 5, borderRadius: 3, backgroundColor: BRAND },
+  budgetEmptyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  budgetEmptyText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+  },
 
   // Booked accommodation card
   bookedCard: {
