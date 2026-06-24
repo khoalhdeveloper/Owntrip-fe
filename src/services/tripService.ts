@@ -21,6 +21,7 @@ export interface Trip {
   description?: string;
   isPublished: boolean;
   notes?: string[];
+  members?: string[];
   budget?: TripBudget;
   createdAt?: string;
   updatedAt?: string;
@@ -256,6 +257,7 @@ export const tripService = {
     budget?: number | TripBudget;
     accommodation?: any;
     notes?: string[];
+    members?: string[];
   }): Promise<Trip | null> => {
     try {
       const url = ENDPOINTS.TRIPS.UPDATE(tripId);
@@ -376,6 +378,61 @@ export const tripService = {
       return response;
     } catch (error) {
       console.error(`Error deleting itinerary review for trip ${tripId}:`, error);
+      return null;
+    }
+  },
+
+  getTripExpenses: async (tripId: string): Promise<any> => {
+    try {
+      const url = ENDPOINTS.TRIPS.EXPENSES(tripId);
+      const response = await axiosClient.get(url);
+      return response;
+    } catch (error) {
+      console.error(`Error fetching expenses for trip ${tripId}:`, error);
+      return null;
+    }
+  },
+
+  addTripExpense: async (tripId: string, payload: any): Promise<any> => {
+    try {
+      const url = ENDPOINTS.TRIPS.EXPENSES(tripId);
+      const response = await axiosClient.post(url, payload);
+      return response;
+    } catch (error) {
+      console.error(`Error adding expense for trip ${tripId}:`, error);
+      return null;
+    }
+  },
+
+  deleteTripExpense: async (tripId: string, expenseId: string): Promise<any> => {
+    try {
+      const url = ENDPOINTS.TRIPS.EXPENSE_DETAIL(tripId, expenseId);
+      const response = await axiosClient.delete(url);
+      return response;
+    } catch (error) {
+      console.error(`Error deleting expense ${expenseId} for trip ${tripId}:`, error);
+      return null;
+    }
+  },
+
+  enableTripSharing: async (tripId: string): Promise<{ success: boolean; shareToken?: string; message?: string }> => {
+    try {
+      const url = ENDPOINTS.TRIPS.SHARE(tripId);
+      const response = await axiosClient.post<any, any>(url);
+      return response;
+    } catch (error) {
+      console.error(`Error enabling sharing for trip ${tripId}:`, error);
+      return { success: false, message: 'Lỗi chia sẻ chuyến đi' };
+    }
+  },
+
+  getSharedTrip: async (shareToken: string): Promise<TripDetailResponse | null> => {
+    try {
+      const url = ENDPOINTS.TRIPS.GET_SHARED(shareToken);
+      const response = await axiosClient.get<any, TripDetailResponse>(url);
+      return response;
+    } catch (error) {
+      console.error(`Error fetching shared trip with token ${shareToken}:`, error);
       return null;
     }
   },

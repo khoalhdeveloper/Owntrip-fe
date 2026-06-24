@@ -1,7 +1,6 @@
 export const API_CONFIG = {
-  BASE_URL: 'https://owntrip.vercel.app', // Production URL
-
-
+  // BASE_URL: 'https://owntrip.vercel.app', // Production URL
+  BASE_URL: 'https://owntrip.vercel.app', // Local Backend URL for Android Emulator
   TIMEOUT: 15000,
 };
 
@@ -39,6 +38,10 @@ export const ENDPOINTS = {
     DELETE: (id: string) => `/api/trips/${id}`,
     DESTINATIONS: (id: string) => `/api/trips/${id}/destinations`,
     PUBLISH: (id: string) => `/api/trips/${id}/publish`,
+    EXPENSES: (id: string) => `/api/trips/${id}/expenses`,
+    EXPENSE_DETAIL: (tripId: string, expenseId: string) => `/api/trips/${tripId}/expenses/${expenseId}`,
+    SHARE: (id: string) => `/api/trips/${id}/share`,
+    GET_SHARED: (shareToken: string) => `/api/trips/shared/${shareToken}`,
   },
   PLACES: {
     SEARCH: '/api/places/search',
