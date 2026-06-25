@@ -41,6 +41,28 @@ This command will move the starter code to the **app-example** directory and cre
 - If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
 - Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
 
+## EAS build
+
+Install dependencies first:
+
+```bash
+npm install
+```
+
+Create an internal Android APK:
+
+```bash
+npm run build:apk
+```
+
+Create a production Android App Bundle for Play Store:
+
+```bash
+npm run build:android:production
+```
+
+The build scripts run EAS CLI 20.3.0 through `npx`. If EAS asks for authentication, run `npx eas-cli@20.3.0 login` and retry the build command.
+
 ## Learn more
 
 To learn more about developing your project with Expo, look at the following resources:

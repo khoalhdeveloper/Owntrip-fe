@@ -110,7 +110,7 @@ export default function GuideScreen() {
           {activeTab === 'overview' && (
             <View style={styles.tabPane}>
               <Text style={styles.promptText}>
-                Hãy cho độc giả biết bạn biết {province} như thế nào (ví dụ: "Đã sống ở {province}", "Đã thăm {province} trong một tuần vào năm 2023", "Người du lịch đam mê qua 5 châu lục")
+                Hãy cho độc giả biết bạn biết {province} như thế nào (ví dụ: &quot;Đã sống ở {province}&quot;, &quot;Đã thăm {province} trong một tuần vào năm 2023&quot;, &quot;Người du lịch đam mê qua 5 châu lục&quot;)
               </Text>
 
               <View style={styles.section}>
