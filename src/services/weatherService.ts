@@ -27,7 +27,7 @@ export interface WeatherResponse {
 
 const getWeatherForecast = async (city: string): Promise<WeatherResponse> => {
   try {
-    const response = await axiosClient.get<any, WeatherResponse>('http://192.168.100.103:3000/api/weather/forecast', {
+    const response = await axiosClient.get<any, WeatherResponse>('/api/weather/forecast', {
       params: { city },
     });
     return response;
